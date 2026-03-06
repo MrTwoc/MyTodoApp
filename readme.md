@@ -17,7 +17,7 @@
 - 通信协议：quic协议
 - 异步运行时：tokio
 - 网络协议：ipv6
-- 传输协议：WebTransport
+- 传输协议：WebTransport / websocket / SSE + (Leptos)Server Functions
 ### 项目功能
 - 明暗主题切换
 - 单机模式
