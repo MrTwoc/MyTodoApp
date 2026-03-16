@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 futures-util = "0.3.32"
-salvo = { version = "0.89.2", features = ["websocket"] }
+salvo = { version = "0.89.2", features = ["websocket","oapi"] }
 serde = "1.0.228"
 serde_json = "1.0.149"
 tokio = "1.50.0"
