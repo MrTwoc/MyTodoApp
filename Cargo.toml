@@ -1,7 +1,25 @@
 [workspace]
 members = [
     "backend",
-    "frontend"
+    "frontend",
 ]
 
 resolver = "2"
+
+[workspace.dependencies]
+futures-util = "0.3.32"
+salvo = { version = "0.89.2", features = ["websocket","oapi"] }
+serde = "1.0.228"
+serde_json = "1.0.149"
+tokio = "1.50.0"
+tokio-stream = "0.1.18"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.22"
+
+console_error_panic_hook = "0.1.7"
+leptos = { version = "0.8.17", features = ["csr"] }
+
+# ferroid = "1.0.2"
+sonyflake = "0.4.0"
+# nulid = "0.10.1"
+chrono = "0.4.44"
