@@ -71,6 +71,8 @@ pub struct Sub_Team {
     pub sub_team_create_time: i64,
     // 子团队描述，可选
     pub sub_team_description: Option<String>,
+    // 子团队所属团队ID，雪花ID，u64类型
+    pub team_id: u64,
 }
 
 // 团队成员结构体
