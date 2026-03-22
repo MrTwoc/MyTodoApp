@@ -12,7 +12,7 @@ pub struct Log_TeamLog {
     pub action: LogAction,          // 操作类型
     pub target_type: String,        // 目标类型 (task, member, team, etc.)
     pub target_id: Option<u64>,     // 目标ID
-    pub details: String,            // 详情描述
+    pub details: Option<String>,    // 详情描述
     pub created_at: i64,            // 操作时间
     pub ip_address: Option<String>, // IP地址
 }
