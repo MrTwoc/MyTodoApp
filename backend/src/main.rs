@@ -3,6 +3,11 @@ use salvo::prelude::*;
 
 mod models;
 // use models::user;
+mod db;
+use db::migrations::init_database;
+use db::pool::create_pool;
+
+use crate::db::pool::test_connection;
 
 #[endpoint]
 async fn hello(name: QueryParam<String, false>) -> String {
@@ -14,6 +19,10 @@ async fn hello(name: QueryParam<String, false>) -> String {
 async fn main() {
     tracing_subscriber::fmt().init();
 
+    if let Err(e) = run_database().await {
+        tracing::error!("数据库初始化失败: {:?}", e);
+        return;
+    }
     let router = Router::new().push(Router::with_path("hello").get(hello));
 
     let doc = OpenApi::new("test api", "0.0.1").merge_router(&router);
@@ -25,4 +34,11 @@ async fn main() {
     // let acceptor = TcpListener::new("0.0.0.0:8698").bind().await;
     let acceptor = TcpListener::new("localhost:8698").bind().await;
     Server::new(acceptor).serve(router).await;
+}
+
+async fn run_database() -> Result<(), Box<dyn std::error::Error>> {
+    let _pool = init_database().await?;
+    create_pool().await?;
+    test_connection(&_pool).await?;
+    Ok(())
 }

@@ -1,20 +1,24 @@
 /*
-数据库连接池
+PostgreSQL 数据库连接池
 */
-// src/db/pool.rs
-use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
+use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 use std::env;
+use std::time::Duration;
 
-pub type DbPool = Pool<Sqlite>;
+pub type DbPool = Pool<Postgres>;
+
+// postgres://mytodoapp:mytodoapp@localhost:5432/mytodoapp_db
+pub const MY_TODOAPP_DATABASE_URL: &str =
+    "postgres://mytodoapp:mytodoapp@localhost:5432/mytodoapp_db";
 
 pub async fn create_pool() -> Result<DbPool, sqlx::Error> {
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_url = MY_TODOAPP_DATABASE_URL;
 
-    let pool = SqlitePoolOptions::new()
-        .max_connections(10) // 最大连接数
-        .acquire_timeout(std::time::Duration::from_secs(30))
-        .idle_timeout(std::time::Duration::from_secs(600))
-        .max_lifetime(std::time::Duration::from_secs(1800))
+    let pool = PgPoolOptions::new()
+        .max_connections(20)
+        .acquire_timeout(Duration::from_secs(30))
+        .idle_timeout(Duration::from_secs(300))
+        .max_lifetime(Duration::from_secs(1800))
         .connect(&database_url)
         .await?;
 
@@ -24,5 +28,6 @@ pub async fn create_pool() -> Result<DbPool, sqlx::Error> {
 // 测试连接
 pub async fn test_connection(pool: &DbPool) -> Result<(), sqlx::Error> {
     sqlx::query("SELECT 1").fetch_one(pool).await?;
+    println!("数据库连接测试");
     Ok(())
 }
