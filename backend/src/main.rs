@@ -7,8 +7,6 @@ mod db;
 use db::migrations::init_database;
 use db::pool::create_pool;
 
-use crate::db::pool::test_connection;
-
 #[endpoint]
 async fn hello(name: QueryParam<String, false>) -> String {
     // format!("Hello, {}!", name.as_deref().unwrap_or("World"))
@@ -39,6 +37,5 @@ async fn main() {
 async fn run_database() -> Result<(), Box<dyn std::error::Error>> {
     let _pool = init_database().await?;
     create_pool().await?;
-    test_connection(&_pool).await?;
     Ok(())
 }

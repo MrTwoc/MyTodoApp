@@ -64,8 +64,9 @@ pub async fn run_migrations(pool: &DbPool) -> Result<(), Box<dyn std::error::Err
 
 /// 运行自定义迁移脚本
 async fn run_custom_migrations(pool: &DbPool) -> Result<(), sqlx::Error> {
-    // 这里需要运行 PostgreSQL 版本的迁移脚本
-    // 可以使用 sqlx::query_file! 或直接执行 SQL 语句
+    sqlx::migrate!("./migrations").run(pool).await?;
+    tracing::info!("自定义迁移完成");
+
     Ok(())
 }
 

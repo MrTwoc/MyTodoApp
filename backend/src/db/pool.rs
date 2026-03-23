@@ -21,13 +21,13 @@ pub async fn create_pool() -> Result<DbPool, sqlx::Error> {
         .max_lifetime(Duration::from_secs(1800))
         .connect(&database_url)
         .await?;
+    tracing::info!("数据库连接池创建成功");
 
     Ok(pool)
 }
 
 // 测试连接
-pub async fn test_connection(pool: &DbPool) -> Result<(), sqlx::Error> {
+pub async fn _test_connection(pool: &DbPool) -> Result<(), sqlx::Error> {
     sqlx::query("SELECT 1").fetch_one(pool).await?;
-    println!("数据库连接测试");
     Ok(())
 }

@@ -1,6 +1,5 @@
--- 001_initial_schema_postgres.sql
+-- 001_initial_schema.sql
 -- PostgreSQL 初始数据库结构设置
--- 包含所有核心表和索引
 -- 初始化时间：2026-03-22
 
 -- ============================================
@@ -289,57 +288,3 @@ CREATE INDEX IF NOT EXISTS idx_task_logs_task ON task_logs(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_logs_operator ON task_logs(operator_id);
 CREATE INDEX IF NOT EXISTS idx_team_logs_team ON team_logs(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_logs_operator ON team_logs(operator_id);
-
--- ============================================
--- 函数和触发器（可选，用于高级功能）
--- ============================================
-
--- 自动更新时间戳的触发器函数
-CREATE OR REPLACE FUNCTION update_modified_time()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.task_update_time = EXTRACT(EPOCH FROM NOW());
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- 为任务表创建更新时间戳的触发器
-CREATE TRIGGER trigger_update_task_time
-    BEFORE UPDATE ON tasks
-    FOR EACH ROW
-    EXECUTE FUNCTION update_modified_time();
-
--- 用户注册时间的默认值函数
-CREATE OR REPLACE FUNCTION set_default_reg_time()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.user_reg_time IS NULL OR NEW.user_reg_time = 0 THEN
-        NEW.user_reg_time = EXTRACT(EPOCH FROM NOW());
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- 为用户表创建注册时间默认值触发器
-CREATE TRIGGER trigger_set_user_reg_time
-    BEFORE INSERT ON users
-    FOR EACH ROW
-    EXECUTE FUNCTION set_default_reg_time();
-
--- ============================================
--- 迁移完成注释
--- ============================================
-COMMENT ON TABLE users IS '用户信息表';
-COMMENT ON TABLE tasks IS '任务信息表';
-COMMENT ON TABLE teams IS '团队信息表';
-COMMENT ON TABLE sub_teams IS '子团队信息表';
-COMMENT ON TABLE team_members IS '团队成员关系表';
-COMMENT ON TABLE sub_team_members IS '子团队成员关系表';
-COMMENT ON TABLE team_invites IS '团队邀请表';
-COMMENT ON TABLE join_requests IS '团队加入申请表';
-COMMENT ON TABLE user_logs IS '用户操作日志表';
-COMMENT ON TABLE task_logs IS '任务操作日志表';
-COMMENT ON TABLE team_logs IS '团队操作日志表';
-
--- 迁移完成
-SELECT 'PostgreSQL 数据库迁移完成 - 版本 1.0' AS migration_status;
