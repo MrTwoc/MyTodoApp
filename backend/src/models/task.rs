@@ -17,8 +17,8 @@ pub struct Task {
     pub task_keywords: HashSet<String>,
     // 任务优先级
     pub task_priority: u8,
-    // 任务截止时间，Unix时间戳
-    pub task_deadline: i64,
+    // 任务截止时间，Unix时间戳，可选（无截止时间为None）
+    pub task_deadline: Option<i64>,
     // 任务完成时间，Unix时间戳
     pub task_complete_time: Option<i64>,
     // 任务状态: 进行中或已完成

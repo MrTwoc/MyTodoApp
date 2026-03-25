@@ -243,9 +243,18 @@ ALTER TABLE team_logs
 ADD CONSTRAINT fk_team_logs_team 
 FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE;
 
-ALTER TABLE team_logs 
-ADD CONSTRAINT fk_team_logs_operator 
+ALTER TABLE team_logs
+ADD CONSTRAINT fk_team_logs_operator
 FOREIGN KEY (operator_id) REFERENCES users(user_id) ON DELETE CASCADE;
+
+-- 任务表外键
+ALTER TABLE tasks
+ADD CONSTRAINT fk_tasks_leader
+FOREIGN KEY (task_leader_id) REFERENCES users(user_id) ON DELETE CASCADE;
+
+ALTER TABLE tasks
+ADD CONSTRAINT fk_tasks_team
+FOREIGN KEY (task_team_id) REFERENCES teams(team_id) ON DELETE SET NULL;
 
 -- ============================================
 -- 索引创建
@@ -259,6 +268,10 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users(user_username);
 CREATE INDEX IF NOT EXISTS idx_user_logs_user_id ON user_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_logs_created_at ON user_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_user_logs_user_created ON user_logs(user_id, created_at DESC);
+
+-- JSONB 字段 GIN 索引
+CREATE INDEX IF NOT EXISTS idx_users_teams_gin ON users USING GIN (user_teams);
+CREATE INDEX IF NOT EXISTS idx_tasks_keywords_gin ON tasks USING GIN (task_keywords);
 
 -- 任务表索引
 CREATE INDEX IF NOT EXISTS idx_tasks_leader ON tasks(task_leader_id);

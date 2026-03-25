@@ -31,8 +31,8 @@ pub struct User {
     pub user_phone: String,
     // 加入的团队ID列表
     pub user_teams: Vec<u64>,
-    // 最后登录时间，Unix时间戳
-    pub user_last_login_time: i64,
+    // 最后登录时间，Unix时间戳，可选（未登录时为None）
+    pub user_last_login_time: Option<i64>,
     // 用户描述(自我介绍/个人介绍)，可选
     pub user_description: Option<String>,
     pub user_settings: UserSettings,
