@@ -33,7 +33,7 @@ pub struct Task {
     pub task_update_time: Option<i64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TaskStatus {
     Active,    // 进行中 / 默认运行中
     Completed, // 已完成
