@@ -17,7 +17,7 @@ pub struct Log_TeamLog {
     pub ip_address: Option<String>, // IP地址
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum LogAction {
     // 成员相关
     MemberJoined,      // 成员加入
