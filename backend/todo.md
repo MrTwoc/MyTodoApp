@@ -114,7 +114,7 @@
 ### 第二阶段：认证和授权（依赖第一阶段）
 
 #### 2.1 JWT 认证
-- [ ] **JWT 工具** - 创建 `backend/src/utils/jwt.rs`
+- [完成] **JWT 工具** - 创建 `backend/src/utils/jwt.rs`
   - Token 生成（登录时使用）
   - Token 验证（中间件使用）
   - [可选] Token 刷新（后续根据需求添加）

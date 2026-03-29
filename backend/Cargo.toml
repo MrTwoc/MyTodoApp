@@ -20,3 +20,4 @@ anyhow = { workspace = true }
 regex-lite = { workspace = true }
 tracing-appender = { workspace = true }
 uuid = { workspace = true }
+jsonwebtoken = { workspace = true }

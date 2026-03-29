@@ -7,6 +7,9 @@ mod db;
 use db::migrations::init_database;
 use db::pool::create_pool;
 
+mod middleware;
+use middleware::logging::{logger, request_logger};
+
 // use crate::utils::id_generator::test_sonyflake_id;
 mod utils;
 
