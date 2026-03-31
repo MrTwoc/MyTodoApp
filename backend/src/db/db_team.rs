@@ -54,7 +54,11 @@ impl DbTeam {
         .await?;
 
         match result {
-            Some(row) => Ok(Some(Self::row_to_team(row)?)),
+            Some(row) => {
+                let mut team = Self::row_to_team(row)?;
+                team.team_members = Self::get_team_members(pool, team_id).await?;
+                Ok(Some(team))
+            }
             None => Ok(None),
         }
     }

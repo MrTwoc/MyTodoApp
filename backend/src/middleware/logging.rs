@@ -4,6 +4,21 @@ use salvo::prelude::*;
 use std::time::Instant;
 use tracing::{info, warn};
 
+/*
+置好 tracing_subscriber 后，只需要调用以下宏就会自动记录日志：
+
+宏	                    级别	用途
+tracing::info!("...")	INFO	一般信息
+tracing::warn!("...")	WARN	警告信息
+tracing::error!("...")	ERROR	错误信息
+tracing::debug!("...")	DEBUG	调试信息
+例如：
+tracing::info!("应用启动成功");
+tracing::error!("数据库连接失败: {:?}", e);
+tracing::warn!("请求超时: {}", path);
+
+*/
+
 pub fn logger() -> Logger {
     Logger::new()
 }
