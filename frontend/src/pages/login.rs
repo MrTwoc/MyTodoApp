@@ -15,15 +15,47 @@ pub fn LoginPage() -> impl IntoView {
 
     let (email, set_email) = signal(String::new());
     let (password, set_password) = signal(String::new());
+    let (show_password, set_show_password) = signal(false);
+    let (remember_me, set_remember_me) = signal(false);
     let (error, set_error) = signal(Option::<String>::None);
     let (loading, set_loading) = signal(false);
+    let (email_error, set_email_error) = signal(Option::<String>::None);
+    let (password_error, set_password_error) = signal(Option::<String>::None);
+
+    let validate_email = move |email_val: &str| {
+        if email_val.is_empty() {
+            set_email_error.set(Some("Email is required".to_string()));
+            false
+        } else if !email_val.contains('@') || !email_val.contains('.') {
+            set_email_error.set(Some("Please enter a valid email".to_string()));
+            false
+        } else {
+            set_email_error.set(None);
+            true
+        }
+    };
+
+    let validate_password = move |password_val: &str| {
+        if password_val.is_empty() {
+            set_password_error.set(Some("Password is required".to_string()));
+            false
+        } else if password_val.len() < 6 {
+            set_password_error.set(Some("Password must be at least 6 characters".to_string()));
+            false
+        } else {
+            set_password_error.set(None);
+            true
+        }
+    };
 
     let on_submit = move |_: ev::SubmitEvent| {
         let email_val = email.get();
         let password_val = password.get();
 
-        if email_val.is_empty() || password_val.is_empty() {
-            set_error.set(Some("Please fill in all fields".to_string()));
+        let email_valid = validate_email(&email_val);
+        let password_valid = validate_password(&password_val);
+
+        if !email_valid || !password_valid {
             return;
         }
 
@@ -54,6 +86,10 @@ pub fn LoginPage() -> impl IntoView {
         });
     };
 
+    let toggle_password = move |_| {
+        set_show_password.update(|v| *v = !*v);
+    };
+
     view! {
         <div class="auth-page">
             <div class="auth-container">
@@ -61,20 +97,58 @@ pub fn LoginPage() -> impl IntoView {
                 <p class="auth-subtitle">"Sign in to your account"</p>
 
                 <Form on_submit=Callback::from(on_submit)>
-                    <FormGroup label="Email".to_string() required=true>
+                    <FormGroup label="Email".to_string() required=true error=email_error.get().unwrap_or_default()>
                         <Input
                             input_type=InputType::Email
                             placeholder="Enter your email".to_string()
-                            on_input=Callback::from(move |v: String| set_email.set(v))
+                            on_input=Callback::from(move |v: String| {
+                                set_email.set(v.clone());
+                                if !v.is_empty() {
+                                    validate_email(&v);
+                                } else {
+                                    set_email_error.set(None);
+                                }
+                            })
                         />
                     </FormGroup>
-                    <FormGroup label="Password".to_string() required=true>
-                        <Input
-                            input_type=InputType::Password
-                            placeholder="Enter your password".to_string()
-                            on_input=Callback::from(move |v: String| set_password.set(v))
-                        />
+                    <FormGroup label="Password".to_string() required=true error=password_error.get().unwrap_or_default()>
+                        <div class="password-input-wrapper">
+                            <Input
+                                input_type=if show_password.get() { InputType::Text } else { InputType::Password }
+                                placeholder="Enter your password".to_string()
+                                on_input=Callback::from(move |v: String| {
+                                    set_password.set(v.clone());
+                                    if !v.is_empty() {
+                                        validate_password(&v);
+                                    } else {
+                                        set_password_error.set(None);
+                                    }
+                                })
+                            />
+                            <button
+                                type="button"
+                                class="password-toggle"
+                                on:click=toggle_password
+                            >
+                                {move || if show_password.get() { "Hide" } else { "Show" }}
+                            </button>
+                        </div>
                     </FormGroup>
+
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input
+                                type="checkbox"
+                                checked=remember_me.get()
+                                on:change=move |ev| {
+                                    let checked = event_target_checked(&ev);
+                                    set_remember_me.set(checked);
+                                }
+                            />
+                            <span>"Remember me"</span>
+                        </label>
+                        <a href="/forgot-password" class="forgot-link">"Forgot password?"</a>
+                    </div>
 
                     {move || error.get().map(|msg| {
                         view! { <div class="auth-error">{msg}</div> }.into_any()

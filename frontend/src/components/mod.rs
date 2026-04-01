@@ -4,3 +4,4 @@ pub mod form;
 pub mod input;
 pub mod loading;
 pub mod modal;
+pub mod theme_switcher;

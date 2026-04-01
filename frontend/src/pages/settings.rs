@@ -1,7 +1,7 @@
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
 use crate::components::form::FormActions;
-use crate::store::theme_store::Theme;
+use crate::components::theme_switcher::ThemeSwitcher;
 use crate::store::{use_theme_store, use_user_store};
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
@@ -53,44 +53,16 @@ pub fn SettingsPage() -> impl IntoView {
                                     <span class="profile-label">"Email"</span>
                                     <span class="profile-value">{p.email.clone()}</span>
                                 </div>
-                                <div class="profile-field">
-                                    <span class="profile-label">"Phone"</span>
-                                    <span class="profile-value">{p.phone.clone()}</span>
-                                </div>
-                                {if let Some(desc) = &p.description {
-                                    view! {
-                                        <div class="profile-field">
-                                            <span class="profile-label">"Bio"</span>
-                                            <span class="profile-value">{desc.clone()}</span>
-                                        </div>
-                                    }.into_any()
-                                } else {
-                                    ().into_any()
-                                }}
                             </div>
                         }.into_any()
                     }).unwrap_or_else(|| view! { <p>"Not logged in"</p> }.into_any())}
+                    <div class="profile-actions">
+                        <a href="/profile" class="profile-link-btn">"View Full Profile →"</a>
+                    </div>
                 </Card>
 
                 <Card title="Appearance".to_string() subtitle="Customize your experience".to_string()>
-                    <div class="theme-options">
-                        <button
-                            class=("theme-option", true)
-                            class=("theme-option-active", matches!(theme_store.theme.get(), Theme::Light))
-                            on:click=move |_| { theme_store.set_theme.set(Theme::Light); }
-                        >
-                            <span>"☀️"</span>
-                            <span>"Light"</span>
-                        </button>
-                        <button
-                            class=("theme-option", true)
-                            class=("theme-option-active", matches!(theme_store.theme.get(), Theme::Dark))
-                            on:click=move |_| { theme_store.set_theme.set(Theme::Dark); }
-                        >
-                            <span>"🌙"</span>
-                            <span>"Dark"</span>
-                        </button>
-                    </div>
+                    <ThemeSwitcher variant=crate::components::theme_switcher::ThemeSwitcherVariant::Segmented show_label=true />
                 </Card>
 
                 <Card title="Account".to_string() subtitle="Manage your account".to_string()>

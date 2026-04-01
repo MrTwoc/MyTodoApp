@@ -217,17 +217,17 @@ db/db_user.rs            (数据库操作)
 ### 第五阶段：前端用户界面（依赖第四阶段） [无单元测试]
 
 #### 5.1 认证页面
-- [ ] **登录页面** - `frontend/src/pages/login.rs`
-- [ ] **注册页面** - `frontend/src/pages/register.rs`
+- [完成] **登录页面** - `frontend/src/pages/login.rs`
+- [完成] **注册页面** - `frontend/src/pages/register.rs`
 
 #### 5.2 主题切换
-- [ ] **主题切换组件** - `frontend/src/components/theme_switcher.rs`
-- [ ] **主题持久化** - LocalStorage 存储
+- [完成] **主题切换组件** - `frontend/src/components/theme_switcher.rs`
+- [完成] **主题持久化** - LocalStorage 存储
 
 #### 5.3 用户信息页面
-- [ ] **用户信息展示** - `frontend/src/pages/profile.rs`
-- [ ] **用户信息编辑** - 表单组件
-- [ ] **密码修改** - 密码修改表单
+- [完成] **用户信息展示** - `frontend/src/pages/profile.rs`
+- [完成] **用户信息编辑** - 表单组件
+- [完成] **密码修改** - 密码修改表单
 
 ---
 

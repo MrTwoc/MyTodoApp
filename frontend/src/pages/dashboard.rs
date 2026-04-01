@@ -84,6 +84,7 @@ pub fn DashboardPage() -> impl IntoView {
                         {move || match theme_store.theme.get() {
                             crate::store::theme_store::Theme::Light => "Light",
                             crate::store::theme_store::Theme::Dark => "Dark",
+                            crate::store::theme_store::Theme::System => "System",
                         }}
                     </p>
                     <CardFooter>

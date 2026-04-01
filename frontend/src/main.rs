@@ -10,24 +10,24 @@ mod pages;
 use pages::dashboard::DashboardPage;
 use pages::login::LoginPage;
 use pages::not_found::NotFoundPage;
+use pages::profile::ProfilePage;
 use pages::protected_route::ProtectedRoute;
 use pages::register::RegisterPage;
 use pages::settings::SettingsPage;
 use pages::tasks::TasksPage;
 use pages::teams::TeamsPage;
-use store::{create_stores, provide_stores, use_theme_store};
+use store::{create_stores, provide_stores};
+use components::theme_switcher::ThemeSwitcher;
 
 #[component]
 fn App() -> impl IntoView {
     let stores = create_stores();
     provide_stores(stores);
 
-    let theme_store = use_theme_store();
-
     view! {
         <Router>
             <div class="app-container">
-                <AppHeader theme_store=theme_store />
+                <AppHeader />
                 <main class="app-main">
                     <Routes fallback=|| view! { <NotFoundPage /> }>
                         <Route path=path!("/") view=LoginPage />
@@ -65,6 +65,14 @@ fn App() -> impl IntoView {
                                 </ProtectedRoute>
                             }
                         />
+                        <Route
+                            path=path!("/profile")
+                            view=|| view! {
+                                <ProtectedRoute>
+                                    <ProfilePage />
+                                </ProtectedRoute>
+                            }
+                        />
                         <Route path=path!("/*any") view=NotFoundPage />
                     </Routes>
                 </main>
@@ -74,21 +82,14 @@ fn App() -> impl IntoView {
 }
 
 #[component]
-fn AppHeader(theme_store: store::theme_store::ThemeStore) -> impl IntoView {
-    let toggle_theme = move |_| {
-        theme_store.toggle();
-    };
+fn AppHeader() -> impl IntoView {
+    use components::theme_switcher::ThemeSwitcher;
 
     view! {
         <header class="app-header">
             <a href="/dashboard" class="app-logo">"todoManager"</a>
             <div class="header-actions">
-                <button class="theme-toggle" on:click=toggle_theme>
-                    {move || match theme_store.theme.get() {
-                        store::theme_store::Theme::Light => "☀️",
-                        store::theme_store::Theme::Dark => "🌙",
-                    }}
-                </button>
+                <ThemeSwitcher />
             </div>
         </header>
     }

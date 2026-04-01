@@ -664,6 +664,131 @@ a:hover {
   text-decoration: underline;
 }
 
+/* Password Input */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .input-wrapper {
+  flex: 1;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+.password-toggle:hover {
+  color: var(--text-primary);
+}
+
+/* Form Options */
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0;
+  font-size: 0.875rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.checkbox-label:hover {
+  color: var(--text-primary);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.forgot-link {
+  color: var(--accent-primary);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+/* Password Strength */
+.password-strength {
+  margin-top: 8px;
+}
+
+.strength-bar {
+  height: 4px;
+  background-color: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.strength-fill {
+  height: 100%;
+  transition: width var(--transition-normal), background-color var(--transition-normal);
+  border-radius: 2px;
+}
+
+.strength-fill.weak {
+  width: 25%;
+  background-color: var(--danger);
+}
+
+.strength-fill.fair {
+  width: 50%;
+  background-color: var(--warning);
+}
+
+.strength-fill.good {
+  width: 75%;
+  background-color: #f59f00;
+}
+
+.strength-fill.strong {
+  width: 100%;
+  background-color: var(--success);
+}
+
+.strength-text {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+/* Register Form */
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.password-confirm-group {
+  position: relative;
+}
+
+.password-match-error {
+  font-size: 0.75rem;
+  color: var(--danger);
+  margin-top: 4px;
+}
+
 /* Dashboard */
 .dashboard {
   padding: 24px 0;
@@ -839,6 +964,125 @@ a:hover {
   color: var(--text-primary);
 }
 
+/* Theme Transitions */
+*, *::before, *::after {
+  transition: background-color 0.25s ease,
+              border-color 0.25s ease,
+              color 0.25s ease,
+              box-shadow 0.25s ease;
+}
+
+/* Exclude transition for elements that shouldn't animate */
+input, textarea, select, button, .no-transition {
+  transition: background-color 0.15s ease,
+              border-color 0.15s ease,
+              color 0.15s ease,
+              box-shadow 0.15s ease,
+              transform 0.15s ease,
+              opacity 0.15s ease;
+}
+
+/* Theme Switcher */
+.theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  background: none;
+  outline: none;
+}
+
+.theme-switcher-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+.theme-switcher-icon:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.theme-switcher-icon-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.theme-icon-sm {
+  width: 16px;
+  height: 16px;
+}
+
+.theme-icon-xs {
+  width: 14px;
+  height: 14px;
+}
+
+.theme-switcher-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.theme-switcher-button {
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--border-primary);
+  transition: all var(--transition-fast);
+}
+.theme-switcher-button:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-focus);
+}
+
+.theme-switcher-segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  gap: 2px;
+}
+
+.theme-segment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+.theme-segment:hover {
+  color: var(--text-primary);
+}
+.theme-segment-active {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Theme Options (Settings Page) */
 .theme-options {
   display: flex;
   gap: 12px;
@@ -930,4 +1174,45 @@ a:hover {
   color: var(--text-tertiary);
   text-align: center;
   padding: 16px 0;
+}
+
+/* Profile Page */
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-secondary);
+}
+
+.profile-link-btn {
+  color: var(--accent-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+.profile-link-btn:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+.profile-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.profile-password-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-secondary);
+}
+
+.auth-success {
+  padding: 10px 12px;
+  background-color: var(--success-subtle);
+  color: var(--success);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
 }
