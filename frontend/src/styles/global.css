@@ -1512,3 +1512,148 @@ input, textarea, select, button, .no-transition {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
+
+/* Task Form */
+.task-description-input {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+/* Tag Input */
+.tag-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background-color: var(--accent-subtle);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent-primary);
+}
+
+.tag-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.tag-remove:hover {
+  color: var(--danger);
+}
+
+.tag-input-wrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.tag-input {
+  flex: 1;
+}
+
+/* Priority Selector */
+.priority-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.priority-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.priority-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.priority-btn.selected {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-focus);
+}
+
+.priority-low-btn.selected {
+  background-color: var(--bg-tertiary);
+  border-color: var(--text-tertiary);
+}
+
+.priority-medium-btn.selected {
+  background-color: var(--accent-subtle);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.priority-high-btn.selected {
+  background-color: var(--warning-subtle);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.priority-urgent-btn.selected {
+  background-color: var(--danger-subtle);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* Date Picker */
+.date-picker-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.date-input {
+  width: 100%;
+}
+
+.date-clear {
+  position: absolute;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.date-clear:hover {
+  color: var(--text-primary);
+}
+
+.hidden {
+  display: none !important;
+}
