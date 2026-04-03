@@ -268,16 +268,16 @@ db/db_task.rs             (数据库操作)
 - [完成] **分页组件** - 分页加载
 
 #### 7.2 任务创建/编辑
-- [ ] **任务表单** - `frontend/src/components/task_form.rs`
-- [ ] **关键词标签输入** - 标签组件
-- [ ] **截止时间选择器** - 日期选择器
-- [ ] **优先级选择器** - 优先级组件
+- [完成] **任务表单** - `frontend/src/components/task_form.rs`
+- [完成] **关键词标签输入** - 标签组件
+- [完成] **截止时间选择器** - 日期选择器
+- [完成] **优先级选择器** - 优先级组件
 
 #### 7.3 任务详情
-- [ ] **任务详情页面** - `frontend/src/pages/task_detail.rs`
-- [ ] **任务状态切换** - 状态按钮
-- [ ] **任务进度显示** - 进度条
-- [ ] **任务历史记录** - 时间线组件
+- [完成] **任务详情页面** - `frontend/src/pages/task_detail.rs`
+- [完成] **任务状态切换** - 状态按钮
+- [完成] **任务进度显示** - 进度条
+- [完成] **任务历史记录** - 时间线组件（占位符）
 
 ---
 
@@ -297,19 +297,19 @@ db/db_team.rs             (数据库操作)
 ```
 
 #### 8.2 团队 API 端点
-- [ ] **创建团队** - `POST /api/teams`
-- [ ] **获取团队详情** - `GET /api/teams/{team_id}`
-- [ ] **获取团队列表** - `GET /api/teams`
-- [ ] **更新团队** - `PUT /api/teams/{team_id}`
-- [ ] **删除团队** - `DELETE /api/teams/{team_id}`
-- [ ] **添加成员** - `POST /api/teams/{team_id}/members`
-- [ ] **移除成员** - `DELETE /api/teams/{team_id}/members/{user_id}`
-- [ ] **更新成员角色** - `PUT /api/teams/{team_id}/members/{user_id}/role`
-- [ ] **获取成员列表** - `GET /api/teams/{team_id}/members`
-- [ ] **创建邀请** - `POST /api/teams/{team_id}/invites`
-- [ ] **申请加入** - `POST /api/teams/{team_id}/join-requests`
-- [ ] **处理申请** - `PUT /api/teams/{team_id}/join-requests/{request_id}`
-- [ ] **获取团队日志** - `GET /api/teams/{team_id}/logs`
+- [完成] **创建团队** - `POST /api/teams`
+- [完成] **获取团队详情** - `GET /api/teams/{team_id}`
+- [完成] **获取团队列表** - `GET /api/teams`
+- [完成] **更新团队** - `PUT /api/teams/{team_id}`
+- [完成] **删除团队** - `DELETE /api/teams/{team_id}`
+- [完成] **添加成员** - `POST /api/teams/{team_id}/members`
+- [完成] **移除成员** - `DELETE /api/teams/{team_id}/members/{user_id}`
+- [完成] **更新成员角色** - `PUT /api/teams/{team_id}/members/{user_id}/role`
+- [完成] **获取成员列表** - `GET /api/teams/{team_id}/members`
+- [完成] **创建邀请** - `POST /api/teams/{team_id}/invites`
+- [完成] **申请加入** - `POST /api/teams/{team_id}/join-requests`
+- [完成] **处理申请** - `PUT /api/teams/{team_id}/join-requests/{request_id}`
+- [完成] **获取团队日志** - `GET /api/teams/{team_id}/logs`
 
 ---
 
@@ -468,9 +468,9 @@ db/db_team.rs             (数据库操作)
 - [x] 第三阶段：用户 API (8/8)
 - [x] 第四阶段：前端基础 (0/16)
 - [x] 第五阶段：前端用户界面 (0/7)
-- [ ] 第六阶段：任务 API (0/8)
-- [ ] 第七阶段：任务前端 (0/13)
-- [ ] 第八阶段：团队 API (0/14)
+- [x] 第六阶段：任务 API (8/8)
+- [x] 第七阶段：任务前端 (13/13)
+- [x] 第八阶段：团队 API (13/13)
 - [ ] 第九阶段：团队前端 (0/9)
 - [ ] 第十阶段：Dashboard (0/8)
 - [ ] 第十一阶段：子任务 (0/8)
@@ -481,7 +481,7 @@ db/db_team.rs             (数据库操作)
 
 ### 总体进度
 - **总任务数**: 123
-- **已完成**: 22
+- **已完成**: 56
 - **进行中**: 0
 - **待完成**: 101
 - **完成率**: 18%

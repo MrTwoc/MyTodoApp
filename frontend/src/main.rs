@@ -14,6 +14,7 @@ use pages::profile::ProfilePage;
 use pages::protected_route::ProtectedRoute;
 use pages::register::RegisterPage;
 use pages::settings::SettingsPage;
+use pages::task_detail::TaskDetailPage;
 use pages::tasks::TasksPage;
 use pages::teams::TeamsPage;
 use store::{create_stores, provide_stores};
@@ -46,6 +47,14 @@ fn App() -> impl IntoView {
                             view=|| view! {
                                 <ProtectedRoute>
                                     <TasksPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path=path!("/tasks/:task_id")
+                            view=|| view! {
+                                <ProtectedRoute>
+                                    <TaskDetailPage />
                                 </ProtectedRoute>
                             }
                         />

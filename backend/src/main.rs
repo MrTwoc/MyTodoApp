@@ -16,7 +16,7 @@ mod handlers;
 mod routes;
 mod services;
 
-use routes::{user_routes, task_routes};
+use routes::{user_routes, task_routes, team_routes};
 
 #[endpoint]
 async fn hello(name: QueryParam<String, false>) -> String {
@@ -40,7 +40,8 @@ async fn main() {
     let router = Router::new()
         .push(Router::with_path("hello").get(hello))
         .push(user_routes::user_router())
-        .push(task_routes::task_router());
+        .push(task_routes::task_router())
+        .push(team_routes::team_router());
 
     let doc = OpenApi::new("test api", "0.0.1").merge_router(&router);
 
