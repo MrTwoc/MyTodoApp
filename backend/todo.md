@@ -274,10 +274,10 @@ db/db_task.rs             (数据库操作)
 - [完成] **优先级选择器** - 优先级组件
 
 #### 7.3 任务详情
-- [ ] **任务详情页面** - `frontend/src/pages/task_detail.rs`
-- [ ] **任务状态切换** - 状态按钮
-- [ ] **任务进度显示** - 进度条
-- [ ] **任务历史记录** - 时间线组件
+- [完成] **任务详情页面** - `frontend/src/pages/task_detail.rs`
+- [完成] **任务状态切换** - 状态按钮
+- [完成] **任务进度显示** - 进度条
+- [完成] **任务历史记录** - 时间线组件（占位符）
 
 ---
 
@@ -297,65 +297,65 @@ db/db_team.rs             (数据库操作)
 ```
 
 #### 8.2 团队 API 端点
-- [ ] **创建团队** - `POST /api/teams`
-- [ ] **获取团队详情** - `GET /api/teams/{team_id}`
-- [ ] **获取团队列表** - `GET /api/teams`
-- [ ] **更新团队** - `PUT /api/teams/{team_id}`
-- [ ] **删除团队** - `DELETE /api/teams/{team_id}`
-- [ ] **添加成员** - `POST /api/teams/{team_id}/members`
-- [ ] **移除成员** - `DELETE /api/teams/{team_id}/members/{user_id}`
-- [ ] **更新成员角色** - `PUT /api/teams/{team_id}/members/{user_id}/role`
-- [ ] **获取成员列表** - `GET /api/teams/{team_id}/members`
-- [ ] **创建邀请** - `POST /api/teams/{team_id}/invites`
-- [ ] **申请加入** - `POST /api/teams/{team_id}/join-requests`
-- [ ] **处理申请** - `PUT /api/teams/{team_id}/join-requests/{request_id}`
-- [ ] **获取团队日志** - `GET /api/teams/{team_id}/logs`
+- [完成] **创建团队** - `POST /api/teams`
+- [完成] **获取团队详情** - `GET /api/teams/{team_id}`
+- [完成] **获取团队列表** - `GET /api/teams`
+- [完成] **更新团队** - `PUT /api/teams/{team_id}`
+- [完成] **删除团队** - `DELETE /api/teams/{team_id}`
+- [完成] **添加成员** - `POST /api/teams/{team_id}/members`
+- [完成] **移除成员** - `DELETE /api/teams/{team_id}/members/{user_id}`
+- [完成] **更新成员角色** - `PUT /api/teams/{team_id}/members/{user_id}/role`
+- [完成] **获取成员列表** - `GET /api/teams/{team_id}/members`
+- [完成] **创建邀请** - `POST /api/teams/{team_id}/invites`
+- [完成] **申请加入** - `POST /api/teams/{team_id}/join-requests`
+- [完成] **处理申请** - `PUT /api/teams/{team_id}/join-requests/{request_id}`
+- [完成] **获取团队日志** - `GET /api/teams/{team_id}/logs`
 
 ---
 
 ### 第九阶段：团队前端（依赖第八阶段） [无单元测试]
 
 #### 9.1 团队列表
-- [ ] **团队列表页面** - `frontend/src/pages/teams.rs`
-- [ ] **团队卡片组件** - `frontend/src/components/team_card.rs`
-- [ ] **创建团队按钮** - 模态框
+- [完成] **团队列表页面** - `frontend/src/pages/teams.rs`
+- [完成] **团队卡片组件** - `frontend/src/components/team_card.rs`
+- [完成] **创建团队按钮** - 模态框
 
 #### 9.2 团队详情
-- [ ] **团队详情页面** - `frontend/src/pages/team_detail.rs`
-- [ ] **团队信息展示**
-- [ ] **成员列表** - 成员卡片
-- [ ] **成员管理** - 添加/移除/角色变更
+- [完成] **团队详情页面** - `frontend/src/pages/team_detail.rs`
+- [完成] **团队信息展示**
+- [完成] **成员列表** - 成员卡片
+- [完成] **成员管理** - 添加/移除/角色变更
 
 #### 9.3 团队任务
-- [ ] **团队任务列表** - 团队任务卡片
-- [ ] **任务分配** - 分配给成员
-- [ ] **任务进度** - 团队任务统计
+- [完成] **团队任务列表** - 团队任务卡片
+- [ ] **任务分配** - 分配给成员（待补充）
+- [完成] **任务进度** - 团队任务统计
 
 ---
 
 ### 第十阶段：Dashboard（依赖第七、九阶段） [无单元测试]
 
 #### 10.1 Dashboard API
-- [ ] **概览数据** - `GET /api/dashboard/overview`
-- [ ] **个人任务统计** - `GET /api/dashboard/tasks`
-- [ ] **团队任务统计** - `GET /api/dashboard/teams`
+- [完成] **概览数据** - `GET /api/dashboard/overview`
+- [完成] **个人任务统计** - `GET /api/dashboard/tasks`
+- [完成] **团队任务统计** - `GET /api/dashboard/teams`
 
 #### 10.2 Dashboard 前端
-- [ ] **Dashboard 页面** - `frontend/src/pages/dashboard.rs`
-- [ ] **个人任务看板** - 统计卡片
-- [ ] **团队任务看板** - 统计图表
-- [ ] **最近任务** - 任务列表
-- [ ] **数据可视化** - 图表组件
+- [完成] **Dashboard 页面** - `frontend/src/pages/dashboard.rs`
+- [完成] **个人任务看板** - 统计卡片
+- [完成] **团队任务看板** - 统计卡片
+- [完成] **最近任务** - 任务列表
+- [ ] **数据可视化** - 图表组件（当前为统计卡片，暂无 SVG/Canvas 图表）
 
 ---
 
 ### 第十一阶段：子任务（依赖第六阶段） [无单元测试]
 
 #### 11.1 子任务 API
-- [ ] **创建子任务** - `POST /api/tasks/{task_id}/subtasks`
-- [ ] **获取子任务列表** - `GET /api/tasks/{task_id}/subtasks`
-- [ ] **更新子任务** - `PUT /api/tasks/{task_id}/subtasks/{subtask_id}`
-- [ ] **删除子任务** - `DELETE /api/tasks/{task_id}/subtasks/{subtask_id}`
+- [完成] **创建子任务** - `POST /api/tasks/{task_id}/subtasks`
+- [完成] **获取子任务列表** - `GET /api/tasks/{task_id}/subtasks`
+- [完成] **更新子任务** - `PUT /api/tasks/{task_id}/subtasks/{subtask_id}`
+- [完成] **删除子任务** - `DELETE /api/tasks/{task_id}/subtasks/{subtask_id}`
 
 #### 11.2 子任务前端
 - [ ] **子任务列表组件**
@@ -368,11 +368,11 @@ db/db_team.rs             (数据库操作)
 ### 第十二阶段：子团队（依赖第八阶段） [无单元测试]
 
 #### 12.1 子团队 API
-- [ ] **创建子团队** - `POST /api/teams/{team_id}/subteams`
-- [ ] **获取子团队列表** - `GET /api/teams/{team_id}/subteams`
-- [ ] **获取子团队详情** - `GET /api/subteams/{sub_team_id}`
-- [ ] **更新子团队** - `PUT /api/subteams/{sub_team_id}`
-- [ ] **删除子团队** - `DELETE /api/subteams/{sub_team_id}`
+- [完成] **创建子团队** - `POST /api/teams/{team_id}/subteams`
+- [完成] **获取子团队列表** - `GET /api/teams/{team_id}/subteams`
+- [完成] **获取子团队详情** - `GET /api/subteams/{sub_team_id}`
+- [完成] **更新子团队** - `PUT /api/subteams/{sub_team_id}`
+- [完成] **删除子团队** - `DELETE /api/subteams/{sub_team_id}`
 
 #### 12.2 子团队前端
 - [ ] **子团队列表**
@@ -384,16 +384,16 @@ db/db_team.rs             (数据库操作)
 ### 第十三阶段：实时通信（可选，后期优化） [无单元测试]
 
 #### 13.1 WebSocket 后端
-- [ ] **WebSocket 服务器**
-- [ ] **连接管理**
-- [ ] **消息推送**
-- [ ] **心跳检测**
+- [完成] **WebSocket 服务器** - `ws_routes.rs` + `ws.rs`
+- [完成] **连接管理** - 连接/断开处理
+- [完成] **消息推送** - broadcast channel
+- [完成] **心跳检测** - 30s ping 保活
 
 #### 13.2 WebSocket 前端
-- [ ] **WebSocket 客户端**
-- [ ] **连接管理**
-- [ ] **消息接收**
-- [ ] **实时通知**
+- [完成] **WebSocket 客户端** - `frontend/src/api/ws.rs`
+- [完成] **连接管理** - WsState (Connecting/Open/Closed/Error)
+- [完成] **消息接收** - MessageEvent + JSON 解析
+- [ ] **实时通知** - 通知 UI 组件（待接入）
 
 ---
 
@@ -401,10 +401,10 @@ db/db_team.rs             (数据库操作)
 
 #### 14.1 离线存储前端 [个人离线模式]
 离线模式下，只显示用户的个人任务，与在线模式中的任务数据完全隔离，不干扰团队数据。
-- [ ] **IndexedDB 封装** - 创建本地数据库
-- [ ] **本地数据存储** - 存储个人任务数据
-- [ ] **离线任务操作** - 创建/编辑/删除个人任务
-- [ ] **离线状态显示** - 显示当前是否为离线状态
+- [完成] **IndexedDB 封装** - 创建本地数据库
+- [完成] **本地数据存储** - 存储个人任务数据
+- [完成] **离线任务操作** - 创建/编辑/删除个人任务
+- [完成] **离线状态显示** - 显示当前是否为离线状态
 - [ ] **上线同步（可选）** - 联网后同步到服务器
 
 ---
@@ -468,23 +468,23 @@ db/db_team.rs             (数据库操作)
 - [x] 第三阶段：用户 API (8/8)
 - [x] 第四阶段：前端基础 (0/16)
 - [x] 第五阶段：前端用户界面 (0/7)
-- [ ] 第六阶段：任务 API (0/8)
-- [ ] 第七阶段：任务前端 (0/13)
-- [ ] 第八阶段：团队 API (0/14)
-- [ ] 第九阶段：团队前端 (0/9)
-- [ ] 第十阶段：Dashboard (0/8)
-- [ ] 第十一阶段：子任务 (0/8)
-- [ ] 第十二阶段：子团队 (0/8)
-- [ ] 第十三阶段：实时通信 (0/8)
-- [ ] 第十四阶段：离线存储 (0/4)
+- [x] 第六阶段：任务 API (8/8)
+- [x] 第七阶段：任务前端 (13/13)
+- [x] 第八阶段：团队 API (13/13)
+- [ ] 第九阶段：团队前端 (8/9)
+- [ ] 第十阶段：Dashboard (7/8)
+- [ ] 第十一阶段：子任务 (4/8)
+- [ ] 第十二阶段：子团队 (5/8)
+- [ ] 第十三阶段：实时通信 (7/8)
+- [x] 第十四阶段：离线存储 (4/4)
 - [ ] 第十五阶段：测试和优化 (0/8)
 
 ### 总体进度
 - **总任务数**: 123
-- **已完成**: 22
-- **进行中**: 0
-- **待完成**: 101
-- **完成率**: 18%
+- **已完成**: 68
+- **进行中**: 1
+- **待完成**: 54
+- **完成率**: 55%
 
 ---
 

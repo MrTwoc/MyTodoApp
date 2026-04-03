@@ -8,7 +8,7 @@ pub fn Modal(
     #[prop(default = MaybeSignal::Static(true))] open: MaybeSignal<bool>,
     #[prop(default = true)] close_on_overlay: bool,
     #[prop(default = true)] show_close_button: bool,
-    #[prop(optional)] on_close: Option<Callback<()>>,
+    #[prop(default = Callback::new(|_| ()))] on_close: Callback<(ev::MouseEvent,)>,
     children: ChildrenFn,
 ) -> impl IntoView {
     let close_on_overlay_click = move |ev: ev::MouseEvent| {
@@ -16,19 +16,15 @@ pub fn Modal(
             if let Some(target_el) = ev.target() {
                 if let Some(el) = target_el.dyn_ref::<web_sys::Element>() {
                     if el.class_list().contains("modal-overlay") {
-                        if let Some(cb) = on_close {
-                            cb.run(());
-                        }
+                        on_close.run((ev,));
                     }
                 }
             }
         }
     };
 
-    let close_handler = move || {
-        if let Some(cb) = on_close {
-            cb.run(());
-        }
+    let close_handler = move |ev: ev::MouseEvent| {
+        on_close.run((ev,));
     };
 
     view! {
@@ -43,9 +39,9 @@ pub fn Modal(
                                 } else {
                                     ().into_any()
                                 }}
-                                {if show_close_button {
+                            {if show_close_button {
                                     view! {
-                                        <button class="modal-close" on:click=move |_| close_handler() aria-label="Close">
+                                        <button class="modal-close" on:click=close_handler aria-label="Close">
                                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                                             </svg>

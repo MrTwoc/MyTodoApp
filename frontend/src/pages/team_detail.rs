@@ -1,0 +1,686 @@
+use crate::api::ApiClient;
+use crate::api::task::{TaskListResponse, list_tasks};
+use crate::api::team::{
+    AddMemberRequest, UpdateRoleRequest, add_member, get_members, get_team, remove_member,
+    update_member_role,
+};
+use crate::components::button::{Button, ButtonSize, ButtonVariant};
+use crate::components::card::{Card, CardFooter};
+use crate::components::form::{Form, FormActions, FormGroup};
+use crate::components::input::Input;
+use crate::components::loading::{Loading, LoadingVariant};
+use crate::components::search::SearchInput;
+use crate::store::task_store::{Task, TaskStatus};
+use crate::store::team_store::{TeamMember, TeamStore};
+use crate::store::{use_api_client, use_team_store};
+use leptos::ev;
+use leptos::prelude::*;
+use leptos_router::hooks::{use_navigate, use_params_map};
+
+fn format_timestamp(ts: i64) -> String {
+    let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_f64((ts * 1000) as f64));
+    let year = date.get_full_year();
+    let month = date.get_month() + 1;
+    let day = date.get_date();
+    format!("{:04}-{:02}-{:02}", year, month, day)
+}
+
+fn status_text(status: &TaskStatus) -> &'static str {
+    match status {
+        TaskStatus::Active => "Active",
+        TaskStatus::Completed => "Completed",
+        TaskStatus::Paused => "Paused",
+    }
+}
+
+fn load_team_detail_data(
+    team_id: u64,
+    client: ApiClient,
+    team_store: TeamStore,
+    set_page_error: WriteSignal<Option<String>>,
+    set_member_action_error: WriteSignal<Option<String>>,
+    set_tasks_error: WriteSignal<Option<String>>,
+    set_tasks_loading: WriteSignal<bool>,
+    set_team_tasks: WriteSignal<Vec<Task>>,
+) {
+    if team_id == 0 {
+        set_page_error.set(Some("Invalid team id".to_string()));
+        return;
+    }
+
+    set_page_error.set(None);
+    set_member_action_error.set(None);
+    set_tasks_loading.set(true);
+    set_tasks_error.set(None);
+
+    let client = client.clone();
+    let team_store = team_store.clone();
+
+    let set_page_error = set_page_error;
+    let set_member_action_error = set_member_action_error;
+    let set_tasks_error = set_tasks_error;
+    let set_tasks_loading = set_tasks_loading;
+    let set_team_tasks = set_team_tasks;
+
+    wasm_bindgen_futures::spawn_local(async move {
+        match get_team(&client, team_id).await {
+            Ok(team) => {
+                team_store.upsert_team(team);
+                team_store.set_active_team(Some(team_id));
+            }
+            Err(e) => {
+                set_page_error.set(Some(e.message));
+                return;
+            }
+        }
+
+        match get_members(&client, team_id).await {
+            Ok(members) => {
+                team_store.set_team_members(team_id, members);
+            }
+            Err(e) => {
+                set_member_action_error.set(Some(e.message));
+            }
+        }
+
+        match list_tasks(&client, 1, 50, None, Some(team_id)).await {
+            Ok(TaskListResponse { tasks, .. }) => {
+                set_team_tasks.set(tasks);
+            }
+            Err(e) => {
+                set_tasks_error.set(Some(e.message));
+            }
+        }
+
+        set_tasks_loading.set(false);
+    });
+}
+
+#[component]
+fn TeamTaskRow(task: Task) -> impl IntoView {
+    let navigate = use_navigate();
+    let task_id = task.task_id;
+    let status = status_text(&task.task_status).to_string();
+    let name = task.task_name.clone();
+    let description = task
+        .task_description
+        .clone()
+        .unwrap_or_else(|| "No description".to_string());
+
+    let on_open = Callback::from(move |_| {
+        let path = format!("/tasks/{}", task_id);
+        navigate(&path, Default::default());
+    });
+
+    view! {
+        <Card title=name subtitle=status>
+            <p class="team-detail-desc">
+                {description}
+            </p>
+            <CardFooter>
+                <Button
+                    variant=ButtonVariant::Ghost
+                    size=ButtonSize::Sm
+                    on_click=on_open
+                >
+                    "Open"
+                </Button>
+            </CardFooter>
+        </Card>
+    }
+}
+
+#[component]
+fn TeamMemberRow(
+    member: TeamMember,
+    team_id: u64,
+    set_member_action_error: WriteSignal<Option<String>>,
+    member_action_loading: ReadSignal<bool>,
+    set_member_action_loading: WriteSignal<bool>,
+) -> impl IntoView {
+    let client = use_api_client();
+    let team_store = use_team_store();
+    let user_id = member.user_id;
+    let role = member.level;
+    let (draft_role, set_draft_role) = signal(role.to_string());
+
+    let on_save = {
+        let client_for_update = client.clone();
+        let team_store = team_store.clone();
+        let set_member_action_error = set_member_action_error;
+        let set_member_action_loading = set_member_action_loading;
+
+        Callback::from(move |_| {
+            let role_text = draft_role.get();
+            let new_level = match role_text.parse::<u8>() {
+                Ok(v) => v,
+                Err(_) => {
+                    set_member_action_error.set(Some("Invalid role level".to_string()));
+                    return;
+                }
+            };
+            let req = UpdateRoleRequest { level: new_level };
+            let team_store = team_store.clone();
+            let client = client_for_update.clone();
+            let set_member_action_error = set_member_action_error;
+            let set_member_action_loading = set_member_action_loading;
+
+            set_member_action_loading.set(true);
+            set_member_action_error.set(None);
+
+            wasm_bindgen_futures::spawn_local(async move {
+                match update_member_role(&client, team_id, user_id, &req).await {
+                    Ok(()) => match get_members(&client, team_id).await {
+                        Ok(members) => {
+                            team_store.set_team_members(team_id, members);
+                            set_member_action_loading.set(false);
+                        }
+                        Err(e) => {
+                            set_member_action_error.set(Some(e.message));
+                            set_member_action_loading.set(false);
+                        }
+                    },
+                    Err(e) => {
+                        set_member_action_error.set(Some(e.message));
+                        set_member_action_loading.set(false);
+                    }
+                }
+            });
+        })
+    };
+
+    let on_remove = {
+        let client_for_remove = client;
+        let team_store = team_store;
+        let set_member_action_error = set_member_action_error;
+        let set_member_action_loading = set_member_action_loading;
+
+        Callback::from(move |_| {
+            let client = client_for_remove.clone();
+            let team_store = team_store.clone();
+            let set_member_action_error = set_member_action_error;
+            let set_member_action_loading = set_member_action_loading;
+
+            set_member_action_loading.set(true);
+            set_member_action_error.set(None);
+
+            wasm_bindgen_futures::spawn_local(async move {
+                match remove_member(&client, team_id, user_id).await {
+                    Ok(()) => match get_members(&client, team_id).await {
+                        Ok(members) => {
+                            team_store.set_team_members(team_id, members);
+                            set_member_action_loading.set(false);
+                        }
+                        Err(e) => {
+                            set_member_action_error.set(Some(e.message));
+                            set_member_action_loading.set(false);
+                        }
+                    },
+                    Err(e) => {
+                        set_member_action_error.set(Some(e.message));
+                        set_member_action_loading.set(false);
+                    }
+                }
+            });
+        })
+    };
+
+    view! {
+        <div class="team-member-item">
+            <div class="team-member-meta">
+                <span class="team-member-id">{user_id}</span>
+                <span class="team-member-role">{format!("Level {}", role)}</span>
+            </div>
+            <div class="team-member-actions">
+                <Input
+                    value=draft_role.get()
+                    on_input=Callback::from(move |v: String| {
+                        set_draft_role.set(v);
+                    })
+                />
+                <Button
+                    variant=ButtonVariant::Primary
+                    size=ButtonSize::Sm
+                    disabled=member_action_loading.get()
+                    on_click=on_save
+                >
+                    "Save"
+                </Button>
+                <Button
+                    variant=ButtonVariant::Danger
+                    size=ButtonSize::Sm
+                    disabled=member_action_loading.get()
+                    on_click=on_remove
+                >
+                    "Remove"
+                </Button>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn TeamDetailPage() -> impl IntoView {
+    let params = use_params_map();
+    let team_id = params
+        .get()
+        .get("team_id")
+        .and_then(|raw| raw.parse::<u64>().ok())
+        .unwrap_or(0);
+
+    let team_store = use_team_store();
+    let client = use_api_client();
+    let navigate = use_navigate();
+
+    let (loaded, set_loaded) = signal(false);
+    let (page_error, set_page_error) = signal(Option::<String>::None);
+
+    let (team_tasks, set_team_tasks) = signal(Vec::<Task>::new());
+    let (tasks_loading, set_tasks_loading) = signal(false);
+    let (tasks_error, set_tasks_error) = signal(Option::<String>::None);
+
+    let (member_search_query, set_member_search_query) = signal(String::new());
+    let (member_action_error, set_member_action_error) = signal(Option::<String>::None);
+    let (member_action_loading, set_member_action_loading) = signal(false);
+    let (new_member_user_id, set_new_member_user_id) = signal(String::new());
+    let (new_member_level, set_new_member_level) = signal(String::new());
+
+    let on_back = {
+        let n = navigate.clone();
+        move |_| n("/teams", Default::default())
+    };
+
+    let current_team = {
+        let team_store = team_store.clone();
+        move || {
+            team_store
+                .state
+                .get()
+                .teams
+                .into_iter()
+                .find(|team| team.team_id == team_id)
+        }
+    };
+
+    let total_members = move || current_team().map_or(0, |team| team.team_members.len());
+
+    let current_members = move || {
+        current_team()
+            .map(|team| team.team_members)
+            .unwrap_or_default()
+    };
+
+    let filtered_members = move || {
+        let q = member_search_query.get().to_lowercase();
+        if q.is_empty() {
+            current_members()
+        } else {
+            current_members()
+                .into_iter()
+                .filter(|member| member.user_id.to_string().contains(&q))
+                .collect::<Vec<_>>()
+        }
+    };
+
+    let tasks_total = move || team_tasks.get().len();
+    let tasks_active = move || {
+        team_tasks
+            .get()
+            .iter()
+            .filter(|task| matches!(task.task_status, TaskStatus::Active))
+            .count()
+    };
+    let tasks_done = move || {
+        team_tasks
+            .get()
+            .iter()
+            .filter(|task| matches!(task.task_status, TaskStatus::Completed))
+            .count()
+    };
+    let tasks_paused = move || {
+        team_tasks
+            .get()
+            .iter()
+            .filter(|task| matches!(task.task_status, TaskStatus::Paused))
+            .count()
+    };
+
+    let effect_client = client.clone();
+    let effect_store = team_store.clone();
+    let effect_page_error = set_page_error;
+    let effect_member_error = set_member_action_error;
+    let effect_tasks_error = set_tasks_error;
+    let effect_tasks_loading = set_tasks_loading;
+    let effect_team_tasks = set_team_tasks;
+    Effect::new(move |_| {
+        if !loaded.get() {
+            set_loaded.set(true);
+            load_team_detail_data(
+                team_id,
+                effect_client.clone(),
+                effect_store.clone(),
+                effect_page_error,
+                effect_member_error,
+                effect_tasks_error,
+                effect_tasks_loading,
+                effect_team_tasks,
+            );
+        }
+    });
+
+    let on_refresh = Callback::from({
+        let client = client.clone();
+        let team_store = team_store.clone();
+        let set_page_error = set_page_error;
+        let set_member_action_error = set_member_action_error;
+        let set_tasks_error = set_tasks_error;
+        let set_tasks_loading = set_tasks_loading;
+        let set_team_tasks = set_team_tasks;
+        move |_| {
+            load_team_detail_data(
+                team_id,
+                client.clone(),
+                team_store.clone(),
+                set_page_error,
+                set_member_action_error,
+                set_tasks_error,
+                set_tasks_loading,
+                set_team_tasks,
+            );
+        }
+    });
+
+    let on_add_member = {
+        let client = client.clone();
+        let set_member_action_error = set_member_action_error;
+        let set_member_action_loading = set_member_action_loading;
+        let set_new_member_user_id = set_new_member_user_id;
+        let set_new_member_level = set_new_member_level;
+        Callback::from(move |_: ev::SubmitEvent| {
+            let user_id_text = new_member_user_id.get();
+            let level_text = new_member_level.get();
+
+            if user_id_text.trim().is_empty() {
+                set_member_action_error.set(Some("Member user id is required".to_string()));
+                return;
+            }
+            if level_text.trim().is_empty() {
+                set_member_action_error.set(Some("Role level is required".to_string()));
+                return;
+            }
+
+            let user_id = match user_id_text.parse::<u64>() {
+                Ok(v) => v,
+                Err(_) => {
+                    set_member_action_error.set(Some("Invalid user id".to_string()));
+                    return;
+                }
+            };
+
+            let level = match level_text.parse::<u8>() {
+                Ok(v) => v,
+                Err(_) => {
+                    set_member_action_error.set(Some("Role level should be 0-255".to_string()));
+                    return;
+                }
+            };
+
+            let req = AddMemberRequest { user_id, level };
+            let team_id = team_id;
+            let client = client.clone();
+            let team_store = team_store.clone();
+            let set_member_action_error = set_member_action_error;
+            let set_member_action_loading = set_member_action_loading;
+            let set_new_member_user_id = set_new_member_user_id;
+            let set_new_member_level = set_new_member_level;
+
+            set_member_action_loading.set(true);
+            set_member_action_error.set(None);
+
+            wasm_bindgen_futures::spawn_local(async move {
+                match add_member(&client, team_id, &req).await {
+                    Ok(()) => {
+                        set_new_member_user_id.set(String::new());
+                        set_new_member_level.set(String::new());
+                        match get_members(&client, team_id).await {
+                            Ok(members) => {
+                                team_store.set_team_members(team_id, members);
+                            }
+                            Err(e) => {
+                                set_member_action_error.set(Some(e.message));
+                            }
+                        }
+                        set_member_action_loading.set(false);
+                    }
+                    Err(e) => {
+                        set_member_action_error.set(Some(e.message));
+                        set_member_action_loading.set(false);
+                    }
+                }
+            });
+        })
+    };
+
+    view! {
+        <div class="page">
+            <header class="page-header">
+                <div>
+                    <button class="back-btn" on:click=on_back>"← Back"</button>
+                    <h1 class="page-title">
+                        {move || {
+                            current_team()
+                                .map(|team| team.team_name)
+                                .unwrap_or_else(|| "Team".to_string())
+                        }}
+                    </h1>
+                </div>
+                <Button
+                    variant=ButtonVariant::Secondary
+                    size=ButtonSize::Sm
+                    on_click=on_refresh
+                >
+                    "Refresh"
+                </Button>
+            </header>
+
+            <Show
+                when=move || page_error.get().is_none()
+                fallback=move || {
+                    view! {
+                        <Card
+                            title="Team detail failed".to_string()
+                            subtitle="Unable to load team".to_string()
+                        >
+                            <p class="auth-error">
+                                {page_error.get().unwrap_or_else(|| "Unknown error".to_string())}
+                            </p>
+                            <FormActions>
+                                <Button
+                                    variant=ButtonVariant::Primary
+                                    size=ButtonSize::Sm
+                                    on_click=on_refresh
+                                >
+                                    "Retry"
+                                </Button>
+                            </FormActions>
+                        </Card>
+                    }
+                }
+            >
+                <div class="team-detail-grid">
+                    {move || {
+                        current_team().map(|team| {
+                            let created = format_timestamp(team.team_create_time);
+                            let visibility = format!("{:?}", team.team_settings.team_visibility);
+                            let description = team
+                                .team_settings
+                                .team_description
+                                .unwrap_or_else(|| "No description".to_string());
+                            let member_limit = team.team_settings.team_member_limit;
+
+                            view! {
+                                <div class="team-detail-col">
+                                    <Card title="Team Information".to_string() subtitle="Basic team info".to_string()>
+                                        <div class="team-detail-info">
+                                            <p class="team-detail-field">
+                                                <span class="team-detail-label">"Team ID"</span>
+                                                <span>{team.team_id}</span>
+                                            </p>
+                                            <p class="team-detail-field">
+                                                <span class="team-detail-label">"Leader"</span>
+                                                <span>{team.team_leader_id}</span>
+                                            </p>
+                                            <p class="team-detail-field">
+                                                <span class="team-detail-label">"Created"</span>
+                                                <span>{created}</span>
+                                            </p>
+                                            <p class="team-detail-field">
+                                                <span class="team-detail-label">"Members"</span>
+                                                <span>{total_members()}</span>
+                                            </p>
+                                            <p class="team-detail-field">
+                                                <span class="team-detail-label">"Member limit"</span>
+                                                <span>{if member_limit == 0 { "Unlimited".to_string() } else { member_limit.to_string() }}</span>
+                                            </p>
+                                            <p class="team-detail-field">
+                                                <span class="team-detail-label">"Visibility"</span>
+                                                <span>{visibility}</span>
+                                            </p>
+                                            <p class="team-detail-desc">{description}</p>
+                                        </div>
+                                    </Card>
+
+                                    <Card title="Task Progress".to_string() subtitle="Team tasks".to_string()>
+                                        <div class="team-detail-stats">
+                                            <div class="team-stat">
+                                                <span class="team-stat-number">{tasks_total}</span>
+                                                <span class="team-stat-label">"Total"</span>
+                                            </div>
+                                            <div class="team-stat">
+                                                <span class="team-stat-number">{tasks_active}</span>
+                                                <span class="team-stat-label">"Active"</span>
+                                            </div>
+                                            <div class="team-stat">
+                                                <span class="team-stat-number">{tasks_done}</span>
+                                                <span class="team-stat-label">"Done"</span>
+                                            </div>
+                                            <div class="team-stat">
+                                                <span class="team-stat-number">{tasks_paused}</span>
+                                                <span class="team-stat-label">"Paused"</span>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                </div>
+                            }
+                        })
+                    }}
+                </div>
+
+                <Card title="Members".to_string() subtitle="Member management".to_string()>
+                    <SearchInput
+                        placeholder="Search members by user id".to_string()
+                        instant=true
+                        on_search=Callback::from(move |query: String| {
+                            set_member_search_query.set(query);
+                        })
+                    />
+
+                    <Form on_submit=on_add_member>
+                        <div class="team-member-add">
+                            <FormGroup label="User ID".to_string() required=true>
+                                <Input
+                                    value=new_member_user_id.get()
+                                    on_input=Callback::from(move |v: String| {
+                                        set_new_member_user_id.set(v);
+                                    })
+                                />
+                            </FormGroup>
+                            <FormGroup label="Role".to_string() required=true>
+                                <Input
+                                    value=new_member_level.get()
+                                    on_input=Callback::from(move |v: String| {
+                                        set_new_member_level.set(v);
+                                    })
+                                />
+                            </FormGroup>
+                            <Button
+                                variant=ButtonVariant::Primary
+                                size=ButtonSize::Sm
+                                disabled=member_action_loading.get()
+                            >
+                                {move || if member_action_loading.get() { "Adding..." } else { "Add Member" }}
+                            </Button>
+                        </div>
+                    </Form>
+
+                    {move || {
+                        member_action_error.get().map(|msg| view! {
+                            <p class="auth-error">{msg}</p>
+                        })
+                    }}
+
+                    {move || {
+                    let members = filtered_members();
+                        if members.is_empty() {
+                            view! { <p class="empty-text">"No members found."</p> }.into_any()
+                        } else {
+                            let items = members
+                                .into_iter()
+                                .map(|member: TeamMember| {
+                                    view! {
+                                        <TeamMemberRow
+                                            member=member
+                                            team_id=team_id
+                                            set_member_action_error=set_member_action_error
+                                            member_action_loading=member_action_loading
+                                            set_member_action_loading=set_member_action_loading
+                                        />
+                                    }
+                                })
+                                .collect::<Vec<_>>();
+                            view! { <div class="team-member-list">{items}</div> }.into_any()
+                        }
+                    }}
+                </Card>
+
+                <Card title="Team Tasks".to_string() subtitle="Task list".to_string()>
+                    {move || {
+                        if tasks_loading.get() {
+                            view! {
+                                <Loading variant=LoadingVariant::Spinner label="Loading tasks...".to_string() />
+                            }.into_any()
+                        } else if let Some(msg) = tasks_error.get() {
+                            view! {
+                                <div>
+                                    <p class="auth-error">{msg}</p>
+                                    <Button
+                                        variant=ButtonVariant::Secondary
+                                        size=ButtonSize::Sm
+                                        on_click=on_refresh
+                                    >
+                                        "Retry"
+                                    </Button>
+                                </div>
+                            }.into_any()
+                        } else if team_tasks.get().is_empty() {
+                            view! {
+                                <p class="empty-text">"No tasks yet for this team."</p>
+                            }.into_any()
+                        } else {
+                            let tasks = team_tasks
+                                .get()
+                                .into_iter()
+                                .map(|task| {
+                                    view! {
+                                        <TeamTaskRow task=task />
+                                    }
+                                })
+                                .collect::<Vec<_>>();
+                            view! { <div class="team-task-list">{tasks}</div> }.into_any()
+                        }
+                    }}
+                </Card>
+            </Show>
+        </div>
+    }
+}

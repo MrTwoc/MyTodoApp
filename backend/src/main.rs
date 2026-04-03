@@ -16,6 +16,7 @@ use db::pool::create_pool;
 
 mod middleware;
 use middleware::logging::{logger, request_logger};
+mod ws;
 
 mod utils;
 
@@ -47,7 +48,13 @@ async fn main() {
     let router = Router::new()
         .push(Router::with_path("hello").get(hello))
         .push(user_routes::user_router())
-        .push(task_routes::task_router());
+        .push(task_routes::task_router())
+        .push(team_routes::team_router())
+        .push(dashboard_routes::dashboard_router())
+        .push(sub_team_routes::sub_team_router())
+        .push(sub_team_routes::sub_team_single_router())
+        .push(sub_task_routes::sub_task_router())
+        .push(ws_routes::ws_router());
 
     let doc = OpenApi::new("test api", "0.0.1").merge_router(&router);
 

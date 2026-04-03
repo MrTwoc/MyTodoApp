@@ -108,6 +108,30 @@ pub struct TeamStore {
 }
 
 impl TeamStore {
+    pub fn upsert_team(&self, team: Team) {
+        let mut state = self.state.get();
+        let team_id = team.team_id;
+        if let Some(pos) = state.teams.iter().position(|t| t.team_id == team_id) {
+            state.teams[pos] = team.clone();
+        } else {
+            state.teams.push(team);
+        }
+        state.active_team_id = Some(team_id);
+        state.is_loading = false;
+        state.error = None;
+        self.set_state.set(state);
+    }
+
+    pub fn set_team_members(&self, team_id: u64, members: Vec<TeamMember>) {
+        let mut state = self.state.get();
+        if let Some(team) = state.teams.iter_mut().find(|t| t.team_id == team_id) {
+            team.team_members = members;
+            state.is_loading = false;
+            state.error = None;
+            self.set_state.set(state);
+        }
+    }
+
     pub fn set_teams(&self, teams: Vec<Team>) {
         let mut state = self.state.get();
         state.teams = teams;

@@ -28,12 +28,12 @@ pub fn Form(
 #[component]
 pub fn FormGroup(
     #[prop(optional)] label: Option<String>,
-    #[prop(optional)] error: Option<String>,
+    #[prop(default = String::new())] error: String,
     #[prop(default = false)] required: bool,
     children: Children,
 ) -> impl IntoView {
-    let has_error = error.is_some();
-    let error_text = error.unwrap_or_default();
+    let has_error = !error.is_empty();
+    let error_text = error;
 
     let required_star = if required {
         view! { <span class="form-required">" *"</span> }.into_any()

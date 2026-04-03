@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::api::{ApiClient, ApiResult};
-use crate::store::team_store::{Team, TeamMember, JoinRequest, TeamInvite};
+use crate::store::team_store::{JoinRequest, Team, TeamInvite, TeamMember};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTeamRequest {
@@ -92,7 +92,11 @@ pub async fn list_teams(client: &ApiClient) -> ApiResult<Vec<Team>> {
     Ok(resp.teams)
 }
 
-pub async fn update_team(client: &ApiClient, team_id: u64, req: &UpdateTeamRequest) -> ApiResult<Team> {
+pub async fn update_team(
+    client: &ApiClient,
+    team_id: u64,
+    req: &UpdateTeamRequest,
+) -> ApiResult<Team> {
     let path = format!("/api/teams/{}", team_id);
     let resp: TeamResponse = client.put(&path, req).await?;
     Ok(resp.team)
@@ -108,14 +112,14 @@ pub async fn delete_team(client: &ApiClient, team_id: u64) -> ApiResult<()> {
     Ok(())
 }
 
-pub async fn add_member(client: &ApiClient, team_id: u64, req: &AddMemberRequest) -> ApiResult<TeamMember> {
+pub async fn add_member(client: &ApiClient, team_id: u64, req: &AddMemberRequest) -> ApiResult<()> {
     let path = format!("/api/teams/{}/members", team_id);
     #[derive(Deserialize)]
-    struct MemberResponse {
-        member: TeamMember,
+    struct MessageResponse {
+        message: String,
     }
-    let resp: MemberResponse = client.post(&path, req).await?;
-    Ok(resp.member)
+    let _: MessageResponse = client.post(&path, req).await?;
+    Ok(())
 }
 
 pub async fn remove_member(client: &ApiClient, team_id: u64, user_id: u64) -> ApiResult<()> {
@@ -133,14 +137,14 @@ pub async fn update_member_role(
     team_id: u64,
     user_id: u64,
     req: &UpdateRoleRequest,
-) -> ApiResult<TeamMember> {
+) -> ApiResult<()> {
     let path = format!("/api/teams/{}/members/{}/role", team_id, user_id);
     #[derive(Deserialize)]
-    struct MemberResponse {
-        member: TeamMember,
+    struct MessageResponse {
+        message: String,
     }
-    let resp: MemberResponse = client.put(&path, req).await?;
-    Ok(resp.member)
+    let _: MessageResponse = client.put(&path, req).await?;
+    Ok(())
 }
 
 pub async fn get_members(client: &ApiClient, team_id: u64) -> ApiResult<Vec<TeamMember>> {

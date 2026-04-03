@@ -1,11 +1,11 @@
-use leptos::prelude::*;
-use leptos::ev;
-use leptos_router::hooks::use_navigate;
-use crate::store::{use_user_store, use_api_client};
-use crate::components::button::{Button, ButtonVariant};
-use crate::components::input::{Input, InputType};
-use crate::components::form::{Form, FormGroup, FormActions};
 use crate::api::auth::{LoginRequest, login};
+use crate::components::button::{Button, ButtonVariant};
+use crate::components::form::{Form, FormActions, FormGroup};
+use crate::components::input::{Input, InputType};
+use crate::store::{use_api_client, use_user_store};
+use leptos::ev;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 
 #[component]
 pub fn LoginPage() -> impl IntoView {

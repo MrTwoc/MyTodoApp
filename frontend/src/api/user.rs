@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::api::{ApiClient, ApiResult};
 use crate::store::user_store::UserProfile;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateUserRequest {
@@ -51,19 +51,31 @@ pub async fn get_user(client: &ApiClient, user_id: u64) -> ApiResult<UserProfile
     Ok(resp.user)
 }
 
-pub async fn update_user(client: &ApiClient, user_id: u64, req: &UpdateUserRequest) -> ApiResult<UserProfile> {
+pub async fn update_user(
+    client: &ApiClient,
+    user_id: u64,
+    req: &UpdateUserRequest,
+) -> ApiResult<UserProfile> {
     let path = format!("/api/users/{}", user_id);
     let resp: UserResponse = client.put(&path, req).await?;
     Ok(resp.user)
 }
 
-pub async fn change_password(client: &ApiClient, user_id: u64, req: &ChangePasswordRequest) -> ApiResult<()> {
+pub async fn change_password(
+    client: &ApiClient,
+    user_id: u64,
+    req: &ChangePasswordRequest,
+) -> ApiResult<()> {
     let path = format!("/api/users/{}/password", user_id);
     let _: MessageResponse = client.put(&path, req).await?;
     Ok(())
 }
 
-pub async fn update_settings(client: &ApiClient, user_id: u64, req: &UpdateSettingsRequest) -> ApiResult<UserProfile> {
+pub async fn update_settings(
+    client: &ApiClient,
+    user_id: u64,
+    req: &UpdateSettingsRequest,
+) -> ApiResult<UserProfile> {
     let path = format!("/api/users/{}/settings", user_id);
     let resp: UserResponse = client.put(&path, req).await?;
     Ok(resp.user)

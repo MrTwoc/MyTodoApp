@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::api::{ApiClient, ApiResult};
 use crate::store::task_store::Task;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTaskRequest {
@@ -32,7 +32,8 @@ pub struct UpdateTaskRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskListResponse {
     pub tasks: Vec<Task>,
-    pub total: u32,
+    #[serde(default)]
+    pub total: Option<u32>,
 }
 
 pub async fn create_task(client: &ApiClient, req: &CreateTaskRequest) -> ApiResult<Task> {
@@ -66,7 +67,11 @@ pub async fn list_tasks(
     client.get(&path).await
 }
 
-pub async fn update_task(client: &ApiClient, task_id: u64, req: &UpdateTaskRequest) -> ApiResult<Task> {
+pub async fn update_task(
+    client: &ApiClient,
+    task_id: u64,
+    req: &UpdateTaskRequest,
+) -> ApiResult<Task> {
     let path = format!("/api/tasks/{}", task_id);
     #[derive(Deserialize)]
     struct TaskResponse {
@@ -96,11 +101,22 @@ pub async fn update_task_status(client: &ApiClient, task_id: u64, status: &str) 
     struct TaskResponse {
         task: Task,
     }
-    let resp: TaskResponse = client.put(&path, &StatusReq { status: status.to_string() }).await?;
+    let resp: TaskResponse = client
+        .put(
+            &path,
+            &StatusReq {
+                status: status.to_string(),
+            },
+        )
+        .await?;
     Ok(resp.task)
 }
 
-pub async fn update_task_priority(client: &ApiClient, task_id: u64, priority: u8) -> ApiResult<Task> {
+pub async fn update_task_priority(
+    client: &ApiClient,
+    task_id: u64,
+    priority: u8,
+) -> ApiResult<Task> {
     let path = format!("/api/tasks/{}/priority", task_id);
     #[derive(Serialize)]
     struct PriorityReq {

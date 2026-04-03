@@ -2,11 +2,12 @@ use leptos::prelude::*;
 use leptos_router::components::*;
 use leptos_router::path;
 
-mod components;
 mod api;
-mod store;
+mod components;
 mod pages;
+mod store;
 
+use components::theme_switcher::ThemeSwitcher;
 use pages::dashboard::DashboardPage;
 use pages::login::LoginPage;
 use pages::not_found::NotFoundPage;
@@ -14,10 +15,11 @@ use pages::profile::ProfilePage;
 use pages::protected_route::ProtectedRoute;
 use pages::register::RegisterPage;
 use pages::settings::SettingsPage;
+use pages::task_detail::TaskDetailPage;
 use pages::tasks::TasksPage;
+use pages::team_detail::TeamDetailPage;
 use pages::teams::TeamsPage;
 use store::{create_stores, provide_stores};
-use components::theme_switcher::ThemeSwitcher;
 
 #[component]
 fn App() -> impl IntoView {
@@ -50,10 +52,26 @@ fn App() -> impl IntoView {
                             }
                         />
                         <Route
+                            path=path!("/tasks/:task_id")
+                            view=|| view! {
+                                <ProtectedRoute>
+                                    <TaskDetailPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
                             path=path!("/teams")
                             view=|| view! {
                                 <ProtectedRoute>
                                     <TeamsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path=path!("/teams/:team_id")
+                            view=|| view! {
+                                <ProtectedRoute>
+                                    <TeamDetailPage />
                                 </ProtectedRoute>
                             }
                         />
