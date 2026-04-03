@@ -1,9 +1,10 @@
 use crate::api::ApiClient;
+use leptos::prelude::Callable;
 use leptos::prelude::Callback;
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
+use wasm_bindgen::closure::Closure;
 use web_sys::{CloseEvent, ErrorEvent, Event, MessageEvent, WebSocket};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,7 +133,10 @@ fn parse_text_or_raw(text: &str) -> WsEvent {
         if let Some(event_name) = event.get("event").and_then(|v| v.as_str()) {
             WsEvent {
                 event: event_name.to_string(),
-                payload: event.get("payload").cloned().unwrap_or(serde_json::Value::Null),
+                payload: event
+                    .get("payload")
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null),
             }
         } else {
             WsEvent {

@@ -26,6 +26,8 @@ mod services;
 
 use routes::{task_routes, user_routes};
 
+use crate::routes::{dashboard_routes, sub_task_routes, sub_team_routes, team_routes, ws_routes};
+
 #[endpoint]
 async fn hello(name: QueryParam<String, false>) -> String {
     format!("Hello, {}!", name.as_deref().unwrap_or("World"))
