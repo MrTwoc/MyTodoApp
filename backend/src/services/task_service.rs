@@ -1,5 +1,9 @@
 use crate::db::db_task::DbTask;
 use crate::models::task::{Task, TaskStatus};
+use crate::utils::validator::{
+    validate_task_deadline, validate_task_description, validate_task_keywords, validate_task_name,
+    validate_task_priority,
+};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -55,6 +59,24 @@ impl TaskService {
         user_id: u64,
         request: CreateTaskRequest,
     ) -> Result<Task> {
+        validate_task_name(&request.task_name)?;
+
+        if let Some(ref desc) = request.task_description {
+            validate_task_description(desc)?;
+        }
+
+        if let Some(priority) = request.task_priority {
+            validate_task_priority(priority)?;
+        }
+
+        if let Some(deadline) = request.task_deadline {
+            validate_task_deadline(deadline)?;
+        }
+
+        if let Some(ref keywords) = request.task_keywords {
+            validate_task_keywords(keywords)?;
+        }
+
         let keywords = request
             .task_keywords
             .unwrap_or_default()
@@ -105,6 +127,26 @@ impl TaskService {
         task_id: u64,
         request: UpdateTaskRequest,
     ) -> Result<Option<Task>> {
+        if let Some(ref name) = request.task_name {
+            validate_task_name(name)?;
+        }
+
+        if let Some(ref desc) = request.task_description {
+            validate_task_description(desc)?;
+        }
+
+        if let Some(priority) = request.task_priority {
+            validate_task_priority(priority)?;
+        }
+
+        if let Some(Some(deadline)) = request.task_deadline {
+            validate_task_deadline(deadline)?;
+        }
+
+        if let Some(ref keywords) = request.task_keywords {
+            validate_task_keywords(keywords)?;
+        }
+
         DbTask::update_task(
             pool,
             task_id,

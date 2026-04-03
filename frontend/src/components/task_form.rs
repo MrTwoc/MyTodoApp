@@ -1,308 +1,219 @@
-use crate::components::button::{Button, ButtonSize, ButtonVariant};
-use crate::components::form::{Form, FormActions, FormGroup};
+use crate::components::modal::Modal;
 use crate::store::task_store::Task;
 use leptos::ev;
 use leptos::prelude::*;
 
-// ── TaskFormData ──────────────────────────────────────────────────────────────
+#[derive(Clone, PartialEq)]
+pub enum TaskFormMode {
+    Create,
+    Edit,
+}
 
 #[derive(Clone)]
 pub struct TaskFormData {
-    pub name: String,
-    pub description: Option<String>,
-    pub keywords: Vec<String>,
-    pub priority: u8,
-    pub deadline: Option<i64>,
+    pub task_id: Option<u64>,
+    pub task_name: String,
+    pub task_description: Option<String>,
+    pub task_keywords: Vec<String>,
+    pub task_priority: u8,
+    pub task_deadline: Option<i64>,
+    pub task_leader_id: u64,
+    pub task_team_id: Option<u64>,
 }
 
-// ── TagInput ──────────────────────────────────────────────────────────────────
-
-#[component]
-pub fn TagInput(
-    tags: ReadSignal<Vec<String>>,
-    set_tags: WriteSignal<Vec<String>>,
-    #[prop(optional)] placeholder: Option<String>,
-) -> impl IntoView {
-    let (input_value, set_input_value) = signal(String::new());
-
-    let commit_tag = move || {
-        let raw = input_value.get();
-        let tag = raw.trim().trim_end_matches(',').to_string();
-        if !tag.is_empty() {
-            let mut current = tags.get();
-            if !current.contains(&tag) {
-                current.push(tag);
-                set_tags.set(current);
-            }
-            set_input_value.set(String::new());
+impl Default for TaskFormData {
+    fn default() -> Self {
+        Self {
+            task_id: None,
+            task_name: String::new(),
+            task_description: None,
+            task_keywords: Vec::new(),
+            task_priority: 5,
+            task_deadline: None,
+            task_leader_id: 0,
+            task_team_id: None,
         }
-    };
+    }
+}
 
-    let on_keydown = move |ev: ev::KeyboardEvent| {
-        if ev.key() == "Enter" || ev.key() == "," {
-            ev.prevent_default();
-            commit_tag();
+impl From<Task> for TaskFormData {
+    fn from(task: Task) -> Self {
+        Self {
+            task_id: Some(task.task_id),
+            task_name: task.task_name,
+            task_description: task.task_description,
+            task_keywords: task.task_keywords.into_iter().collect(),
+            task_priority: task.task_priority,
+            task_deadline: task.task_deadline,
+            task_leader_id: task.task_leader_id,
+            task_team_id: task.task_team_id,
         }
-    };
-
-    let on_blur = move |_: ev::FocusEvent| {
-        commit_tag();
-    };
-
-    view! {
-        <div class="tag-input-wrapper">
-            <div class="tag-chips">
-                {move || {
-                    tags.get()
-                        .into_iter()
-                        .enumerate()
-                        .map(|(i, tag)| {
-                            let tag_clone = tag.clone();
-                            let remove = move |_: ev::MouseEvent| {
-                                let mut current = tags.get();
-                                current.remove(i);
-                                set_tags.set(current);
-                            };
-                            view! {
-                                <span class="tag-chip">
-                                    {tag_clone}
-                                    <button
-                                        type="button"
-                                        class="tag-chip-remove"
-                                        on:click=remove
-                                        aria-label="Remove tag"
-                                    >
-                                        "×"
-                                    </button>
-                                </span>
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                }}
-            </div>
-            <input
-                type="text"
-                class="input-field tag-input-field"
-                placeholder=placeholder.unwrap_or_else(|| "Type and press Enter…".to_string())
-                prop:value=input_value
-                on:input=move |ev| set_input_value.set(event_target_value(&ev))
-                on:keydown=on_keydown
-                on:blur=on_blur
-            />
-        </div>
-    }
-}
-
-// ── DatePicker ────────────────────────────────────────────────────────────────
-
-fn timestamp_to_date_str(ts: i64) -> String {
-    let ms = (ts * 1000) as f64;
-    let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_f64(ms));
-    let year = date.get_full_year();
-    let month = date.get_month() + 1;
-    let day = date.get_date();
-    format!("{:04}-{:02}-{:02}", year, month, day)
-}
-
-fn date_str_to_timestamp(s: &str) -> Option<i64> {
-    let js_str = wasm_bindgen::JsValue::from_str(s);
-    let date = js_sys::Date::new(&js_str);
-    let ms = date.get_time();
-    if ms.is_nan() {
-        None
-    } else {
-        Some((ms / 1000.0) as i64)
     }
 }
 
 #[component]
-pub fn DatePicker(
-    value: ReadSignal<Option<i64>>,
-    set_value: WriteSignal<Option<i64>>,
-    #[prop(optional)] label: Option<String>,
-) -> impl IntoView {
-    let date_str = move || value.get().map(timestamp_to_date_str).unwrap_or_default();
-
-    let on_change = move |ev: ev::Event| {
-        let raw = event_target_value(&ev);
-        if raw.is_empty() {
-            set_value.set(None);
-        } else {
-            set_value.set(date_str_to_timestamp(&raw));
-        }
-    };
-
-    view! {
-        <div class="input-wrapper">
-            {label.map(|text| view! {
-                <label class="input-label">{text}</label>
-            })}
-            <input
-                type="date"
-                class="input-field"
-                prop:value=date_str
-                on:change=on_change
-            />
-        </div>
-    }
-}
-
-// ── PrioritySelector ─────────────────────────────────────────────────────────
-
-#[component]
-pub fn PrioritySelector(value: ReadSignal<u8>, set_value: WriteSignal<u8>) -> impl IntoView {
-    let levels: &'static [(u8, &'static str)] =
-        &[(0, "Low"), (3, "Medium"), (6, "High"), (9, "Urgent")];
-
-    view! {
-        <div class="priority-selector">
-            {levels
-                .iter()
-                .map(|(level, label)| {
-                    let level = *level;
-                    let label = *label;
-                    view! {
-                        <Button
-                            variant=if value.get() == level { ButtonVariant::Primary } else { ButtonVariant::Secondary }
-                            size=ButtonSize::Sm
-                            on_click=Callback::from(move |_: ev::MouseEvent| {
-                                set_value.set(level);
-                            })
-                        >
-                            {label}
-                        </Button>
-                    }
-                })
-                .collect::<Vec<_>>()}
-        </div>
-    }
-}
-
-// ── TaskForm ──────────────────────────────────────────────────────────────────
-
-#[component]
-pub fn TaskForm(
-    #[prop(optional)] task: Option<Task>,
+pub fn TaskFormModal(
+    #[prop(default = false)] open: bool,
+    #[prop(default = TaskFormMode::Create)] mode: TaskFormMode,
+    #[prop(default = TaskFormData::default())] initial_data: TaskFormData,
     #[prop(optional)] on_submit: Option<Callback<(TaskFormData,)>>,
-    #[prop(optional)] on_cancel: Option<Callback<()>>,
+    #[prop(optional)] on_close: Option<Callback<()>>,
 ) -> impl IntoView {
-    let is_edit = task.is_some();
+    let title = if mode == TaskFormMode::Create {
+        "Create Task"
+    } else {
+        "Edit Task"
+    };
+    let submit_text = if mode == TaskFormMode::Create {
+        "Create"
+    } else {
+        "Save"
+    };
 
-    let initial_name = task
-        .as_ref()
-        .map(|t| t.task_name.clone())
-        .unwrap_or_default();
-    let initial_desc = task
-        .as_ref()
-        .and_then(|t| t.task_description.clone())
-        .unwrap_or_default();
-    let initial_keywords: Vec<String> = task
-        .as_ref()
-        .map(|t| t.task_keywords.iter().cloned().collect())
-        .unwrap_or_default();
-    let initial_priority = task.as_ref().map(|t| t.task_priority).unwrap_or(0);
-    let initial_deadline = task.as_ref().and_then(|t| t.task_deadline);
+    // 响应式表单状态
+    let initial_data_clone = initial_data.clone();
+    let form_data = RwSignal::new(initial_data_clone);
 
-    let (name, set_name) = signal(initial_name);
-    let (description, set_description) = signal(initial_desc);
-    let (keywords, set_keywords) = signal(initial_keywords);
-    let (priority, set_priority) = signal(initial_priority);
-    let (deadline, set_deadline) = signal(initial_deadline);
-    let (name_error, set_name_error) = signal(Option::<String>::None);
+    // 当 initial_data 属性变化时更新表单数据（简单起见，仅首次渲染后更新）
+    Effect::new(move |_| {
+        form_data.set(initial_data.clone());
+    });
 
-    let handle_submit = move |_ev: ev::SubmitEvent| {
-        let n = name.get();
-        if n.trim().is_empty() {
-            set_name_error.set(Some("Task name is required.".to_string()));
-            return;
-        }
-        set_name_error.set(None);
+    // 字段更新函数
+    let update_name = move |ev: ev::Event| {
+        let value = event_target_value(&ev);
+        form_data.update(|data| data.task_name = value);
+    };
 
-        let desc = {
-            let d = description.get();
-            if d.trim().is_empty() { None } else { Some(d) }
-        };
+    let update_description = move |ev: ev::Event| {
+        let value = event_target_value(&ev);
+        form_data.update(|data| {
+            data.task_description = if value.is_empty() { None } else { Some(value) }
+        });
+    };
 
-        if let Some(cb) = on_submit {
-            cb.run((TaskFormData {
-                name: n,
-                description: desc,
-                keywords: keywords.get(),
-                priority: priority.get(),
-                deadline: deadline.get(),
-            },));
+    let update_priority = move |ev: ev::Event| {
+        let value = event_target_value(&ev);
+        if let Ok(priority) = value.parse::<u8>() {
+            form_data.update(|data| data.task_priority = priority);
         }
     };
 
-    let handle_cancel = move |_ev: ev::MouseEvent| {
-        if let Some(cb) = on_cancel {
-            cb.run(());
+    // 关键词输入：逗号分隔的字符串
+    let update_keywords = move |ev: ev::Event| {
+        let value = event_target_value(&ev);
+        let keywords: Vec<String> = value
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        form_data.update(|data| data.task_keywords = keywords);
+    };
+
+    // 截止日期：将日期字符串转换为 i64 时间戳（UTC 午夜）
+    let update_deadline = move |ev: ev::Event| {
+        let value = event_target_value(&ev);
+        if value.is_empty() {
+            form_data.update(|data| data.task_deadline = None);
+        } else {
+            // 将 YYYY-MM-DD 转换为 Unix 时间戳（毫秒）
+            if let Ok(date) = chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d") {
+                let timestamp = date.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp();
+                form_data.update(|data| data.task_deadline = Some(timestamp));
+            }
+        }
+    };
+
+    // 负责人 ID 和团队 ID 暂不提供前端输入（由后端决定）
+    // 提交处理
+    let handle_submit = move |ev: ev::SubmitEvent| {
+        ev.prevent_default();
+        if let Some(callback) = on_submit {
+            callback.run((form_data.get_untracked(),));
+        }
+    };
+
+    // 取消处理
+    let handle_cancel = move |_| {
+        if let Some(callback) = on_close {
+            callback.run(());
         }
     };
 
     view! {
-        <Form on_submit=Callback::from(handle_submit)>
-            <FormGroup label="Task Name".to_string() required=true>
-                <input
-                    type="text"
-                    class="input-field"
-                    class=("input-error", move || name_error.get().is_some())
-                    placeholder="Enter task name…"
-                    prop:value=name
-                    on:input=move |ev| set_name.set(event_target_value(&ev))
-                    required=true
-                />
-                {move || {
-                    name_error.get().map(|e| view! {
-                        <span class="form-error">{e}</span>
-                    })
-                }}
-            </FormGroup>
+        <Modal open=MaybeSignal::Static(open) title={title.to_string()}>
+            <form class="form" on:submit=handle_submit>
+                <div class="form-group">
+                    <label class="form-label">Task Name</label>
+                    <input
+                        type="text"
+                        class="input-field"
+                        placeholder="Enter task name"
+                        prop:value=move || form_data.get().task_name
+                        on:input=update_name
+                    />
+                </div>
 
-            <FormGroup label="Description".to_string()>
-                <textarea
-                    class="input-field task-form-textarea"
-                    placeholder="Enter description (optional)…"
-                    prop:value=description
-                    on:input=move |ev| set_description.set(event_target_value(&ev))
-                    rows="3"
-                />
-            </FormGroup>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea
+                        class="input-field task-description-input"
+                        placeholder="Enter task description"
+                        prop:value=move || form_data.get().task_description.clone().unwrap_or_default()
+                        on:input=update_description
+                    />
+                </div>
 
-            <FormGroup label="Tags / Keywords".to_string()>
-                <TagInput
-                    tags=keywords
-                    set_tags=set_keywords
-                    placeholder="Type a tag and press Enter or comma…".to_string()
-                />
-            </FormGroup>
+                <div class="form-group">
+                    <label class="form-label">Keywords (comma separated)</label>
+                    <input
+                        type="text"
+                        class="input-field"
+                        placeholder="e.g., urgent, bug, feature"
+                        prop:value=move || form_data.get().task_keywords.join(", ")
+                        on:input=update_keywords
+                    />
+                </div>
 
-            <FormGroup label="Priority".to_string()>
-                <PrioritySelector value=priority set_value=set_priority />
-            </FormGroup>
+                <div class="form-group">
+                    <label class="form-label">Priority (1-10)</label>
+                    <input
+                        type="number"
+                        class="input-field"
+                        min="1"
+                        max="10"
+                        prop:value=move || form_data.get().task_priority.to_string()
+                        on:input=update_priority
+                    />
+                </div>
 
-            <FormGroup label="Deadline".to_string()>
-                <DatePicker value=deadline set_value=set_deadline />
-            </FormGroup>
+                <div class="form-group">
+                    <label class="form-label">Deadline</label>
+                    <input
+                        type="date"
+                        class="input-field date-input"
+                        prop:value=move || {
+                            form_data.get().task_deadline.map(|ts| {
+                                // 将毫秒时间戳转换为 YYYY‑MM‑DD 格式
+                                let dt = chrono::DateTime::from_timestamp(ts,0)
+                                    .unwrap_or_default()
+                                    .date_naive();
+                                dt.format("%Y-%m-%d").to_string()
+                            }).unwrap_or_default()
+                        }
+                        on:input=update_deadline
+                    />
+                </div>
 
-            <FormActions>
-                {if on_cancel.is_some() {
-                    view! {
-                        <Button
-                            variant=ButtonVariant::Secondary
-                            size=ButtonSize::Md
-                            on_click=Callback::from(handle_cancel)
-                        >
-                            "Cancel"
-                        </Button>
-                    }.into_any()
-                } else {
-                    ().into_any()
-                }}
-                <Button variant=ButtonVariant::Primary size=ButtonSize::Md>
-                    {if is_edit { "Save Changes" } else { "Create Task" }}
-                </Button>
-            </FormActions>
-        </Form>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary btn-md" on:click=handle_cancel>
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-md">
+                        {submit_text}
+                    </button>
+                </div>
+            </form>
+        </Modal>
     }
 }

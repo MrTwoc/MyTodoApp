@@ -7,5 +7,4 @@ pub mod modal;
 pub mod search;
 pub mod task_card;
 pub mod task_form;
-pub mod team_card;
 pub mod theme_switcher;

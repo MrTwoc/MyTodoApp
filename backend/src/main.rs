@@ -24,7 +24,7 @@ mod handlers;
 mod routes;
 mod services;
 
-use routes::{dashboard_routes, sub_task_routes, sub_team_routes, task_routes, team_routes, user_routes, ws_routes};
+use routes::{task_routes, user_routes};
 
 #[endpoint]
 async fn hello(name: QueryParam<String, false>) -> String {
@@ -33,7 +33,7 @@ async fn hello(name: QueryParam<String, false>) -> String {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt().init();
+    let _guard = utils::log::init_logger();
 
     if let Err(e) = run_database().await {
         tracing::error!("数据库初始化失败: {:?}", e);
