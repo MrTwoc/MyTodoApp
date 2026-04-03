@@ -45,13 +45,10 @@ impl TeamService {
             || request.team_visibility.is_some()
             || request.team_member_limit.is_some()
         {
-            let visibility = request
-                .team_visibility
-                .as_deref()
-                .map(|v| match v {
-                    "Public" => TeamVisibility::Public,
-                    _ => TeamVisibility::Private,
-                });
+            let visibility = request.team_visibility.as_deref().map(|v| match v {
+                "Public" => TeamVisibility::Public,
+                _ => TeamVisibility::Private,
+            });
 
             let updated = DbTeam::update_team(
                 pool,
@@ -122,12 +119,7 @@ impl TeamService {
         DbTeam::delete_team(pool, team_id).await
     }
 
-    pub async fn add_member(
-        pool: &PgPool,
-        team_id: u64,
-        user_id: u64,
-        level: u8,
-    ) -> Result<bool> {
+    pub async fn add_member(pool: &PgPool, team_id: u64, user_id: u64, level: u8) -> Result<bool> {
         DbTeam::add_team_member(pool, team_id, user_id, level).await
     }
 
@@ -193,10 +185,7 @@ impl TeamService {
             .await
     }
 
-    pub async fn get_team_logs(
-        _pool: &PgPool,
-        _team_id: u64,
-    ) -> Result<Vec<serde_json::Value>> {
+    pub async fn get_team_logs(_pool: &PgPool, _team_id: u64) -> Result<Vec<serde_json::Value>> {
         Ok(vec![])
     }
 }

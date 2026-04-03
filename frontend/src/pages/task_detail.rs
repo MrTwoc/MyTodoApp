@@ -262,7 +262,7 @@ pub fn TaskDetailPage() -> impl IntoView {
             <Modal
                 title="Edit Task".to_string()
                 open=MaybeSignal::derive(move || show_edit_modal.get())
-                on_close=Callback::from(move || set_show_edit_modal.set(false))
+                on_close=Callback::from(move |_| set_show_edit_modal.set(false))
             >
                 <TaskForm
                     task=task.get()

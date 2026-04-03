@@ -336,6 +336,37 @@ impl DbTask {
         Ok(affected > 0)
     }
 
+    /// 按状态设置任务状态，并同步更新完成时间
+    pub async fn set_task_status(pool: &PgPool, task_id: u64, status: TaskStatus) -> Result<bool> {
+        let update_time = chrono::Utc::now().timestamp();
+
+        let (task_status, complete_time): (&str, Option<i64>) = match status {
+            TaskStatus::Completed => ("Completed", Some(update_time)),
+            _ => ("Active", None),
+        };
+
+        let result = sqlx::query(
+            "UPDATE tasks SET task_status = $1, task_complete_time = $2, task_update_time = $3 WHERE task_id = $4",
+        )
+        .bind(task_status)
+        .bind(complete_time)
+        .bind(update_time)
+        .bind(task_id as i64)
+        .execute(pool)
+        .await?;
+
+        let affected = result.rows_affected();
+        tracing::info!(
+            "设置任务状态: task_id = {}, status = {:?}, complete_time = {:?}, affected = {}",
+            task_id,
+            status,
+            complete_time,
+            affected
+        );
+
+        Ok(affected > 0)
+    }
+
     /// 将数据库行转换为 Task 结构体
     fn row_to_task(row: sqlx::postgres::PgRow) -> Result<Task> {
         let task_id: i64 = row.get("task_id");

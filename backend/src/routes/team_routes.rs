@@ -22,7 +22,9 @@ pub fn team_router() -> Router {
                         .push(
                             Router::with_path("{user_id}")
                                 .delete(team_handler::remove_member)
-                                .push(Router::with_path("role").put(team_handler::update_member_role)),
+                                .push(
+                                    Router::with_path("role").put(team_handler::update_member_role),
+                                ),
                         ),
                 )
                 .push(Router::with_path("invites").post(team_handler::create_invite))

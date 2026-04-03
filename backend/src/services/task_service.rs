@@ -55,7 +55,11 @@ impl TaskService {
         user_id: u64,
         request: CreateTaskRequest,
     ) -> Result<Task> {
-        let keywords = request.task_keywords.unwrap_or_default().into_iter().collect::<HashSet<String>>();
+        let keywords = request
+            .task_keywords
+            .unwrap_or_default()
+            .into_iter()
+            .collect::<HashSet<String>>();
 
         let task = DbTask::create_task(
             pool,
@@ -106,7 +110,9 @@ impl TaskService {
             task_id,
             request.task_name.as_deref(),
             request.task_description.as_deref(),
-            request.task_keywords.map(|k| k.into_iter().collect::<HashSet<String>>()),
+            request
+                .task_keywords
+                .map(|k| k.into_iter().collect::<HashSet<String>>()),
             request.task_priority,
             request.task_deadline,
             request.task_status,

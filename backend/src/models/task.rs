@@ -45,3 +45,23 @@ impl Default for TaskStatus {
         Self::Active
     }
 }
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct SubTask {
+    // 子任务ID，雪花ID
+    pub sub_task_id: u64,
+    // 对应父任务ID
+    pub task_id: u64,
+    // 子任务标题
+    pub sub_task_name: String,
+    // 子任务描述
+    pub sub_task_description: Option<String>,
+    // 子任务状态
+    pub sub_task_status: TaskStatus,
+    // 创建时间
+    pub sub_task_create_time: i64,
+    // 更新时间
+    pub sub_task_update_time: Option<i64>,
+    // 完成时间
+    pub sub_task_complete_time: Option<i64>,
+}

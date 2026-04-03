@@ -72,8 +72,11 @@ impl UserService {
         )
         .await?;
 
-        let (access_token, refresh_token) =
-            jwt::generate_token_pair(user.user_id as i64, user.user_username.clone(), "user".to_string())?;
+        let (access_token, refresh_token) = jwt::generate_token_pair(
+            user.user_id as i64,
+            user.user_username.clone(),
+            "user".to_string(),
+        )?;
 
         DbUser::update_last_login_time(pool, user.user_id).await?;
 
@@ -91,8 +94,11 @@ impl UserService {
 
         crate::utils::utils_passwd::verify_password(&request.password, &user.user_password)?;
 
-        let (access_token, refresh_token) =
-            jwt::generate_token_pair(user.user_id as i64, user.user_username.clone(), "user".to_string())?;
+        let (access_token, refresh_token) = jwt::generate_token_pair(
+            user.user_id as i64,
+            user.user_username.clone(),
+            "user".to_string(),
+        )?;
 
         DbUser::update_last_login_time(pool, user.user_id).await?;
 
@@ -174,7 +180,7 @@ impl UserService {
         }
 
         let settings_json = serde_json::to_string(&settings)?;
-        
+
         let result = sqlx::query("UPDATE users SET user_settings = $1 WHERE user_id = $2")
             .bind(&settings_json)
             .bind(user_id as i64)

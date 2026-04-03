@@ -121,12 +121,7 @@ pub fn DatePicker(
     set_value: WriteSignal<Option<i64>>,
     #[prop(optional)] label: Option<String>,
 ) -> impl IntoView {
-    let date_str = move || {
-        value
-            .get()
-            .map(timestamp_to_date_str)
-            .unwrap_or_default()
-    };
+    let date_str = move || value.get().map(timestamp_to_date_str).unwrap_or_default();
 
     let on_change = move |ev: ev::Event| {
         let raw = event_target_value(&ev);
@@ -155,10 +150,7 @@ pub fn DatePicker(
 // ── PrioritySelector ─────────────────────────────────────────────────────────
 
 #[component]
-pub fn PrioritySelector(
-    value: ReadSignal<u8>,
-    set_value: WriteSignal<u8>,
-) -> impl IntoView {
+pub fn PrioritySelector(value: ReadSignal<u8>, set_value: WriteSignal<u8>) -> impl IntoView {
     let levels: &'static [(u8, &'static str)] =
         &[(0, "Low"), (3, "Medium"), (6, "High"), (9, "Urgent")];
 
@@ -196,7 +188,10 @@ pub fn TaskForm(
 ) -> impl IntoView {
     let is_edit = task.is_some();
 
-    let initial_name = task.as_ref().map(|t| t.task_name.clone()).unwrap_or_default();
+    let initial_name = task
+        .as_ref()
+        .map(|t| t.task_name.clone())
+        .unwrap_or_default();
     let initial_desc = task
         .as_ref()
         .and_then(|t| t.task_description.clone())

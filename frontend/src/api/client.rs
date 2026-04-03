@@ -1,7 +1,7 @@
-use gloo_net::http::Response;
-use serde::{de::DeserializeOwned, Serialize};
 use crate::api::error::{ApiError, ApiResult};
 use crate::store::get_local_storage_item;
+use gloo_net::http::Response;
+use serde::{Serialize, de::DeserializeOwned};
 
 const DEFAULT_BASE_URL: &str = "http://[::1]:5800";
 const TOKEN_KEY: &str = "todo_token";
@@ -38,7 +38,9 @@ impl ApiClient {
         if let Some(token) = Self::get_token() {
             req = req.header("Authorization", &format!("Bearer {}", token));
         }
-        req.send().await.map_err(|e| ApiError::network(e.to_string()))
+        req.send()
+            .await
+            .map_err(|e| ApiError::network(e.to_string()))
     }
 
     async fn do_post<B: Serialize>(&self, path: &str, body: &B) -> ApiResult<Response> {
@@ -83,7 +85,9 @@ impl ApiClient {
         if let Some(token) = Self::get_token() {
             req = req.header("Authorization", &format!("Bearer {}", token));
         }
-        req.send().await.map_err(|e| ApiError::network(e.to_string()))
+        req.send()
+            .await
+            .map_err(|e| ApiError::network(e.to_string()))
     }
 
     async fn handle_response<T: DeserializeOwned>(response: Response) -> ApiResult<T> {
@@ -114,12 +118,20 @@ impl ApiClient {
         Self::handle_response(resp).await
     }
 
-    pub async fn post<T: DeserializeOwned, B: Serialize>(&self, path: &str, body: &B) -> ApiResult<T> {
+    pub async fn post<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> ApiResult<T> {
         let resp = self.do_post(path, body).await?;
         Self::handle_response(resp).await
     }
 
-    pub async fn put<T: DeserializeOwned, B: Serialize>(&self, path: &str, body: &B) -> ApiResult<T> {
+    pub async fn put<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> ApiResult<T> {
         let resp = self.do_put(path, body).await?;
         Self::handle_response(resp).await
     }

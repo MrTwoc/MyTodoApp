@@ -10,3 +10,4 @@ pub mod db_user_log;
 
 pub mod db_sub_team;
 pub mod db_sub_team_member;
+pub mod db_sub_task;

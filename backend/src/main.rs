@@ -1,14 +1,22 @@
-#![allow(non_camel_case_types, non_snake_case, dead_code, unused_variables, unused_mut, unused_imports)]
+#![allow(
+    non_camel_case_types,
+    non_snake_case,
+    dead_code,
+    unused_variables,
+    unused_mut,
+    unused_imports
+)]
 use salvo::oapi::extract::*;
 use salvo::prelude::*;
 
-mod models;
 mod db;
+mod models;
 use db::migrations::init_database;
 use db::pool::create_pool;
 
 mod middleware;
 use middleware::logging::{logger, request_logger};
+mod ws;
 
 mod utils;
 
@@ -16,7 +24,7 @@ mod handlers;
 mod routes;
 mod services;
 
-use routes::{user_routes, task_routes, team_routes};
+use routes::{dashboard_routes, sub_task_routes, sub_team_routes, task_routes, team_routes, user_routes, ws_routes};
 
 #[endpoint]
 async fn hello(name: QueryParam<String, false>) -> String {
@@ -41,7 +49,12 @@ async fn main() {
         .push(Router::with_path("hello").get(hello))
         .push(user_routes::user_router())
         .push(task_routes::task_router())
-        .push(team_routes::team_router());
+        .push(team_routes::team_router())
+        .push(dashboard_routes::dashboard_router())
+        .push(sub_team_routes::sub_team_router())
+        .push(sub_team_routes::sub_team_single_router())
+        .push(sub_task_routes::sub_task_router())
+        .push(ws_routes::ws_router());
 
     let doc = OpenApi::new("test api", "0.0.1").merge_router(&router);
 

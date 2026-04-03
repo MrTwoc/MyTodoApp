@@ -7,4 +7,5 @@ pub mod register;
 pub mod settings;
 pub mod task_detail;
 pub mod tasks;
+pub mod team_detail;
 pub mod teams;

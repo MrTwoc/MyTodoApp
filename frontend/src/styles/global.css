@@ -1501,6 +1501,30 @@ input, textarea, select, button, .no-transition {
   margin-bottom: 16px;
 }
 
+.task-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.task-mode-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.offline-task-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.offline-task-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .task-toolbar .search-input-wrapper {
   flex: 1;
   max-width: 320px;

@@ -326,11 +326,7 @@ pub async fn add_member(team_id: PathParam<u64>, req: &mut Request, res: &mut Re
 }
 
 #[endpoint]
-pub async fn remove_member(
-    team_id: PathParam<u64>,
-    user_id: PathParam<u64>,
-    res: &mut Response,
-) {
+pub async fn remove_member(team_id: PathParam<u64>, user_id: PathParam<u64>, res: &mut Response) {
     let team_id: u64 = team_id.into_inner();
     let user_id: u64 = user_id.into_inner();
 
@@ -545,11 +541,7 @@ pub async fn create_invite(
 }
 
 #[endpoint]
-pub async fn create_join_request(
-    team_id: PathParam<u64>,
-    depot: &mut Depot,
-    res: &mut Response,
-) {
+pub async fn create_join_request(team_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
     let team_id: u64 = team_id.into_inner();
 
     let user_id = match depot.get::<i64>("user_id").ok() {

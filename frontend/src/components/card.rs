@@ -20,15 +20,13 @@ pub enum ButtonSize {
 pub fn Card(
     #[prop(optional)] title: Option<String>,
     #[prop(optional)] subtitle: Option<String>,
-    #[prop(optional)] on_click: Option<Callback<(ev::MouseEvent,)>>,
+    #[prop(default = Callback::new(|_| ()))] on_click: Callback<(ev::MouseEvent,)>,
     #[prop(default = false)] interactive: bool,
     #[prop(default = false)] elevated: bool,
     children: Children,
 ) -> impl IntoView {
     let on_click_handler = move |ev: ev::MouseEvent| {
-        if let Some(cb) = on_click {
-            cb.run((ev,));
-        }
+        on_click.run((ev,));
     };
 
     view! {

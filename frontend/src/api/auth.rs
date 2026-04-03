@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::api::{ApiClient, ApiResult};
 use crate::store::user_store::UserProfile;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegisterRequest {

@@ -1,11 +1,11 @@
-use leptos::prelude::*;
-use leptos::ev;
-use leptos_router::hooks::use_navigate;
-use crate::store::{use_user_store, use_api_client};
-use crate::components::button::{Button, ButtonVariant};
-use crate::components::input::{Input, InputType};
-use crate::components::form::{Form, FormGroup, FormActions};
 use crate::api::auth::{RegisterRequest, register};
+use crate::components::button::{Button, ButtonVariant};
+use crate::components::form::{Form, FormActions, FormGroup};
+use crate::components::input::{Input, InputType};
+use crate::store::{use_api_client, use_user_store};
+use leptos::ev;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 
 #[derive(Debug, Clone, PartialEq)]
 enum PasswordStrength {
@@ -18,17 +18,34 @@ enum PasswordStrength {
 impl PasswordStrength {
     fn from_password(password: &str) -> Self {
         let mut score = 0;
-        if password.len() >= 6 { score += 1; }
-        if password.len() >= 10 { score += 1; }
-        if password.chars().any(|c| c.is_uppercase()) { score += 1; }
-        if password.chars().any(|c| c.is_lowercase()) { score += 1; }
-        if password.chars().any(|c| c.is_numeric()) { score += 1; }
-        if password.chars().any(|c| !c.is_alphanumeric()) { score += 1; }
+        if password.len() >= 6 {
+            score += 1;
+        }
+        if password.len() >= 10 {
+            score += 1;
+        }
+        if password.chars().any(|c| c.is_uppercase()) {
+            score += 1;
+        }
+        if password.chars().any(|c| c.is_lowercase()) {
+            score += 1;
+        }
+        if password.chars().any(|c| c.is_numeric()) {
+            score += 1;
+        }
+        if password.chars().any(|c| !c.is_alphanumeric()) {
+            score += 1;
+        }
 
-        if score <= 2 { PasswordStrength::Weak }
-        else if score <= 3 { PasswordStrength::Fair }
-        else if score <= 4 { PasswordStrength::Good }
-        else { PasswordStrength::Strong }
+        if score <= 2 {
+            PasswordStrength::Weak
+        } else if score <= 3 {
+            PasswordStrength::Fair
+        } else if score <= 4 {
+            PasswordStrength::Good
+        } else {
+            PasswordStrength::Strong
+        }
     }
 
     fn as_str(&self) -> &'static str {
@@ -97,8 +114,13 @@ pub fn RegisterPage() -> impl IntoView {
         } else if username_val.len() < 3 {
             set_username_error.set(Some("Username must be at least 3 characters".to_string()));
             false
-        } else if !username_val.chars().all(|c| c.is_alphanumeric() || c == '_') {
-            set_username_error.set(Some("Username can only contain letters, numbers, and underscores".to_string()));
+        } else if !username_val
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_')
+        {
+            set_username_error.set(Some(
+                "Username can only contain letters, numbers, and underscores".to_string(),
+            ));
             false
         } else {
             set_username_error.set(None);
