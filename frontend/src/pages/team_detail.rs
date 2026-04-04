@@ -1,14 +1,15 @@
 use crate::api::ApiClient;
 use crate::api::task::{TaskListResponse, create_task, list_tasks};
 use crate::api::team::{
-    AddMemberRequest, UpdateRoleRequest, add_member, get_members, get_team, remove_member,
-    update_member_role,
+    AddMemberRequest, UpdateRoleRequest, UpdateTeamRequest, add_member, get_members, get_team,
+    remove_member, update_member_role, update_team,
 };
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::{Card, CardFooter};
 use crate::components::form::{Form, FormActions, FormGroup};
 use crate::components::input::Input;
 use crate::components::loading::{Loading, LoadingVariant};
+use crate::components::modal::Modal;
 use crate::components::search::SearchInput;
 use crate::components::task_form::{TaskFormData, TaskFormModal, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
@@ -303,6 +304,62 @@ pub fn TeamDetailPage() -> impl IntoView {
     let (member_action_loading, set_member_action_loading) = signal(false);
     let (new_member_user_id, set_new_member_user_id) = signal(String::new());
     let (new_member_level, set_new_member_level) = signal(String::new());
+
+    let (show_edit_team_modal, set_show_edit_team_modal) = signal(false);
+    let (edit_team_loading, set_edit_team_loading) = signal(false);
+    let (edit_team_error, set_edit_team_error) = signal(Option::<String>::None);
+    let (edit_member_limit, set_edit_member_limit) = signal(String::new());
+    let (edit_visibility, set_edit_visibility) = signal(String::new());
+    let (edit_description, set_edit_description) = signal(String::new());
+
+    let on_edit_team_submit = {
+        let client = client.clone();
+        let team_store = team_store.clone();
+        Callback::from(move |_: ev::SubmitEvent| {
+            set_edit_team_loading.set(true);
+            set_edit_team_error.set(None);
+
+            let member_limit: Option<u16> = if edit_member_limit.get().trim().is_empty() {
+                Some(0)
+            } else {
+                edit_member_limit.get().trim().parse().ok()
+            };
+            let visibility = if edit_visibility.get() == "Public" {
+                Some("Public".to_string())
+            } else {
+                Some("Private".to_string())
+            };
+            let description = if edit_description.get().trim().is_empty() {
+                None
+            } else {
+                Some(edit_description.get().trim().to_string())
+            };
+
+            let req = UpdateTeamRequest {
+                team_name: None,
+                team_description: description,
+                team_visibility: visibility,
+                team_member_limit: member_limit,
+            };
+
+            let client = client.clone();
+            let team_store = team_store.clone();
+
+            wasm_bindgen_futures::spawn_local(async move {
+                match update_team(&client, team_id, &req).await {
+                    Ok(updated_team) => {
+                        team_store.upsert_team(updated_team);
+                        set_edit_team_loading.set(false);
+                        set_show_edit_team_modal.set(false);
+                    }
+                    Err(e) => {
+                        set_edit_team_error.set(Some(e.message));
+                        set_edit_team_loading.set(false);
+                    }
+                }
+            });
+        })
+    };
 
     let on_back = {
         let n = navigate.clone();
@@ -624,6 +681,22 @@ pub fn TeamDetailPage() -> impl IntoView {
                                             </p>
                                             <p class="team-detail-desc">{description}</p>
                                         </div>
+                                        <CardFooter>
+                                            <Button
+                                                variant=ButtonVariant::Ghost
+                                                size=ButtonSize::Sm
+                                                on_click=Callback::from(move |_| {
+                                                    if let Some(t) = current_team() {
+                                                        set_edit_member_limit.set(t.team_settings.team_member_limit.to_string());
+                                                        set_edit_visibility.set(format!("{:?}", t.team_settings.team_visibility));
+                                                        set_edit_description.set(t.team_settings.team_description.clone().unwrap_or_default());
+                                                    }
+                                                    set_show_edit_team_modal.set(true);
+                                                })
+                                            >
+                                                "Edit"
+                                            </Button>
+                                        </CardFooter>
                                     </Card>
                                 }
                             })
@@ -775,6 +848,70 @@ pub fn TeamDetailPage() -> impl IntoView {
                     on_submit=do_create_task_submit
                     on_close=close_create_task
                 />
+
+                    <Modal
+                    open=show_edit_team_modal.into()
+                    title="Edit Team Information".to_string()
+                >
+                    <Form on_submit=on_edit_team_submit>
+                        <FormGroup label="Member limit".to_string() required=false>
+                            <Input
+                                value=edit_member_limit.get()
+                                placeholder="0 for unlimited".to_string()
+                                on_input=Callback::from(move |v: String| {
+                                    set_edit_member_limit.set(v);
+                                })
+                            />
+                        </FormGroup>
+                        <FormGroup label="Visibility".to_string() required=true>
+                            <select
+                                class="input-field"
+                                prop:value=edit_visibility.get()
+                                on:change=move |ev| {
+                                    set_edit_visibility.set(event_target_value(&ev));
+                                }
+                            >
+                                <option value="Public">Public</option>
+                                <option value="Private">Private</option>
+                            </select>
+                        </FormGroup>
+                        <FormGroup label="Description".to_string() required=false>
+                            <textarea
+                                class="input-field task-description-input"
+                                placeholder="Enter team description"
+                                prop:value=edit_description.get()
+                                on:input=move |ev| {
+                                    set_edit_description.set(event_target_value(&ev));
+                                }
+                            />
+                        </FormGroup>
+                        {move || {
+                            if let Some(msg) = edit_team_error.get() {
+                                view! { <p class="auth-error">{msg}</p> }.into_any()
+                            } else {
+                                ().into_any()
+                            }
+                        }}
+                        <FormActions>
+                            <Button
+                                variant=ButtonVariant::Secondary
+                                size=ButtonSize::Md
+                                on_click=Callback::from(move |_| {
+                                    set_show_edit_team_modal.set(false);
+                                })
+                            >
+                                "Cancel"
+                            </Button>
+                            <Button
+                                variant=ButtonVariant::Primary
+                                size=ButtonSize::Md
+                                disabled=edit_team_loading.get()
+                            >
+                                "Save"
+                            </Button>
+                        </FormActions>
+                    </Form>
+                </Modal>
             </Show>
         </div>
     }
