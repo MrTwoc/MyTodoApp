@@ -58,6 +58,8 @@ pub fn TasksPage() -> impl IntoView {
     let (show_edit_modal, set_show_edit_modal) = signal(false);
     let (editing_task, set_editing_task) = signal(None::<Task>);
     let (offline_page, set_offline_page) = signal(1_u32);
+    use leptos::prelude::RwSignal;
+    let view_mode: RwSignal<&str> = RwSignal::new("card");
 
     let filter_all = {
         let store = task_store.clone();
@@ -352,6 +354,18 @@ pub fn TasksPage() -> impl IntoView {
         }
     });
 
+    let toggle_view_mode = {
+        let vm = view_mode.clone();
+        Callback::from(move |_| {
+            let current = vm.get();
+            if current == "card" {
+                vm.set("list");
+            } else {
+                vm.set("card");
+            }
+        })
+    };
+
     let toggle_offline = {
         let store = offline_store.clone();
         move |ev: ev::Event| {
@@ -432,6 +446,14 @@ pub fn TasksPage() -> impl IntoView {
                 >
                     "Paused"
                 </Button>
+                <div class="filter-bar-spacer"></div>
+                <Button
+                    variant=ButtonVariant::Secondary
+                    size=ButtonSize::Sm
+                    on_click=toggle_view_mode
+                >
+                    {move || if view_mode.get() == "card" { "List" } else { "Card" }}
+                </Button>
             </div>
 
             {move || {
@@ -499,7 +521,8 @@ pub fn TasksPage() -> impl IntoView {
                                         }
                                     })
                                     .collect();
-                                view! { <div class="task-grid">{cards}</div> }.into_any()
+                                let class = if view_mode.get() == "list" { "task-list" } else { "task-grid" };
+                                view! { <div class={class}>{cards}</div> }.into_any()
                             } else {
                                 let cards: Vec<_> = tasks
                                     .into_iter()
@@ -519,7 +542,8 @@ pub fn TasksPage() -> impl IntoView {
                                         }
                                     })
                                     .collect();
-                                view! { <div class="task-grid">{cards}</div> }.into_any()
+                                let class = if view_mode.get() == "list" { "task-list" } else { "task-grid" };
+                                view! { <div class={class}>{cards}</div> }.into_any()
                             }
                         }
                     }

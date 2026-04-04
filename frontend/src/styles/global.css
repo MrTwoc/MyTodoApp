@@ -1052,6 +1052,11 @@ a:hover {
   gap: 8px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-bar-spacer {
+  flex: 1;
 }
 
 /* Task List */
