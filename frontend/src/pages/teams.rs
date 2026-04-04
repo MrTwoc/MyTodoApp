@@ -201,12 +201,21 @@ pub fn TeamsPage() -> impl IntoView {
                     let teams = filtered_teams();
                     if teams.is_empty() {
                         view! {
-                            <Card
-                                title="No Teams".to_string()
-                                subtitle="Create your first team to get started".to_string()
-                            >
-                                <p class="empty-text">"No teams found for your account yet."</p>
-                            </Card>
+                            <div class="empty-state">
+                                <div class="empty-state-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                    </svg>
+                                </div>
+                                <h3 class="empty-state-title">"No Teams Yet"</h3>
+                                <p class="empty-state-desc">"Create your first team to start collaborating with others"</p>
+                                <Button variant=ButtonVariant::Primary size=ButtonSize::Sm on_click=open_create>
+                                    "Create Team"
+                                </Button>
+                            </div>
                         }.into_any()
                     } else {
                         let cards = teams

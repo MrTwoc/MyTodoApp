@@ -28,6 +28,19 @@ pub fn TeamCard(
         .unwrap_or_else(|| "No description".to_string());
     let member_count = team.team_members.len();
     let member_limit = team.team_settings.team_member_limit;
+    let team_id = team.team_id;
+
+    let initials: String = team
+        .team_name
+        .split_whitespace()
+        .take(2)
+        .map(|w| {
+            w.chars()
+                .next()
+                .map(|c| c.to_ascii_uppercase())
+                .unwrap_or(' ')
+        })
+        .collect();
 
     view! {
         <div
@@ -37,19 +50,32 @@ pub fn TeamCard(
             on:click=move |ev| on_click.run((ev,))
         >
             <div class="team-card-icon">
-                {team.team_name.chars().next().map(|c| c.to_uppercase().to_string()).unwrap_or_default()}
+                {initials}
             </div>
             <div class="team-card-content">
-                <h3 class="team-card-title">{team.team_name.clone()}</h3>
+                <div class="team-card-header-row">
+                    <h3 class="team-card-title">{team.team_name.clone()}</h3>
+                    <span class="team-card-id">#{team_id}</span>
+                </div>
                 <p class="team-card-desc">{description}</p>
                 <div class="team-card-stats">
                     <div class="team-stat">
+                        <svg class="team-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
                         <span class="team-stat-value">{member_count}</span>
                         <span class="team-stat-label">"members"</span>
                     </div>
                     {if member_limit > 0 {
                         view! {
                             <div class="team-stat">
+                                <svg class="team-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
                                 <span class="team-stat-value">{member_limit}</span>
                                 <span class="team-stat-label">"limit"</span>
                             </div>

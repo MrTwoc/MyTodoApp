@@ -1183,14 +1183,15 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
   color: white;
   font-size: 1.25rem;
   font-weight: 700;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .team-card-content {
@@ -1202,7 +1203,20 @@ a:hover {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 4px;
+  margin: 0;
+}
+
+.team-card-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.team-card-id {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono, monospace);
 }
 
 .team-card-desc {
@@ -1221,8 +1235,14 @@ a:hover {
 
 .team-stat {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
+}
+
+.team-stat-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-tertiary);
 }
 
 .team-stat-value {

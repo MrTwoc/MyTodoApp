@@ -101,7 +101,9 @@ impl DbTeam {
 
         let mut teams = Vec::new();
         for row in rows {
-            teams.push(Self::row_to_team(row)?);
+            let mut team = Self::row_to_team(row)?;
+            team.team_members = Self::get_team_members(pool, team.team_id).await?;
+            teams.push(team);
         }
 
         Ok(teams)
