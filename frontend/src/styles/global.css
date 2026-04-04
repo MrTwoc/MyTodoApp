@@ -793,6 +793,8 @@ a:hover {
 /* Dashboard */
 .dashboard {
   padding: 24px 0;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .dashboard-header {
@@ -800,54 +802,212 @@ a:hover {
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 32px;
-}
-
-.dashboard-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.dashboard-greeting {
-  font-size: 0.875rem;
-  color: var(--text-tertiary);
-  margin: 4px 0 0;
-}
-
-.dashboard-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  flex-wrap: wrap;
   gap: 16px;
 }
 
-.stat-row {
-  display: flex;
-  gap: 24px;
-}
-
-.stat {
+.dashboard-header-left {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.stat-number {
+.dashboard-title {
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-greeting {
+  font-size: 0.9375rem;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.dashboard-greeting strong {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* WebSocket Feed Section */
+.dashboard-ws {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-ws-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dashboard-ws-status-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dashboard-ws-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.dashboard-ws-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--text-tertiary);
+}
+
+.dashboard-ws-status.connected::before {
+  background-color: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+
+.dashboard-ws-status.connecting::before {
+  background-color: var(--warning);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.dashboard-ws-status.error::before {
+  background-color: var(--danger);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.dashboard-ws-count {
+  background-color: var(--accent-subtle);
+  color: var(--accent-primary);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dashboard-ws-log {
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  min-height: 120px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dashboard-ws-item {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  background-color: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent-primary);
+  word-break: break-all;
+}
+
+.dashboard-ws-item:last-child {
+  margin-bottom: 0;
+}
+
+.empty-text {
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 24px;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* Stat Card Enhancements */
+.stat-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 60px;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  text-align: center;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.stat:hover {
+  background-color: var(--bg-tertiary);
+  transform: translateY(-2px);
+}
+
+.stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+.stat-total .stat-number {
+  color: var(--accent-primary);
+}
+
+.stat-active .stat-number {
+  color: var(--warning);
+}
+
+.stat-completed .stat-number {
+  color: var(--success);
+}
+
+.stat-paused .stat-number {
+  color: var(--text-tertiary);
+}
+
+/* Card Footer */
+.dashboard .card-footer {
+  margin-top: 8px;
 }
 
 .theme-info {

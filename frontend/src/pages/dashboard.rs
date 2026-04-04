@@ -169,7 +169,7 @@ pub fn DashboardPage() -> impl IntoView {
     view! {
         <div class="dashboard">
             <header class="dashboard-header">
-                <div>
+                <div class="dashboard-header-left">
                     <h1 class="dashboard-title">"Dashboard"</h1>
                     <p class="dashboard-greeting">
                         {move || format!("Welcome, {}", user_label())}
@@ -182,91 +182,111 @@ pub fn DashboardPage() -> impl IntoView {
                 </div>
             </header>
 
-            <Card title="Real-time Feed".to_string() subtitle="WebSocket notifications".to_string()>
-                <div class="dashboard-ws">
-                    <p class="dashboard-ws-status">{move || format!("Status: {}", ws_status.get())}</p>
-                    <p class="dashboard-ws-status">{move || format!("Events: {}", ws_count.get())}</p>
-                    <div class="dashboard-ws-log">
-                        {move || {
-                            let logs = ws_logs.get();
-                            if logs.is_empty() {
-                                view! { <p class="empty-text">"No events yet."</p> }.into_any()
-                            } else {
-                                let items = logs
-                                    .into_iter()
-                                    .map(|msg| view! { <p class="dashboard-ws-item">{msg}</p> })
-                                    .collect::<Vec<_>>();
-                                view! { <div>{items}</div> }.into_any()
-                            }
-                        }}
+            <div class="dashboard-main">
+                <Card title="Real-time Feed".to_string() subtitle="WebSocket notifications".to_string()>
+                    <div class="dashboard-ws">
+                        <div class="dashboard-ws-header">
+                            <div class="dashboard-ws-status-row">
+                                <span class=move || {
+                                    let status = ws_status.get();
+                                    let status_lower = status.to_lowercase();
+                                    if status_lower.contains("connected") {
+                                        "dashboard-ws-status connected"
+                                    } else if status_lower.contains("connecting") {
+                                        "dashboard-ws-status connecting"
+                                    } else if status_lower.contains("error") {
+                                        "dashboard-ws-status error"
+                                    } else {
+                                        "dashboard-ws-status"
+                                    }
+                                }>
+                                    {move || format!("Status: {}", ws_status.get())}
+                                </span>
+                                <span class="dashboard-ws-count">
+                                    {move || format!("{} events", ws_count.get())}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="dashboard-ws-log">
+                            {move || {
+                                let logs = ws_logs.get();
+                                if logs.is_empty() {
+                                    view! { <p class="empty-text">"No events yet. Waiting for WebSocket messages..."</p> }.into_any()
+                                } else {
+                                    let items = logs
+                                        .into_iter()
+                                        .map(|msg| view! { <p class="dashboard-ws-item">{msg}</p> })
+                                        .collect::<Vec<_>>();
+                                    view! { <div>{items}</div> }.into_any()
+                                }
+                            }}
+                        </div>
                     </div>
+                    <CardFooter>
+                        <Button
+                            variant=ButtonVariant::Secondary
+                            size=ButtonSize::Sm
+                            on_click=refresh_button
+                        >
+                            "Refresh"
+                        </Button>
+                    </CardFooter>
+                </Card>
+
+                <div class="dashboard-grid">
+                    <Card title="Personal Task Board".to_string() subtitle="Your current status".to_string()>
+                        <div class="stat-row">
+                            <div class="stat stat-total">
+                                <span class="stat-number">{move || personal_stats().total}</span>
+                                <span class="stat-label">{move || stat_label(personal_stats().total)}</span>
+                            </div>
+                            <div class="stat stat-active">
+                                <span class="stat-number">{move || personal_stats().active}</span>
+                                <span class="stat-label">"Active"</span>
+                            </div>
+                            <div class="stat stat-completed">
+                                <span class="stat-number">{move || personal_stats().completed}</span>
+                                <span class="stat-label">"Completed"</span>
+                            </div>
+                            <div class="stat stat-paused">
+                                <span class="stat-number">{move || personal_stats().paused}</span>
+                                <span class="stat-label">"Paused"</span>
+                            </div>
+                        </div>
+                        <CardFooter>
+                            <Button variant=ButtonVariant::Primary size=ButtonSize::Sm on_click=nav_tasks>
+                                "Open Personal Tasks"
+                            </Button>
+                        </CardFooter>
+                    </Card>
+
+                    <Card title="Team Task Board".to_string() subtitle="Team progress".to_string()>
+                        <div class="stat-row">
+                            <div class="stat stat-total">
+                                <span class="stat-number">{move || team_stats().total}</span>
+                                <span class="stat-label">{move || stat_label(team_stats().total)}</span>
+                            </div>
+                            <div class="stat stat-active">
+                                <span class="stat-number">{move || team_stats().active}</span>
+                                <span class="stat-label">"Active"</span>
+                            </div>
+                            <div class="stat stat-completed">
+                                <span class="stat-number">{move || team_stats().completed}</span>
+                                <span class="stat-label">"Completed"</span>
+                            </div>
+                            <div class="stat stat-paused">
+                                <span class="stat-number">{move || team_stats().paused}</span>
+                                <span class="stat-label">"Paused"</span>
+                            </div>
+                        </div>
+                        <CardFooter>
+                            <Button variant=ButtonVariant::Primary size=ButtonSize::Sm on_click=nav_teams>
+                                "Open Teams"
+                            </Button>
+                        </CardFooter>
+                    </Card>
                 </div>
-                <CardFooter>
-                    <Button
-                        variant=ButtonVariant::Secondary
-                        size=ButtonSize::Sm
-                        on_click=refresh_button
-                    >
-                        "Refresh"
-                    </Button>
-                </CardFooter>
-            </Card>
-
-            <div class="dashboard-grid">
-                <Card title="Personal Task Board".to_string() subtitle="Current status".to_string()>
-                    <div class="stat-row">
-                        <div class="stat">
-                            <span class="stat-number">{move || personal_stats().total}</span>
-                            <span class="stat-label">{move || stat_label(personal_stats().total)}</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">{move || personal_stats().active}</span>
-                            <span class="stat-label">"Active"</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">{move || personal_stats().completed}</span>
-                            <span class="stat-label">"Completed"</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">{move || personal_stats().paused}</span>
-                            <span class="stat-label">"Paused"</span>
-                        </div>
-                    </div>
-                    <CardFooter>
-                        <Button variant=ButtonVariant::Primary size=ButtonSize::Sm on_click=nav_tasks>
-                            "Open Personal Tasks"
-                        </Button>
-                    </CardFooter>
-                </Card>
-
-                <Card title="Team Task Board".to_string() subtitle="Current status".to_string()>
-                    <div class="stat-row">
-                        <div class="stat">
-                            <span class="stat-number">{move || team_stats().total}</span>
-                            <span class="stat-label">{move || stat_label(team_stats().total)}</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">{move || team_stats().active}</span>
-                            <span class="stat-label">"Active"</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">{move || team_stats().completed}</span>
-                            <span class="stat-label">"Completed"</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">{move || team_stats().paused}</span>
-                            <span class="stat-label">"Paused"</span>
-                        </div>
-                    </div>
-                    <CardFooter>
-                        <Button variant=ButtonVariant::Primary size=ButtonSize::Sm on_click=nav_teams>
-                            "Open Teams"
-                        </Button>
-                    </CardFooter>
-                </Card>
             </div>
-
-            <div></div>
         </div>
     }
 }

@@ -1,7 +1,7 @@
 use chrono::Utc;
 use std::collections::HashSet;
 
-use crate::api::task::{CreateTaskRequest, create_task as api_create_task};
+use crate::api::task::{CreateTaskRequest, create_task as api_create_task, list_tasks};
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
 use crate::components::loading::{Loading, LoadingVariant};
@@ -46,6 +46,7 @@ fn take_page<T>(items: Vec<T>, page: u32, page_size: u32) -> Vec<T> {
 pub fn TasksPage() -> impl IntoView {
     let task_store = use_task_store();
     let offline_store = use_offline_task_store();
+    let client = use_api_client();
     let navigate = use_navigate();
 
     let nav_back = {
@@ -102,6 +103,27 @@ pub fn TasksPage() -> impl IntoView {
 
     let is_offline_mode_store = offline_store.clone();
     let is_offline_mode = move || is_offline_mode_store.state.get().enabled;
+
+    let client_load = client.clone();
+    let store_load = task_store.clone();
+    let is_offline_check = is_offline_mode.clone();
+    Effect::new(move |_| {
+        if !is_offline_check() {
+            let client = client_load.clone();
+            let store = store_load.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                store.set_loading(true);
+                match list_tasks(&client, 1, 20, None, None).await {
+                    Ok(resp) => {
+                        store.set_tasks(resp.tasks, resp.total.unwrap_or(0));
+                    }
+                    Err(e) => {
+                        store.set_error(e.message);
+                    }
+                }
+            });
+        }
+    });
 
     let current_page = {
         let task_store = task_store.clone();

@@ -1,8 +1,10 @@
+use crate::api::task::delete_task as api_delete_task;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
 use crate::components::modal::Modal;
 use crate::components::task_form::{TaskFormData, TaskFormModal, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
+use crate::store::{use_api_client, use_task_store};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 
@@ -100,6 +102,10 @@ pub fn TaskDetailPage() -> impl IntoView {
 
     let (task, set_task) = signal(mock_task(task_id));
     let (show_edit_modal, set_show_edit_modal) = signal(false);
+    let client = use_api_client();
+    let task_store = use_task_store();
+    let client = use_api_client();
+    let task_store = use_task_store();
 
     let nav_back = {
         let n = navigate.clone();
@@ -137,8 +143,25 @@ pub fn TaskDetailPage() -> impl IntoView {
     // ── Delete handler ────────────────────────────────────────────────────────
     let on_delete = {
         let navigate = navigate.clone();
+        let client = client.clone();
+        let task_store = task_store.clone();
+        let task_id = task_id;
         Callback::from(move |_: web_sys::MouseEvent| {
-            navigate("/tasks", Default::default());
+            let client = client.clone();
+            let task_store = task_store.clone();
+            let navigate = navigate.clone();
+            let task_id = task_id;
+            wasm_bindgen_futures::spawn_local(async move {
+                match api_delete_task(&client, task_id).await {
+                    Ok(_) => {
+                        task_store.remove_task(task_id);
+                        navigate("/tasks", Default::default());
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to delete task: {}", e.message);
+                    }
+                }
+            });
         })
     };
 
