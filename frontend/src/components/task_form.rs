@@ -56,6 +56,7 @@ pub fn TaskFormModal(
     #[prop(default = MaybeSignal::Static(false))] open: MaybeSignal<bool>,
     #[prop(default = TaskFormMode::Create)] mode: TaskFormMode,
     #[prop(default = TaskFormData::default())] initial_data: TaskFormData,
+    #[prop(default = false)] force_team_task: bool,
     #[prop(optional)] on_submit: Option<Callback<(TaskFormData,)>>,
     #[prop(optional)] on_close: Option<Callback<()>>,
 ) -> impl IntoView {
@@ -70,7 +71,7 @@ pub fn TaskFormModal(
         "Save"
     };
 
-    let is_team_task = RwSignal::new(initial_data.task_team_id.is_some());
+    let is_team_task = RwSignal::new(initial_data.task_team_id.is_some() || force_team_task);
 
     Effect::new(move |_| {
         is_team_task.set(initial_data.task_team_id.is_some());
@@ -162,7 +163,7 @@ pub fn TaskFormModal(
                             is_team_task.set(value == "team");
                         }
                     >
-                        <option value="personal">Personal</option>
+                        <option value="personal" disabled=is_team_task.get()>Personal</option>
                         <option value="team">Team</option>
                     </select>
                 </div>
@@ -246,6 +247,7 @@ pub fn TaskFormModal(
 pub fn TaskForm(
     #[prop(default = TaskFormMode::Create)] mode: TaskFormMode,
     #[prop(default = TaskFormData::default())] initial_data: TaskFormData,
+    #[prop(default = false)] force_team_task: bool,
     #[prop(optional)] on_submit: Option<Callback<(TaskFormData,)>>,
     #[prop(optional)] on_cancel: Option<Callback<()>>,
 ) -> impl IntoView {
@@ -255,7 +257,7 @@ pub fn TaskForm(
         "Save"
     };
 
-    let is_team_task = RwSignal::new(initial_data.task_team_id.is_some());
+    let is_team_task = RwSignal::new(initial_data.task_team_id.is_some() || force_team_task);
 
     Effect::new(move |_| {
         is_team_task.set(initial_data.task_team_id.is_some());

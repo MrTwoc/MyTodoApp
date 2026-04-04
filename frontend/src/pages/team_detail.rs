@@ -771,6 +771,7 @@ pub fn TeamDetailPage() -> impl IntoView {
                     open=show_create_task_modal.into()
                     mode=TaskFormMode::Create
                     initial_data=TaskFormData::default()
+                    force_team_task=true
                     on_submit=do_create_task_submit
                     on_close=close_create_task
                 />
