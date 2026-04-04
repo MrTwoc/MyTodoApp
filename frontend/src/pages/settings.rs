@@ -46,6 +46,10 @@ pub fn SettingsPage() -> impl IntoView {
                         view! {
                             <div class="profile-info">
                                 <div class="profile-field">
+                                    <span class="profile-label">"User ID"</span>
+                                    <span class="profile-value profile-id">{p.user_id}</span>
+                                </div>
+                                <div class="profile-field">
                                     <span class="profile-label">"Username"</span>
                                     <span class="profile-value">{p.username.clone()}</span>
                                 </div>

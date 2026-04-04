@@ -1295,6 +1295,12 @@ a:hover {
   color: var(--text-primary);
 }
 
+.profile-id {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
 /* Theme Transitions */
 *, *::before, *::after {
   transition: background-color 0.25s ease,
