@@ -2,10 +2,11 @@ use crate::db::db_user::DbUser;
 use crate::models::user::User;
 use crate::utils::jwt;
 use anyhow::Result;
+use salvo::oapi::ToSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct RegisterRequest {
     pub username: String,
     pub password: String,

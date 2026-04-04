@@ -1,13 +1,6 @@
-#![allow(
-    non_camel_case_types,
-    non_snake_case,
-    dead_code,
-    unused_variables,
-    unused_mut,
-    unused_imports
-)]
-use salvo::oapi::extract::*;
+use salvo::http::Method;
 use salvo::prelude::*;
+use salvo::{cors::Cors, oapi::extract::*};
 
 mod db;
 mod models;
@@ -47,8 +40,26 @@ async fn main() {
         return;
     }
 
+    let cors = Cors::new()
+        .allow_origin([
+            "http://127.0.0.1:8698",
+            "http://localhost:8698",
+            "http://127.0.0.1:8080",
+            "http://localhost:8080",
+        ])
+        .allow_methods(vec![
+            Method::GET,
+            Method::POST,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_headers(vec!["authorization", "content-type"])
+        .allow_credentials(true)
+        .into_handler();
+
     let router = Router::new()
-        .push(Router::with_path("hello").get(hello))
+        // .hoop(cors)
+        .push(Router::with_path("hello").post(hello))
         .push(user_routes::user_router())
         .push(task_routes::task_router())
         .push(team_routes::team_router())
@@ -65,7 +76,8 @@ async fn main() {
         .unshift(SwaggerUi::new("/api-doc/openapi.json").into_router("/swagger-ui"));
 
     let acceptor = TcpListener::new("localhost:8698").bind().await;
-    Server::new(acceptor).serve(router).await;
+    let service = Service::new(router).hoop(cors);
+    Server::new(acceptor).serve(service).await;
 }
 
 async fn run_database() -> Result<(), Box<dyn std::error::Error>> {

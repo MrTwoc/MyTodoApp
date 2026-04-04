@@ -3,7 +3,7 @@ use crate::store::get_local_storage_item;
 use gloo_net::http::Response;
 use serde::{Serialize, de::DeserializeOwned};
 
-const DEFAULT_BASE_URL: &str = "http://[::1]:5800";
+const DEFAULT_BASE_URL: &str = "http://127.0.0.1:8698";
 const TOKEN_KEY: &str = "todo_token";
 
 #[derive(Clone)]
@@ -53,7 +53,7 @@ impl ApiClient {
             builder = builder.header("Authorization", &format!("Bearer {}", token));
         }
         builder
-            .json(&json_str)
+            .body(json_str)
             .map_err(|e| ApiError::network(e.to_string()))?
             .send()
             .await
@@ -70,7 +70,7 @@ impl ApiClient {
             builder = builder.header("Authorization", &format!("Bearer {}", token));
         }
         builder
-            .json(&json_str)
+            .body(json_str)
             .map_err(|e| ApiError::network(e.to_string()))?
             .send()
             .await

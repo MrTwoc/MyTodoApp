@@ -227,7 +227,7 @@ pub fn RegisterPage() -> impl IntoView {
                 <p class="auth-subtitle">"Sign up to get started"</p>
 
                 <Form on_submit=Callback::from(on_submit)>
-                    <FormGroup label="Username".to_string() required=true error=username_error.get().unwrap_or_default()>
+                    <FormGroup label="Username".to_string() required=true error=(move || username_error.get().unwrap_or_default())()>
                         <Input
                             input_type=InputType::Text
                             placeholder="Choose a username".to_string()
@@ -241,7 +241,7 @@ pub fn RegisterPage() -> impl IntoView {
                             })
                         />
                     </FormGroup>
-                    <FormGroup label="Email".to_string() required=true error=email_error.get().unwrap_or_default()>
+                    <FormGroup label="Email".to_string() required=true error=(move || email_error.get().unwrap_or_default())()>
                         <Input
                             input_type=InputType::Email
                             placeholder="Enter your email".to_string()
@@ -262,10 +262,10 @@ pub fn RegisterPage() -> impl IntoView {
                             on_input=Callback::from(move |v: String| set_phone.set(v))
                         />
                     </FormGroup>
-                    <FormGroup label="Password".to_string() required=true error=password_error.get().unwrap_or_default()>
+                    <FormGroup label="Password".to_string() required=true error=(move || password_error.get().unwrap_or_default())()>
                         <div class="password-input-wrapper">
                             <Input
-                                input_type=if show_password.get() { InputType::Text } else { InputType::Password }
+                                input_type=((move || if show_password.get() { InputType::Text } else { InputType::Password }))()
                                 placeholder="Create a password".to_string()
                                 on_input=Callback::from(move |v: String| {
                                     set_password.set(v.clone());
@@ -300,10 +300,10 @@ pub fn RegisterPage() -> impl IntoView {
                             }).unwrap_or_else(|| ().into_any())
                         }}
                     </FormGroup>
-                    <FormGroup label="Confirm Password".to_string() required=true error=confirm_password_error.get().unwrap_or_default()>
+                    <FormGroup label="Confirm Password".to_string() required=true error=(move || confirm_password_error.get().unwrap_or_default())()>
                         <div class="password-input-wrapper">
                             <Input
-                                input_type=if show_confirm_password.get() { InputType::Text } else { InputType::Password }
+                                input_type=((move || if show_confirm_password.get() { InputType::Text } else { InputType::Password }))()
                                 placeholder="Confirm your password".to_string()
                                 on_input=Callback::from(move |v: String| {
                                     set_confirm_password.set(v.clone());
@@ -339,7 +339,7 @@ pub fn RegisterPage() -> impl IntoView {
                         <Button
                             variant=ButtonVariant::Primary
                             full_width=true
-                            disabled=loading.get()
+                            disabled=((move || loading.get()))()
                         >
                             {move || if loading.get() { "Creating account..." } else { "Sign Up" }}
                         </Button>

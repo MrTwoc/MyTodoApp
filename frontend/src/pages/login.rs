@@ -97,7 +97,7 @@ pub fn LoginPage() -> impl IntoView {
                 <p class="auth-subtitle">"Sign in to your account"</p>
 
                 <Form on_submit=Callback::from(on_submit)>
-                    <FormGroup label="Email".to_string() required=true error=email_error.get().unwrap_or_default()>
+                    <FormGroup label="Email".to_string() required=true error=(move || email_error.get().unwrap_or_default())()>
                         <Input
                             input_type=InputType::Email
                             placeholder="Enter your email".to_string()
@@ -111,10 +111,10 @@ pub fn LoginPage() -> impl IntoView {
                             })
                         />
                     </FormGroup>
-                    <FormGroup label="Password".to_string() required=true error=password_error.get().unwrap_or_default()>
+                    <FormGroup label="Password".to_string() required=true error=(move || password_error.get().unwrap_or_default())()>
                         <div class="password-input-wrapper">
                             <Input
-                                input_type=if show_password.get() { InputType::Text } else { InputType::Password }
+                                input_type=((move || if show_password.get() { InputType::Text } else { InputType::Password }))()
                                 placeholder="Enter your password".to_string()
                                 on_input=Callback::from(move |v: String| {
                                     set_password.set(v.clone());
@@ -139,7 +139,7 @@ pub fn LoginPage() -> impl IntoView {
                         <label class="checkbox-label">
                             <input
                                 type="checkbox"
-                                checked=remember_me.get()
+                                checked=move || remember_me.get()
                                 on:change=move |ev| {
                                     let checked = event_target_checked(&ev);
                                     set_remember_me.set(checked);
@@ -158,7 +158,7 @@ pub fn LoginPage() -> impl IntoView {
                         <Button
                             variant=ButtonVariant::Primary
                             full_width=true
-                            disabled=loading.get()
+                            disabled=(move || loading.get())()
                         >
                             {move || if loading.get() { "Signing in..." } else { "Sign In" }}
                         </Button>

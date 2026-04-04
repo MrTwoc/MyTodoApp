@@ -1,4 +1,4 @@
-use salvo::oapi::extract::PathParam;
+use salvo::oapi::extract::{JsonBody, PathParam};
 use salvo::prelude::*;
 
 use crate::db::pool::create_pool;
@@ -8,18 +8,8 @@ use crate::services::user_service::{
 };
 
 #[endpoint]
-pub async fn register(req: &mut Request, res: &mut Response) {
-    let request: RegisterRequest = match req.parse_json().await {
-        Ok(req) => req,
-        Err(e) => {
-            res.status_code(StatusCode::BAD_REQUEST);
-            res.render(Json(serde_json::json!({
-                "error": "Invalid request body",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+pub async fn register(req: &mut Request, res: &mut Response, body: JsonBody<RegisterRequest>) {
+    let request: RegisterRequest = body.into_inner();
 
     let pool = match create_pool().await {
         Ok(pool) => pool,
