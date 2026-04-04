@@ -382,14 +382,18 @@ pub fn TasksPage() -> impl IntoView {
                     <h1 class="page-title">"Tasks"</h1>
                 </div>
                 <div class="task-header-actions">
-                    <label class="checkbox-label">
-                        <input
-                            type="checkbox"
-                            checked=move || is_offline_mode()
-                            on:change=toggle_offline
-                        />
-                        <span>"Offline mode"</span>
-                    </label>
+                    <div class="toggle-switch">
+                        <span class="toggle-label">"Online"</span>
+                        <label class="toggle">
+                            <input
+                                type="checkbox"
+                                checked=move || is_offline_mode()
+                                on:change=toggle_offline
+                            />
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">"Offline"</span>
+                    </div>
                     <Button
                         variant=ButtonVariant::Primary
                         size=ButtonSize::Sm
