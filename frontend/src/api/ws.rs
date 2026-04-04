@@ -24,10 +24,10 @@ pub enum WsState {
 
 pub struct WsConnection {
     socket: WebSocket,
-    _open: Closure<dyn FnMut(Event)>,
-    _message: Closure<dyn FnMut(MessageEvent)>,
-    _error: Closure<dyn FnMut(ErrorEvent)>,
-    _close: Closure<dyn FnMut(CloseEvent)>,
+    _open: Closure<dyn Fn(Event)>,
+    _message: Closure<dyn Fn(MessageEvent)>,
+    _error: Closure<dyn Fn(ErrorEvent)>,
+    _close: Closure<dyn Fn(CloseEvent)>,
 }
 
 impl WsConnection {
@@ -52,6 +52,8 @@ impl Drop for WsConnection {
     }
 }
 
+unsafe impl Send for WsConnection {}
+
 fn normalize_base_url(base_url: &str) -> String {
     let trimmed = base_url.trim_end_matches('/');
     if trimmed.starts_with("ws://") || trimmed.starts_with("wss://") {
@@ -73,32 +75,32 @@ pub fn build_ws_url(base_url: &str) -> String {
 
 pub fn connect_ws(
     client: &ApiClient,
-    on_state: Callback<WsState>,
-    on_message: Callback<WsEvent>,
+    on_state: Callback<(WsState,)>,
+    on_message: Callback<(WsEvent,)>,
 ) -> Result<WsConnection, String> {
     let url = build_ws_url(client.base_url());
     let socket =
         WebSocket::new(&url).map_err(|e| format!("Failed to create WebSocket: {:?}", e))?;
 
     let open_callback = {
-        let on_state = on_state;
+        let on_state = on_state.clone();
         Closure::wrap(Box::new(move |_event: Event| {
-            on_state.run(WsState::Open);
-        }) as Box<dyn FnMut(Event)>)
+            on_state.run((WsState::Open,));
+        }) as Box<dyn Fn(Event)>)
     };
 
     let close_callback = {
-        let on_state = on_state;
+        let on_state = on_state.clone();
         Closure::wrap(Box::new(move |_event: CloseEvent| {
-            on_state.run(WsState::Closed);
-        }) as Box<dyn FnMut(CloseEvent)>)
+            on_state.run((WsState::Closed,));
+        }) as Box<dyn Fn(CloseEvent)>)
     };
 
     let error_callback = {
-        let on_state = on_state;
+        let on_state = on_state.clone();
         Closure::wrap(Box::new(move |_event: ErrorEvent| {
-            on_state.run(WsState::Error("WebSocket error".to_string()));
-        }) as Box<dyn FnMut(ErrorEvent)>)
+            on_state.run((WsState::Error("WebSocket error".to_string()),));
+        }) as Box<dyn Fn(ErrorEvent)>)
     };
 
     let message_callback = {
@@ -107,9 +109,9 @@ pub fn connect_ws(
             let data = event.data();
             if let Ok(text) = data.dyn_into::<js_sys::JsString>() {
                 let payload = parse_text_or_raw(&String::from(text));
-                on_message.run(payload);
+                on_message.run((payload,));
             }
-        }) as Box<dyn FnMut(MessageEvent)>)
+        }) as Box<dyn Fn(MessageEvent)>)
     };
 
     socket.set_onopen(Some(open_callback.as_ref().unchecked_ref()));
@@ -117,7 +119,7 @@ pub fn connect_ws(
     socket.set_onerror(Some(error_callback.as_ref().unchecked_ref()));
     socket.set_onclose(Some(close_callback.as_ref().unchecked_ref()));
 
-    on_state.run(WsState::Connecting);
+    on_state.run((WsState::Connecting,));
 
     Ok(WsConnection {
         socket,

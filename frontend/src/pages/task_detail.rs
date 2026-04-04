@@ -1,7 +1,7 @@
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
 use crate::components::modal::Modal;
-use crate::components::task_form::{TaskForm, TaskFormData};
+use crate::components::task_form::{TaskFormData, TaskFormModal, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
@@ -118,18 +118,19 @@ pub fn TaskDetailPage() -> impl IntoView {
     let switch_paused = move |_: web_sys::MouseEvent| switch_to(TaskStatus::Paused);
 
     // ── Edit form callbacks ───────────────────────────────────────────────────
-    let on_edit_submit = Callback::from(move |data: TaskFormData| {
-        let mut t = task.get();
-        t.task_name = data.name;
-        t.task_description = data.description;
-        t.task_keywords = data.keywords.into_iter().collect();
-        t.task_priority = data.priority;
-        t.task_deadline = data.deadline;
-        set_task.set(t);
-        set_show_edit_modal.set(false);
-    });
+    let on_edit_submit: Callback<(TaskFormData,), ()> =
+        Callback::from(move |data: TaskFormData| {
+            let mut t = task.get();
+            t.task_name = data.task_name;
+            t.task_description = data.task_description;
+            t.task_keywords = data.task_keywords.into_iter().collect();
+            t.task_priority = data.task_priority;
+            t.task_deadline = data.task_deadline;
+            set_task.set(t);
+            set_show_edit_modal.set(false);
+        });
 
-    let on_edit_cancel = Callback::from(move || {
+    let on_edit_cancel: Callback<(), ()> = Callback::from(move || {
         set_show_edit_modal.set(false);
     });
 
@@ -259,17 +260,13 @@ pub fn TaskDetailPage() -> impl IntoView {
             </Card>
 
             // ── Edit modal ────────────────────────────────────────────────────
-            <Modal
-                title="Edit Task".to_string()
-                open=MaybeSignal::derive(move || show_edit_modal.get())
-                on_close=Callback::from(move |_| set_show_edit_modal.set(false))
-            >
-                <TaskForm
-                    task=task.get()
-                    on_submit=on_edit_submit
-                    on_cancel=on_edit_cancel
-                />
-            </Modal>
+            <TaskFormModal
+                open=MaybeSignal::from(show_edit_modal)
+                mode=TaskFormMode::Edit
+                initial_data=TaskFormData::from(task.get())
+                on_submit=on_edit_submit
+                on_close=on_edit_cancel
+            />
         </div>
     }
 }

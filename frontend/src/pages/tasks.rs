@@ -7,7 +7,7 @@ use crate::components::loading::{Loading, LoadingVariant};
 use crate::components::modal::Modal;
 use crate::components::search::{Pagination, SearchInput};
 use crate::components::task_card::{TaskCard, TaskCardSkeleton};
-use crate::components::task_form::{TaskForm, TaskFormData};
+use crate::components::task_form::{TaskForm, TaskFormData, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::{use_offline_task_store, use_task_store};
 use leptos::ev;
@@ -234,11 +234,11 @@ pub fn TasksPage() -> impl IntoView {
         let set_offline_page = set_offline_page;
         Callback::from(move |data: TaskFormData| {
             let task = store.new_task(
-                data.name,
-                data.description,
-                data.keywords,
-                data.priority,
-                data.deadline,
+                data.task_name,
+                data.task_description,
+                data.task_keywords,
+                data.task_priority,
+                data.task_deadline,
             );
             store.add_task(task);
             set_offline_page.set(1);
@@ -262,15 +262,15 @@ pub fn TasksPage() -> impl IntoView {
         let set_offline_page = set_offline_page;
         Callback::from(move |data: TaskFormData| {
             if let Some(mut task) = task_signal.get() {
-                task.task_name = data.name;
-                task.task_description = data.description;
+                task.task_name = data.task_name;
+                task.task_description = data.task_description;
                 task.task_keywords = data
-                    .keywords
+                    .task_keywords
                     .into_iter()
                     .filter(|keyword| !keyword.trim().is_empty())
                     .collect::<HashSet<_>>();
-                task.task_priority = data.priority;
-                task.task_deadline = data.deadline;
+                task.task_priority = data.task_priority;
+                task.task_deadline = data.task_deadline;
                 task.task_update_time = Some(Utc::now().timestamp());
                 store.update_task(task.task_id, task);
                 set_editing_task.set(None);
@@ -541,7 +541,8 @@ pub fn TasksPage() -> impl IntoView {
                 on_close=do_edit_close
             >
                 <TaskForm
-                    task=editing_task.get().unwrap_or_default()
+                    mode=TaskFormMode::Edit
+                    initial_data=TaskFormData::from(editing_task.get().unwrap_or_default())
                     on_submit=do_edit_submit
                     on_cancel=do_edit_cancel
                 />

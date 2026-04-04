@@ -1,5 +1,5 @@
 use crate::api::dashboard::get_overview;
-use crate::api::ws::{connect_ws, WsConnection, WsEvent, WsState};
+use crate::api::ws::{WsConnection, WsEvent, WsState, connect_ws};
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::{Card, CardFooter};
 use crate::components::loading::{Loading, LoadingVariant};
@@ -8,7 +8,7 @@ use crate::store::{use_api_client, use_user_store};
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
 use serde_json::Value;
-
+use std::sync::{Arc, Mutex};
 fn stat_label(total: u32) -> &'static str {
     if total == 0 {
         "No data"
@@ -38,7 +38,7 @@ pub fn DashboardPage() -> impl IntoView {
     let (ws_status, set_ws_status) = signal(String::from("Disconnected"));
     let (ws_count, set_ws_count) = signal(0_u32);
     let (ws_logs, set_ws_logs) = signal(Vec::<String>::new());
-    let (ws_conn, set_ws_conn) = signal(Option::<WsConnection>::None);
+    let (ws_conn, set_ws_conn) = signal(Option::<Arc<Mutex<WsConnection>>>::None);
     let (initialized, set_initialized) = signal(false);
 
     let personal_stats = move || {
@@ -62,45 +62,53 @@ pub fn DashboardPage() -> impl IntoView {
             .unwrap_or_else(|| "there".to_string())
     };
 
-    let load_dashboard = {
+    let load_dashboard: Callback<()> = {
         let client = client.clone();
-        Callback::from(move |_| {
+        let set_error = set_error;
+        let set_loading = set_loading;
+        let set_overview = set_overview;
+        Callback::from(move || {
             set_error.set(None);
             set_loading.set(true);
+            let client_clone = client.clone();
+            let set_error_clone = set_error.clone();
+            let set_loading_clone = set_loading.clone();
+            let set_overview_clone = set_overview.clone();
             wasm_bindgen_futures::spawn_local(async move {
-                match get_overview(&client).await {
+                match get_overview(&client_clone).await {
                     Ok(result) => {
-                        set_overview.set(Some(result));
+                        set_overview_clone.set(Some(result));
                     }
                     Err(err) => {
-                        set_error.set(Some(err.message));
+                        set_error_clone.set(Some(err.message));
                     }
                 }
-                set_loading.set(false);
+                set_loading_clone.set(false);
             });
         })
     };
 
-    let connect_realtime = {
+    let connect_realtime: Callback<()> = {
         let client = client.clone();
         let set_ws_status = set_ws_status;
         let set_ws_count = set_ws_count;
         let set_ws_logs = set_ws_logs;
         let ws_conn = ws_conn;
         let set_ws_conn = set_ws_conn;
-        Callback::from(move |_| {
+        Callback::from(move || {
             if ws_conn.get_untracked().is_some() {
                 return;
             }
 
-            let on_state = Callback::from(move |state: WsState| match state {
-                WsState::Connecting => set_ws_status.set("Connecting".to_string()),
-                WsState::Open => set_ws_status.set("Connected".to_string()),
-                WsState::Closed => set_ws_status.set("Closed".to_string()),
-                WsState::Error(msg) => set_ws_status.set(format!("Error: {msg}")),
-            });
+            let on_state: Callback<(WsState,)> =
+                Callback::from(move |state: WsState| match state {
+                    WsState::Connecting => set_ws_status.set("Connecting".to_string()),
+                    WsState::Open => set_ws_status.set("Connected".to_string()),
+                    WsState::Closed => set_ws_status.set("Closed".to_string()),
+                    WsState::Error(msg) => set_ws_status.set(format!("Error: {msg}")),
+                });
 
-            let on_message = Callback::from(move |evt: WsEvent| {
+            let on_message: Callback<(WsEvent,)> = Callback::from(move |evt: WsEvent| {
                 let line = if evt.event.is_empty() {
                     format!("raw: {}", task_payload_to_text(&evt.payload))
                 } else {
@@ -118,7 +126,7 @@ pub fn DashboardPage() -> impl IntoView {
 
             match connect_ws(&client, on_state, on_message) {
                 Ok(conn) => {
-                    set_ws_conn.set(Some(conn));
+                    set_ws_conn.set(Some(Arc::new(Mutex::new(conn))));
                 }
                 Err(msg) => {
                     set_ws_status.set(format!("Error: {msg}"));
@@ -133,15 +141,15 @@ pub fn DashboardPage() -> impl IntoView {
 
     let nav_tasks = {
         let n = navigate.clone();
-        move |_| n("/tasks", Default::default())
+        Callback::from(move |_| n("/tasks", Default::default()))
     };
     let nav_teams = {
         let n = navigate.clone();
-        move |_| n("/teams", Default::default())
+        Callback::from(move |_| n("/teams", Default::default()))
     };
     let nav_settings = {
         let n = navigate.clone();
-        move |_| n("/settings", Default::default())
+        Callback::from(move |_| n("/settings", Default::default()))
     };
 
     Effect::new(move |_| {
@@ -151,7 +159,7 @@ pub fn DashboardPage() -> impl IntoView {
             connect_realtime.run(());
             on_cleanup(move || {
                 if let Some(conn) = ws_conn.get_untracked() {
-                    conn.close();
+                    conn.lock().unwrap().close();
                 }
                 set_ws_conn.set(None);
             });
@@ -258,109 +266,7 @@ pub fn DashboardPage() -> impl IntoView {
                 </Card>
             </div>
 
-            <Show when=move || !loading.get() && error.get().is_none() fallback=|| {
-                view! { <Loading variant=LoadingVariant::Spinner label="Loading dashboard...".to_string() /> }
-            }>
-                <div class="dashboard-sections">
-                    <Show
-                        when=move || !overview.get().is_none()
-                        fallback=|| {
-                            view! {
-                                <Card title="No Data".to_string() subtitle="Nothing loaded yet".to_string()>
-                                    <p class="empty-text">"Create a task first, then you can view it here."</p>
-                                </Card>
-                            }
-                        }
-                    >
-                        <div class="dashboard-grid">
-                            {move || {
-                                let personal = overview
-                                    .get()
-                                    .map(|data| data.recent_personal_tasks)
-                                    .unwrap_or_default();
-                                let team = overview.get().map(|data| data.recent_team_tasks).unwrap_or_default();
-
-                                if personal.is_empty() && team.is_empty() {
-                                    view! {
-                                        <Card title="Recent Task".to_string() subtitle="No recent tasks".to_string()>
-                                            <p class="empty-text">"No recent tasks in the last period."</p>
-                                        </Card>
-                                    }.into_any()
-                                } else {
-                                    let mut cards = Vec::new();
-                                    if !personal.is_empty() {
-                                        let personal_cards = personal
-                                            .into_iter()
-                                            .map(|task| {
-                                                let id = task.task_id;
-                                                let nav = navigate.clone();
-                                                view! {
-                                                    <TaskCard
-                                                        task=task
-                                                        interactive=true
-                                                        on_click=Some(Callback::from(move |_| {
-                                                            nav(&format!("/tasks/{}", id), Default::default());
-                                                        }))
-                                                    />
-                                                }
-                                            })
-                                            .collect::<Vec<_>>();
-                                        let personal_card = view! {
-                                            <div>
-                                                <h3 class="task-list-title">"Recent Personal Tasks"</h3>
-                                                <div class="task-grid">{personal_cards}</div>
-                                            </div>
-                                        };
-                                        cards.push(personal_card.into_any());
-                                    }
-
-                                    if !team.is_empty() {
-                                        let team_cards = team
-                                            .into_iter()
-                                            .map(|task| {
-                                                let id = task.task_id;
-                                                let nav = navigate.clone();
-                                                view! {
-                                                    <TaskCard
-                                                        task=task
-                                                        interactive=true
-                                                        on_click=Some(Callback::from(move |_| {
-                                                            nav(&format!("/tasks/{}", id), Default::default());
-                                                        }))
-                                                    />
-                                                }
-                                            })
-                                            .collect::<Vec<_>>();
-                                        let team_card = view! {
-                                            <div>
-                                                <h3 class="task-list-title">"Recent Team Tasks"</h3>
-                                                <div class="task-grid">{team_cards}</div>
-                                            </div>
-                                        };
-                                        cards.push(team_card.into_any());
-                                    }
-
-                                    view! { <div class="dashboard-recent-list">{cards}</div> }.into_any()
-                                }
-                            }}
-                        </div>
-                    </Show>
-
-                    <Show when=move || error.get().is_some() fallback=|| ().into_any()>
-                        {move || {
-                            if let Some(err) = error.get() {
-                                view! {
-                                    <Card title="Load failed".to_string() subtitle="Dashboard data load error".to_string()>
-                                        <p class="auth-error">{err}</p>
-                                    </Card>
-                                }.into_any()
-                            } else {
-                                ().into_any()
-                            }
-                        }}
-                    </Show>
-                </div>
-            </Show>
+            <div></div>
         </div>
     }
 }
