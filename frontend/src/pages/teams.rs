@@ -116,15 +116,6 @@ pub fn TeamsPage() -> impl IntoView {
         });
     });
 
-    let refresh = {
-        let client = client.clone();
-        let team_store = team_store.clone();
-        Callback::from(move |_| {
-            set_search_query.set(String::new());
-            load_team_list(client.clone(), team_store.clone());
-        })
-    };
-
     let retry_load = {
         let client = client.clone();
         let team_store = team_store.clone();
@@ -185,13 +176,6 @@ pub fn TeamsPage() -> impl IntoView {
                         set_search_query.set(q);
                     })
                 />
-                <Button
-                    variant=ButtonVariant::Secondary
-                    size=ButtonSize::Sm
-                    on_click=refresh
-                >
-                    "Refresh"
-                </Button>
             </div>
 
             {move || {
@@ -231,8 +215,6 @@ pub fn TeamsPage() -> impl IntoView {
                                 let team_store_for_detail = team_store.clone();
                                 let nav = navigate.clone();
                                 let id = team.team_id;
-                                let team_name = team.team_name.clone();
-                                let team_members = team.team_members.len();
                                 view! {
                                     <TeamCard
                                         team=team.clone()
@@ -242,16 +224,11 @@ pub fn TeamsPage() -> impl IntoView {
                                             let path = format!("/teams/{}", id);
                                             nav(&path, Default::default());
                                         })
-                                    >
-                                        <div class="team-card-meta" style="margin-top: 10px; display: flex; justify-content: space-between; color: #6c757d; font-size: 12px;">
-                                            <span>{team_name}</span>
-                                            <span>{team_members} " members"</span>
-                                        </div>
-                                    </TeamCard>
+                                    />
                                 }
                             })
                             .collect::<Vec<_>>();
-                        view! { <div class="team-list">{cards}</div> }.into_any()
+                        view! { <div class="team-grid">{cards}</div> }.into_any()
                     }
                 }
             }}
