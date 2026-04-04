@@ -50,6 +50,7 @@ async fn main() {
         .allow_methods(vec![
             Method::GET,
             Method::POST,
+            Method::PUT,
             Method::DELETE,
             Method::OPTIONS,
         ])
