@@ -37,7 +37,12 @@ pub struct TaskListResponse {
 }
 
 pub async fn create_task(client: &ApiClient, req: &CreateTaskRequest) -> ApiResult<Task> {
-    client.post("/api/tasks", req).await
+    #[derive(Deserialize)]
+    struct TaskResponse {
+        task: Task,
+    }
+    let resp: TaskResponse = client.post("/api/tasks", req).await?;
+    Ok(resp.task)
 }
 
 pub async fn get_task(client: &ApiClient, task_id: u64) -> ApiResult<Task> {

@@ -1,5 +1,5 @@
 use crate::api::ApiClient;
-use crate::api::task::{TaskListResponse, list_tasks};
+use crate::api::task::{TaskListResponse, create_task, list_tasks};
 use crate::api::team::{
     AddMemberRequest, UpdateRoleRequest, add_member, get_members, get_team, remove_member,
     update_member_role,
@@ -10,6 +10,7 @@ use crate::components::form::{Form, FormActions, FormGroup};
 use crate::components::input::Input;
 use crate::components::loading::{Loading, LoadingVariant};
 use crate::components::search::SearchInput;
+use crate::components::task_form::{TaskFormData, TaskFormModal, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::team_store::{TeamMember, TeamStore};
 use crate::store::{use_api_client, use_team_store};
@@ -30,6 +31,14 @@ fn status_text(status: &TaskStatus) -> &'static str {
         TaskStatus::Active => "Active",
         TaskStatus::Completed => "Completed",
         TaskStatus::Paused => "Paused",
+    }
+}
+
+fn status_color(status: &TaskStatus) -> &'static str {
+    match status {
+        TaskStatus::Active => "status-active",
+        TaskStatus::Completed => "status-completed",
+        TaskStatus::Paused => "status-paused",
     }
 }
 
@@ -101,6 +110,7 @@ fn TeamTaskRow(task: Task) -> impl IntoView {
     let navigate = use_navigate();
     let task_id = task.task_id;
     let status = status_text(&task.task_status).to_string();
+    let status_class = status_color(&task.task_status);
     let name = task.task_name.clone();
     let description = task
         .task_description
@@ -113,7 +123,10 @@ fn TeamTaskRow(task: Task) -> impl IntoView {
     });
 
     view! {
-        <Card title=name subtitle=status>
+        <Card title=name subtitle=status.clone()>
+            <span class=format!("task-status-badge {}", status_class)>
+                {status}
+            </span>
             <p class="team-detail-desc">
                 {description}
             </p>
@@ -228,7 +241,13 @@ fn TeamMemberRow(
     view! {
         <div class="team-member-item">
             <div class="team-member-meta">
-                <span class="team-member-id">{user_id}</span>
+                <span class="team-member-id">
+                    <svg class="member-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    {user_id}
+                </span>
                 <span class="team-member-role">{format!("Level {}", role)}</span>
             </div>
             <div class="team-member-actions">
@@ -343,6 +362,63 @@ pub fn TeamDetailPage() -> impl IntoView {
             .iter()
             .filter(|task| matches!(task.task_status, TaskStatus::Paused))
             .count()
+    };
+
+    let (show_create_task_modal, set_show_create_task_modal) = signal(false);
+    let (create_task_loading, set_create_task_loading) = signal(false);
+    let (create_task_error, set_create_task_error) = signal(Option::<String>::None);
+
+    let open_create_task = Callback::from(move |_| {
+        set_create_task_error.set(None);
+        set_show_create_task_modal.set(true);
+    });
+
+    let close_create_task = Callback::from(move || {
+        set_show_create_task_modal.set(false);
+    });
+
+    let do_create_task_submit = {
+        let client = client.clone();
+        let set_loading = set_create_task_loading;
+        let set_error = set_create_task_error;
+        let set_show = set_show_create_task_modal;
+        let set_tasks = set_team_tasks;
+        let current_tasks = team_tasks;
+        let team_id = team_id;
+        Callback::from(move |data: TaskFormData| {
+            set_loading.set(true);
+            set_error.set(None);
+            let req = crate::api::task::CreateTaskRequest {
+                task_name: data.task_name,
+                task_description: data.task_description,
+                task_keywords: data.task_keywords,
+                task_priority: data.task_priority,
+                task_deadline: data.task_deadline,
+                task_leader_id: data.task_leader_id,
+                task_team_id: Some(team_id),
+            };
+            let client = client.clone();
+            let set_tasks = set_tasks.clone();
+            let current_tasks = current_tasks.clone();
+            let set_loading = set_loading;
+            let set_error = set_error;
+            let set_show = set_show;
+            wasm_bindgen_futures::spawn_local(async move {
+                match create_task(&client, &req).await {
+                    Ok(task) => {
+                        let mut new_tasks = current_tasks.get();
+                        new_tasks.insert(0, task);
+                        set_tasks.set(new_tasks);
+                        set_show.set(false);
+                        set_loading.set(false);
+                    }
+                    Err(e) => {
+                        set_error.set(Some(e.message));
+                        set_loading.set(false);
+                    }
+                }
+            });
+        })
     };
 
     let effect_client = client.clone();
@@ -508,18 +584,18 @@ pub fn TeamDetailPage() -> impl IntoView {
                 }
             >
                 <div class="team-detail-grid">
-                    {move || {
-                        current_team().map(|team| {
-                            let created = format_timestamp(team.team_create_time);
-                            let visibility = format!("{:?}", team.team_settings.team_visibility);
-                            let description = team
-                                .team_settings
-                                .team_description
-                                .unwrap_or_else(|| "No description".to_string());
-                            let member_limit = team.team_settings.team_member_limit;
+                    <div class="team-info-col">
+                        {move || {
+                            current_team().map(|team| {
+                                let created = format_timestamp(team.team_create_time);
+                                let visibility = format!("{:?}", team.team_settings.team_visibility);
+                                let description = team
+                                    .team_settings
+                                    .team_description
+                                    .unwrap_or_else(|| "No description".to_string());
+                                let member_limit = team.team_settings.team_member_limit;
 
-                            view! {
-                                <div class="team-detail-col">
+                                view! {
                                     <Card title="Team Information".to_string() subtitle="Basic team info".to_string()>
                                         <div class="team-detail-info">
                                             <p class="team-detail-field">
@@ -549,31 +625,32 @@ pub fn TeamDetailPage() -> impl IntoView {
                                             <p class="team-detail-desc">{description}</p>
                                         </div>
                                     </Card>
-
-                                    <Card title="Task Progress".to_string() subtitle="Team tasks".to_string()>
-                                        <div class="team-detail-stats">
-                                            <div class="team-stat">
-                                                <span class="team-stat-number">{tasks_total}</span>
-                                                <span class="team-stat-label">"Total"</span>
-                                            </div>
-                                            <div class="team-stat">
-                                                <span class="team-stat-number">{tasks_active}</span>
-                                                <span class="team-stat-label">"Active"</span>
-                                            </div>
-                                            <div class="team-stat">
-                                                <span class="team-stat-number">{tasks_done}</span>
-                                                <span class="team-stat-label">"Done"</span>
-                                            </div>
-                                            <div class="team-stat">
-                                                <span class="team-stat-number">{tasks_paused}</span>
-                                                <span class="team-stat-label">"Paused"</span>
-                                            </div>
-                                        </div>
-                                    </Card>
+                                }
+                            })
+                        }}
+                    </div>
+                    <div class="team-stats-col">
+                        <Card title="Task Progress".to_string() subtitle="Team tasks".to_string()>
+                            <div class="team-detail-stats">
+                                <div class="team-stat">
+                                    <span class="team-stat-number">{tasks_total}</span>
+                                    <span class="team-stat-label">"Total"</span>
                                 </div>
-                            }
-                        })
-                    }}
+                                <div class="team-stat">
+                                    <span class="team-stat-number">{tasks_active}</span>
+                                    <span class="team-stat-label">"Active"</span>
+                                </div>
+                                <div class="team-stat">
+                                    <span class="team-stat-number">{tasks_done}</span>
+                                    <span class="team-stat-label">"Done"</span>
+                                </div>
+                                <div class="team-stat">
+                                    <span class="team-stat-number">{tasks_paused}</span>
+                                    <span class="team-stat-label">"Paused"</span>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
                 </div>
 
                 <Card title="Members".to_string() subtitle="Member management".to_string()>
@@ -644,6 +721,15 @@ pub fn TeamDetailPage() -> impl IntoView {
                 </Card>
 
                 <Card title="Team Tasks".to_string() subtitle="Task list".to_string()>
+                    <div class="team-tasks-header">
+                        <Button
+                            variant=ButtonVariant::Primary
+                            size=ButtonSize::Sm
+                            on_click=open_create_task
+                        >
+                            "New Task"
+                        </Button>
+                    </div>
                     {move || {
                         if tasks_loading.get() {
                             view! {
@@ -680,6 +766,14 @@ pub fn TeamDetailPage() -> impl IntoView {
                         }
                     }}
                 </Card>
+
+                <TaskFormModal
+                    open=show_create_task_modal.into()
+                    mode=TaskFormMode::Create
+                    initial_data=TaskFormData::default()
+                    on_submit=do_create_task_submit
+                    on_close=close_create_task
+                />
             </Show>
         </div>
     }

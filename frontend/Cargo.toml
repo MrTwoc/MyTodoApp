@@ -16,3 +16,4 @@ js-sys = "0.3"
 gloo-net = "0.6"
 gloo-utils = "0.2"
 chrono = { version = "0.4", features = ["wasmbind"] }
+tracing = { workspace = true }

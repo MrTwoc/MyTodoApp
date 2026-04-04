@@ -1,6 +1,7 @@
 use chrono::Utc;
 use std::collections::HashSet;
 
+use crate::api::task::{CreateTaskRequest, create_task as api_create_task};
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
 use crate::components::loading::{Loading, LoadingVariant};
@@ -9,7 +10,7 @@ use crate::components::search::{Pagination, SearchInput};
 use crate::components::task_card::{TaskCard, TaskCardSkeleton};
 use crate::components::task_form::{TaskForm, TaskFormData, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
-use crate::store::{use_offline_task_store, use_task_store};
+use crate::store::{use_api_client, use_offline_task_store, use_task_store};
 use leptos::ev;
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
@@ -220,28 +221,59 @@ pub fn TasksPage() -> impl IntoView {
 
     let open_create = {
         let set_show_create_modal = set_show_create_modal;
-        let store = offline_store.clone();
         Callback::from(move |_| {
-            if store.is_enabled() {
-                set_show_create_modal.set(true);
-            }
+            set_show_create_modal.set(true);
         })
     };
 
     let do_create_submit = {
-        let store = offline_store.clone();
+        let offline_store = offline_store.clone();
+        let task_store = task_store.clone();
+        let client = use_api_client();
         let set_show_create_modal = set_show_create_modal;
         let set_offline_page = set_offline_page;
         Callback::from(move |data: TaskFormData| {
-            let task = store.new_task(
-                data.task_name,
-                data.task_description,
-                data.task_keywords,
-                data.task_priority,
-                data.task_deadline,
-            );
-            store.add_task(task);
-            set_offline_page.set(1);
+            if offline_store.is_enabled() {
+                let store = offline_store.clone();
+                let task = store.new_task(
+                    data.task_name,
+                    data.task_description,
+                    data.task_keywords,
+                    data.task_priority,
+                    data.task_deadline,
+                );
+                store.add_task(task);
+                set_offline_page.set(1);
+            } else {
+                let client = client.clone();
+                let task_store = task_store.clone();
+                let task_name = data.task_name.clone();
+                let task_description = data.task_description.clone();
+                let task_keywords = data.task_keywords.clone();
+                let task_priority = data.task_priority;
+                let task_deadline = data.task_deadline;
+                let task_leader_id = data.task_leader_id;
+                let task_team_id = data.task_team_id;
+                wasm_bindgen_futures::spawn_local(async move {
+                    let req = CreateTaskRequest {
+                        task_name,
+                        task_description,
+                        task_keywords,
+                        task_priority,
+                        task_deadline,
+                        task_leader_id,
+                        task_team_id,
+                    };
+                    match api_create_task(&client, &req).await {
+                        Ok(task) => {
+                            task_store.add_task(task);
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to create task: {}", e.message);
+                        }
+                    }
+                });
+            }
             set_show_create_modal.set(false);
         })
     };
@@ -325,7 +357,6 @@ pub fn TasksPage() -> impl IntoView {
                     <Button
                         variant=ButtonVariant::Primary
                         size=ButtonSize::Sm
-                        disabled={!is_offline_mode()}
                         on_click=open_create
                     >
                         "New Task"
@@ -407,22 +438,25 @@ pub fn TasksPage() -> impl IntoView {
                             let tasks = visible_tasks();
                             if tasks.is_empty() {
                                 view! {
-                                    <Card
-                                        title="No Tasks".to_string()
-                                        subtitle=if is_offline_mode() {
-                                            "No offline tasks yet.".to_string()
-                                        } else {
-                                            "No tasks found matching your filters.".to_string()
-                                        }
-                                    >
-                                        <p class="empty-text">
-                                            {if is_offline_mode() {
-                                                "Create a task after turning on offline mode."
+                                    <div class="empty-state-container">
+                                        <div class="empty-state-icon"></div>
+                                        <Card
+                                            title="No Tasks".to_string()
+                                            subtitle=if is_offline_mode() {
+                                                "No offline tasks yet.".to_string()
                                             } else {
-                                                "Create a task after turning on offline mode."
-                                            }}
-                                        </p>
-                                    </Card>
+                                                "No tasks found matching your filters.".to_string()
+                                            }
+                                        >
+                                            <p class="empty-text">
+                                                {if is_offline_mode() {
+                                                    "Create a task after turning on offline mode."
+                                                } else {
+                                                    "Create a task after turning on offline mode."
+                                                }}
+                                            </p>
+                                        </Card>
+                                    </div>
                                 }.into_any()
                             } else if is_offline_mode() {
                                 let cards: Vec<_> = tasks

@@ -16,6 +16,7 @@ pub fn TaskCard(
     #[prop(default = TaskCardVariant::Default)] variant: TaskCardVariant,
     #[prop(optional)] on_click: Option<Callback<(ev::MouseEvent,)>>,
     #[prop(optional)] on_status_change: Option<Callback<(TaskStatus,)>>,
+    #[prop(optional)] extra_actions: Option<Children>,
 ) -> impl IntoView {
     let variant_class = match variant {
         TaskCardVariant::Default => "task-card",
@@ -120,6 +121,11 @@ pub fn TaskCard(
                         TaskStatus::Paused => "Activate",
                     }}
                 </button>
+                {if let Some(actions) = extra_actions {
+                    view! { <div class="task-card-extra-actions">{actions()}</div> }.into_any()
+                } else {
+                    ().into_any()
+                }}
             </div>
         </div>
     }

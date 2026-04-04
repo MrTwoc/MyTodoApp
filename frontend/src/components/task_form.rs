@@ -70,7 +70,12 @@ pub fn TaskFormModal(
         "Save"
     };
 
-    // 响应式表单状态
+    let is_team_task = RwSignal::new(initial_data.task_team_id.is_some());
+
+    Effect::new(move |_| {
+        is_team_task.set(initial_data.task_team_id.is_some());
+    });
+
     let initial_data_clone = initial_data.clone();
     let form_data = RwSignal::new(initial_data_clone);
 
@@ -128,8 +133,12 @@ pub fn TaskFormModal(
     // 提交处理
     let handle_submit = move |ev: ev::SubmitEvent| {
         ev.prevent_default();
+        let mut data = form_data.get_untracked();
+        if !is_team_task.get_untracked() {
+            data.task_team_id = None;
+        }
         if let Some(callback) = on_submit {
-            callback.run((form_data.get_untracked(),));
+            callback.run((data,));
         }
     };
 
@@ -143,6 +152,21 @@ pub fn TaskFormModal(
     view! {
         <Modal open=open title={title.to_string()}>
             <form class="form" on:submit=handle_submit>
+                <div class="form-group">
+                    <label class="form-label">Task Type</label>
+                    <select
+                        class="input-field"
+                        prop:value=move || if is_team_task.get() { "team" } else { "personal" }
+                        on:change=move |ev| {
+                            let value = event_target_value(&ev);
+                            is_team_task.set(value == "team");
+                        }
+                    >
+                        <option value="personal">Personal</option>
+                        <option value="team">Team</option>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Task Name</label>
                     <input
@@ -231,7 +255,12 @@ pub fn TaskForm(
         "Save"
     };
 
-    // 响应式表单状态
+    let is_team_task = RwSignal::new(initial_data.task_team_id.is_some());
+
+    Effect::new(move |_| {
+        is_team_task.set(initial_data.task_team_id.is_some());
+    });
+
     let initial_data_clone = initial_data.clone();
     let form_data = RwSignal::new(initial_data_clone);
 
@@ -284,8 +313,12 @@ pub fn TaskForm(
 
     let handle_submit = move |ev: ev::SubmitEvent| {
         ev.prevent_default();
+        let mut data = form_data.get_untracked();
+        if !is_team_task.get_untracked() {
+            data.task_team_id = None;
+        }
         if let Some(callback) = on_submit {
-            callback.run((form_data.get_untracked(),));
+            callback.run((data,));
         }
     };
 
@@ -297,6 +330,21 @@ pub fn TaskForm(
 
     view! {
         <form class="form" on:submit=handle_submit>
+            <div class="form-group">
+                <label class="form-label">Task Type</label>
+                <select
+                    class="input-field"
+                    prop:value=move || if is_team_task.get() { "team" } else { "personal" }
+                    on:change=move |ev| {
+                        let value = event_target_value(&ev);
+                        is_team_task.set(value == "team");
+                    }
+                >
+                    <option value="personal">Personal</option>
+                    <option value="team">Team</option>
+                </select>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Task Name</label>
                 <input
