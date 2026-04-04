@@ -462,58 +462,18 @@ pub fn TasksPage() -> impl IntoView {
                                 let cards: Vec<_> = tasks
                                     .into_iter()
                                     .map(|task| {
-                                        let task_for_card = task.clone();
-                                        let task_for_edit = task.clone();
-                                        let status_task_id = task.task_id;
-                                        let delete_task_id = task.task_id;
-
-                                        let on_edit = Callback::from({
-                                            let set_show = set_show_edit_modal;
-                                            let set_task = set_editing_task;
-                                            move |_| {
-                                                set_task.set(Some(task_for_edit.clone()));
-                                                set_show.set(true);
-                                            }
-                                        });
-
-                                        let on_status = Callback::from({
-                                            let store = offline_store.clone();
-                                            move |status: TaskStatus| {
-                                                store.set_task_status(status_task_id, status);
-                                            }
-                                        });
-
-                                        let on_delete = Callback::from({
-                                            let store = offline_store.clone();
-                                            move |_| {
-                                                store.delete_task(delete_task_id);
-                                            }
-                                        });
-
+                                        let task_id = task.task_id;
                                         view! {
-                                            <div class="offline-task-card">
-                                                <TaskCard
-                                                    task=task_for_card
-                                                    interactive=false
-                                                    on_status_change=on_status
-                                                />
-                                                <div class="offline-task-actions">
-                                                    <Button
-                                                        variant=ButtonVariant::Secondary
-                                                        size=ButtonSize::Sm
-                                                        on_click=on_edit
-                                                    >
-                                                        "Edit"
-                                                    </Button>
-                                                    <Button
-                                                        variant=ButtonVariant::Danger
-                                                        size=ButtonSize::Sm
-                                                        on_click=on_delete
-                                                    >
-                                                        "Delete"
-                                                    </Button>
-                                                </div>
-                                            </div>
+                                            <TaskCard
+                                                task=task
+                                                interactive=true
+                                                on_click=Callback::from({
+                                                    let navigator = navigate.clone();
+                                                    move |_: web_sys::MouseEvent| {
+                                                        navigator(&format!("/tasks/{}", task_id), Default::default());
+                                                    }
+                                                })
+                                            />
                                         }
                                     })
                                     .collect();

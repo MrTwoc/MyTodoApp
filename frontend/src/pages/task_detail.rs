@@ -134,6 +134,14 @@ pub fn TaskDetailPage() -> impl IntoView {
         set_show_edit_modal.set(false);
     });
 
+    // ── Delete handler ────────────────────────────────────────────────────────
+    let on_delete = {
+        let navigate = navigate.clone();
+        Callback::from(move |_: web_sys::MouseEvent| {
+            navigate("/tasks", Default::default());
+        })
+    };
+
     view! {
         <div class="page">
             // ── Header ────────────────────────────────────────────────────────
@@ -150,6 +158,13 @@ pub fn TaskDetailPage() -> impl IntoView {
                     })
                 >
                     "Edit"
+                </Button>
+                <Button
+                    variant=ButtonVariant::Danger
+                    size=ButtonSize::Sm
+                    on_click=on_delete
+                >
+                    "Delete"
                 </Button>
             </header>
 
