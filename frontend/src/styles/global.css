@@ -57,6 +57,9 @@
   --warning: #e8590c;
   --warning-subtle: #fff4e6;
 
+  --info: #14919b;
+  --info-subtle: #e6f4f5;
+
   --overlay: rgba(0, 0, 0, 0.4);
 
   --spinner-border: #dee2e6;
@@ -93,6 +96,9 @@
 
   --warning: #ff922b;
   --warning-subtle: #2a231a;
+
+  --info: #22b8cf;
+  --info-subtle: #1a2a2f;
 
   --overlay: rgba(0, 0, 0, 0.6);
 
@@ -1504,6 +1510,27 @@ input, textarea, select, button, .no-transition {
 .priority-urgent {
   background-color: var(--danger-subtle);
   color: var(--danger);
+}
+
+.task-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-sm);
+}
+
+.task-type-personal {
+  background-color: var(--bg-tertiary);
+  color: var(--text-tertiary);
+}
+
+.task-type-team {
+  background-color: var(--info-subtle);
+  color: var(--info);
 }
 
 .task-card-title {

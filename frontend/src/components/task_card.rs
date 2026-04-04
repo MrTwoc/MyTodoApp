@@ -50,6 +50,14 @@ pub fn TaskCard(
         _ => "priority-urgent",
     };
 
+    let is_team_task = task.task_team_id.is_some();
+    let task_type_label = if is_team_task { "Team" } else { "Personal" };
+    let task_type_class = if is_team_task {
+        "task-type-team"
+    } else {
+        "task-type-personal"
+    };
+
     let handle_click = move |ev: ev::MouseEvent| {
         if let Some(cb) = on_click.as_ref() {
             cb.run((ev,));
@@ -84,6 +92,9 @@ pub fn TaskCard(
                 </span>
                 <span class=format!("task-priority-badge {}", priority_class)>
                     {priority_label}
+                </span>
+                <span class=format!("task-type-badge {}", task_type_class)>
+                    {task_type_label}
                 </span>
             </div>
 
