@@ -155,13 +155,15 @@ pub async fn list_teams(depot: &mut Depot, req: &mut Request, res: &mut Response
 
     match TeamService::list_teams(&pool, filter_user_id, query.leader_id).await {
         Ok(teams) => {
+            let total = teams.len() as u32;
             let teams_json: Vec<serde_json::Value> = teams
                 .iter()
                 .map(|t| serde_json::to_value(t).unwrap_or_default())
                 .collect();
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
-                "teams": teams_json
+                "teams": teams_json,
+                "total": total
             })));
         }
         Err(e) => {

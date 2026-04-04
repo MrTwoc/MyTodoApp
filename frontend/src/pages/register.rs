@@ -5,6 +5,7 @@ use crate::components::input::{Input, InputType};
 use crate::store::{use_api_client, use_user_store};
 use leptos::ev;
 use leptos::prelude::*;
+use leptos_router::NavigateOptions;
 use leptos_router::hooks::use_navigate;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -72,6 +73,20 @@ pub fn RegisterPage() -> impl IntoView {
     let user_store = use_user_store();
     let client = use_api_client();
     let navigate = use_navigate();
+
+    let user_store_for_effect = user_store.clone();
+    let navigate_for_effect = navigate.clone();
+    Effect::new(move || {
+        if user_store_for_effect.is_authenticated() {
+            navigate_for_effect(
+                "/dashboard",
+                NavigateOptions {
+                    replace: true,
+                    ..Default::default()
+                },
+            );
+        }
+    });
 
     let (username, set_username) = signal(String::new());
     let (email, set_email) = signal(String::new());
@@ -202,7 +217,13 @@ pub fn RegisterPage() -> impl IntoView {
             match register(&client_clone, &req).await {
                 Ok(resp) => {
                     user_store_clone.login(resp.access_token, resp.user);
-                    navigate_clone("/dashboard", Default::default());
+                    navigate_clone(
+                        "/dashboard",
+                        NavigateOptions {
+                            replace: true,
+                            ..Default::default()
+                        },
+                    );
                 }
                 Err(e) => {
                     set_error_clone.set(Some(e.message));
