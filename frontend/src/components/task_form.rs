@@ -75,7 +75,9 @@ pub fn TaskFormModal(
     let is_team_task = RwSignal::new(initial_data.task_team_id.is_some() || force_team_task);
 
     Effect::new(move |_| {
-        is_team_task.set(initial_data.task_team_id.is_some());
+        if !force_team_task {
+            is_team_task.set(initial_data.task_team_id.is_some());
+        }
     });
 
     let can_select_team = !offline_mode;
@@ -270,7 +272,9 @@ pub fn TaskForm(
     let is_team_task = RwSignal::new(initial_data.task_team_id.is_some() || force_team_task);
 
     Effect::new(move |_| {
-        is_team_task.set(initial_data.task_team_id.is_some());
+        if !force_team_task {
+            is_team_task.set(initial_data.task_team_id.is_some());
+        }
     });
 
     let can_select_team = !offline_mode;
