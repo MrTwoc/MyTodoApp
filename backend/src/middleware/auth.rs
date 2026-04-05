@@ -38,12 +38,15 @@ pub async fn auth_check(
 }
 
 fn extract_token(req: &Request) -> Option<String> {
-    let auth_header = req.header::<String>(AUTH_HEADER)?;
-    if auth_header.starts_with(BEARER_PREFIX) {
-        Some(auth_header[BEARER_PREFIX.len()..].to_string())
-    } else {
-        None
+    if let Some(auth_header) = req.header::<String>(AUTH_HEADER) {
+        if auth_header.starts_with(BEARER_PREFIX) {
+            return Some(auth_header[BEARER_PREFIX.len()..].to_string());
+        }
     }
+    if let Some(query) = req.query::<String>("token") {
+        return Some(query);
+    }
+    None
 }
 
 fn unauthorized_response(res: &mut Response) {

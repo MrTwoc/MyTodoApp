@@ -57,6 +57,7 @@ pub fn TaskFormModal(
     #[prop(default = TaskFormMode::Create)] mode: TaskFormMode,
     #[prop(default = TaskFormData::default())] initial_data: TaskFormData,
     #[prop(default = false)] force_team_task: bool,
+    #[prop(default = false)] offline_mode: bool,
     #[prop(optional)] on_submit: Option<Callback<(TaskFormData,)>>,
     #[prop(optional)] on_close: Option<Callback<()>>,
 ) -> impl IntoView {
@@ -76,6 +77,8 @@ pub fn TaskFormModal(
     Effect::new(move |_| {
         is_team_task.set(initial_data.task_team_id.is_some());
     });
+
+    let can_select_team = !offline_mode;
 
     let initial_data_clone = initial_data.clone();
     let form_data = RwSignal::new(initial_data_clone);
@@ -160,11 +163,17 @@ pub fn TaskFormModal(
                         prop:value=move || if is_team_task.get() { "team" } else { "personal" }
                         on:change=move |ev| {
                             let value = event_target_value(&ev);
-                            is_team_task.set(value == "team");
+                            if value == "team" && can_select_team {
+                                is_team_task.set(true);
+                            } else {
+                                is_team_task.set(false);
+                            }
                         }
                     >
-                        <option value="personal" disabled=is_team_task.get()>Personal</option>
-                        <option value="team">Team</option>
+                        <option value="personal">Personal</option>
+                        <option value="team" disabled=!can_select_team>
+                            {if can_select_team { "Team" } else { "Team (offline unavailable)" }}
+                        </option>
                     </select>
                 </div>
 
@@ -248,6 +257,7 @@ pub fn TaskForm(
     #[prop(default = TaskFormMode::Create)] mode: TaskFormMode,
     #[prop(default = TaskFormData::default())] initial_data: TaskFormData,
     #[prop(default = false)] force_team_task: bool,
+    #[prop(default = false)] offline_mode: bool,
     #[prop(optional)] on_submit: Option<Callback<(TaskFormData,)>>,
     #[prop(optional)] on_cancel: Option<Callback<()>>,
 ) -> impl IntoView {
@@ -262,6 +272,8 @@ pub fn TaskForm(
     Effect::new(move |_| {
         is_team_task.set(initial_data.task_team_id.is_some());
     });
+
+    let can_select_team = !offline_mode;
 
     let initial_data_clone = initial_data.clone();
     let form_data = RwSignal::new(initial_data_clone);
@@ -339,11 +351,17 @@ pub fn TaskForm(
                     prop:value=move || if is_team_task.get() { "team" } else { "personal" }
                     on:change=move |ev| {
                         let value = event_target_value(&ev);
-                        is_team_task.set(value == "team");
+                        if value == "team" && can_select_team {
+                            is_team_task.set(true);
+                        } else {
+                            is_team_task.set(false);
+                        }
                     }
                 >
                     <option value="personal">Personal</option>
-                    <option value="team">Team</option>
+                    <option value="team" disabled=!can_select_team>
+                        {if can_select_team { "Team" } else { "Team (offline unavailable)" }}
+                    </option>
                 </select>
             </div>
 

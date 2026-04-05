@@ -14,7 +14,7 @@ use crate::components::search::SearchInput;
 use crate::components::task_form::{TaskFormData, TaskFormModal, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::team_store::{TeamMember, TeamStore};
-use crate::store::{use_api_client, use_team_store};
+use crate::store::{use_api_client, use_team_store, use_user_store};
 use leptos::ev;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
@@ -443,16 +443,18 @@ pub fn TeamDetailPage() -> impl IntoView {
         let set_tasks = set_team_tasks;
         let current_tasks = team_tasks;
         let team_id = team_id;
+        let user_store = use_user_store();
         Callback::from(move |data: TaskFormData| {
             set_loading.set(true);
             set_error.set(None);
+            let leader_id = user_store.user_id().unwrap_or(0);
             let req = crate::api::task::CreateTaskRequest {
                 task_name: data.task_name,
                 task_description: data.task_description,
                 task_keywords: data.task_keywords,
                 task_priority: data.task_priority,
                 task_deadline: data.task_deadline,
-                task_leader_id: data.task_leader_id,
+                task_leader_id: leader_id,
                 task_team_id: Some(team_id),
             };
             let client = client.clone();

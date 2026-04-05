@@ -4,7 +4,8 @@ use crate::components::card::Card;
 use crate::components::modal::Modal;
 use crate::components::task_form::{TaskFormData, TaskFormModal, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
-use crate::store::{use_api_client, use_task_store};
+use crate::store::{use_api_client, use_offline_task_store, use_task_store};
+use chrono::Utc;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 
@@ -104,8 +105,26 @@ pub fn TaskDetailPage() -> impl IntoView {
     let (show_edit_modal, set_show_edit_modal) = signal(false);
     let client = use_api_client();
     let task_store = use_task_store();
-    let client = use_api_client();
-    let task_store = use_task_store();
+    let offline_store = use_offline_task_store();
+
+    let is_offline_mode = move || offline_store.state.get().enabled;
+
+    let current_task = {
+        let offline_store = offline_store.clone();
+        let task_signal = task.clone();
+        let task_id = task_id;
+        let is_offline = is_offline_mode.clone();
+        move || {
+            if is_offline() {
+                let tasks = offline_store.state.get().tasks;
+                let offline_task = tasks.into_iter().find(|t| t.task_id == task_id);
+                if let Some(t) = offline_task {
+                    return t;
+                }
+            }
+            task_signal.get()
+        }
+    };
 
     let nav_back = {
         let n = navigate.clone();
@@ -113,28 +132,67 @@ pub fn TaskDetailPage() -> impl IntoView {
     };
 
     // ── Status switch ─────────────────────────────────────────────────────────
-    let switch_to = move |new_status: TaskStatus| {
-        let mut t = task.get();
-        t.task_status = new_status;
-        set_task.set(t);
+    let switch_to = {
+        let task = task.clone();
+        let set_task = set_task.clone();
+        let offline_store = offline_store.clone();
+        let is_offline = is_offline_mode.clone();
+        let task_id = task_id;
+        move |new_status: TaskStatus| {
+            if is_offline() {
+                offline_store.set_task_status(task_id, new_status);
+            } else {
+                let mut t = task.get();
+                t.task_status = new_status;
+                set_task.set(t);
+            }
+        }
     };
 
-    let switch_active = move |_: web_sys::MouseEvent| switch_to(TaskStatus::Active);
-    let switch_completed = move |_: web_sys::MouseEvent| switch_to(TaskStatus::Completed);
-    let switch_paused = move |_: web_sys::MouseEvent| switch_to(TaskStatus::Paused);
+    let switch_active = {
+        let switch_to = switch_to.clone();
+        move |_: web_sys::MouseEvent| switch_to(TaskStatus::Active)
+    };
+    let switch_completed = {
+        let switch_to = switch_to.clone();
+        move |_: web_sys::MouseEvent| switch_to(TaskStatus::Completed)
+    };
+    let switch_paused = {
+        let switch_to = switch_to.clone();
+        move |_: web_sys::MouseEvent| switch_to(TaskStatus::Paused)
+    };
 
     // ── Edit form callbacks ───────────────────────────────────────────────────
-    let on_edit_submit: Callback<(TaskFormData,), ()> =
+    let on_edit_submit: Callback<(TaskFormData,), ()> = {
+        let task = task.clone();
+        let set_task = set_task.clone();
+        let offline_store = offline_store.clone();
+        let is_offline = is_offline_mode.clone();
+        let task_id = task_id;
         Callback::from(move |data: TaskFormData| {
-            let mut t = task.get();
-            t.task_name = data.task_name;
-            t.task_description = data.task_description;
-            t.task_keywords = data.task_keywords.into_iter().collect();
-            t.task_priority = data.task_priority;
-            t.task_deadline = data.task_deadline;
-            set_task.set(t);
+            if is_offline() {
+                let mut state = offline_store.state.get();
+                if let Some(t) = state.tasks.iter_mut().find(|t| t.task_id == task_id) {
+                    t.task_name = data.task_name;
+                    t.task_description = data.task_description;
+                    t.task_keywords = data.task_keywords.into_iter().collect();
+                    t.task_priority = data.task_priority;
+                    t.task_deadline = data.task_deadline;
+                    t.task_update_time = Some(Utc::now().timestamp());
+                    offline_store.set_state.set(state);
+                }
+            } else {
+                let mut t = task.get();
+                t.task_name = data.task_name;
+                t.task_description = data.task_description;
+                t.task_keywords = data.task_keywords.into_iter().collect();
+                t.task_priority = data.task_priority;
+                t.task_deadline = data.task_deadline;
+                set_task.set(t);
+            }
             set_show_edit_modal.set(false);
-        });
+        })
+    };
 
     let on_edit_cancel: Callback<(), ()> = Callback::from(move || {
         set_show_edit_modal.set(false);
@@ -145,56 +203,65 @@ pub fn TaskDetailPage() -> impl IntoView {
         let navigate = navigate.clone();
         let client = client.clone();
         let task_store = task_store.clone();
+        let offline_store = offline_store.clone();
         let task_id = task_id;
+        let is_offline = is_offline_mode.clone();
         Callback::from(move |_: web_sys::MouseEvent| {
-            let client = client.clone();
-            let task_store = task_store.clone();
-            let navigate = navigate.clone();
-            let task_id = task_id;
-            wasm_bindgen_futures::spawn_local(async move {
-                match api_delete_task(&client, task_id).await {
-                    Ok(_) => {
-                        task_store.remove_task(task_id);
-                        navigate("/tasks", Default::default());
+            if is_offline() {
+                offline_store.delete_task(task_id);
+                navigate("/tasks", Default::default());
+            } else {
+                let client = client.clone();
+                let task_store = task_store.clone();
+                let navigate = navigate.clone();
+                let task_id = task_id;
+                wasm_bindgen_futures::spawn_local(async move {
+                    match api_delete_task(&client, task_id).await {
+                        Ok(_) => {
+                            task_store.remove_task(task_id);
+                            navigate("/tasks", Default::default());
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to delete task: {}", e.message);
+                        }
                     }
-                    Err(e) => {
-                        tracing::error!("Failed to delete task: {}", e.message);
-                    }
-                }
-            });
+                });
+            }
         })
     };
 
     view! {
         <div class="page">
             // ── Header ────────────────────────────────────────────────────────
-            <header class="page-header">
+            <header class="page-header task-detail-header">
                 <div>
                     <button class="back-btn" on:click=nav_back>"← Back"</button>
-                    <h1 class="page-title">{move || task.get().task_name.clone()}</h1>
+                    <h1 class="page-title task-detail-title">{move || current_task().task_name.clone()}</h1>
                 </div>
-                <Button
-                    variant=ButtonVariant::Secondary
-                    size=ButtonSize::Sm
-                    on_click=Callback::from(move |_: web_sys::MouseEvent| {
-                        set_show_edit_modal.set(true);
-                    })
-                >
-                    "Edit"
-                </Button>
-                <Button
-                    variant=ButtonVariant::Danger
-                    size=ButtonSize::Sm
-                    on_click=on_delete
-                >
-                    "Delete"
-                </Button>
+                <div class="task-detail-actions">
+                    <Button
+                        variant=ButtonVariant::Secondary
+                        size=ButtonSize::Sm
+                        on_click=Callback::from(move |_: web_sys::MouseEvent| {
+                            set_show_edit_modal.set(true);
+                        })
+                    >
+                        "Edit"
+                    </Button>
+                    <Button
+                        variant=ButtonVariant::Danger
+                        size=ButtonSize::Sm
+                        on_click=on_delete
+                    >
+                        "Delete"
+                    </Button>
+                </div>
             </header>
 
             // ── Status & Priority badges ──────────────────────────────────────
             <div class="task-detail-badges">
                 {move || {
-                    let t = task.get();
+                    let t = current_task();
                     let sc = status_class(&t.task_status);
                     let sl = status_label(&t.task_status);
                     let pc = priority_class(t.task_priority);
@@ -207,43 +274,54 @@ pub fn TaskDetailPage() -> impl IntoView {
             </div>
 
             // ── Progress bar ──────────────────────────────────────────────────
-            <div class="progress-bar">
-                {move || {
-                    let pct = status_progress(&task.get().task_status);
-                    view! {
-                        <div
-                            class="progress-fill"
-                            style=format!("width: {}%;", pct)
-                            title=format!("{}%", pct)
-                        />
-                    }
-                }}
+            <div class="task-detail-progress">
+                <div class="task-detail-progress-label">
+                    <span>"Progress"</span>
+                    <span class="task-detail-progress-value">{move || {
+                        let pct = status_progress(&current_task().task_status);
+                        format!("{}%", pct)
+                    }}</span>
+                </div>
+                <div class="progress-bar">
+                    {move || {
+                        let pct = status_progress(&current_task().task_status);
+                        view! {
+                            <div
+                                class="progress-fill"
+                                style=format!("width: {}%;", pct)
+                            />
+                        }
+                    }}
+                </div>
             </div>
 
             // ── Status switch ─────────────────────────────────────────────────
             <Card title="Status".to_string()>
                 <div class="status-switch">
                     {move || {
-                        let current = task.get().task_status.clone();
+                        let current = current_task().task_status.clone();
+                        let st_active = switch_to.clone();
+                        let st_completed = switch_to.clone();
+                        let st_paused = switch_to.clone();
                         view! {
                             <Button
                                 variant=if current == TaskStatus::Active { ButtonVariant::Primary } else { ButtonVariant::Secondary }
                                 size=ButtonSize::Sm
-                                on_click=Callback::from(switch_active)
+                                on_click=Callback::from(move |_: web_sys::MouseEvent| st_active(TaskStatus::Active))
                             >
                                 "Active"
                             </Button>
                             <Button
                                 variant=if current == TaskStatus::Completed { ButtonVariant::Primary } else { ButtonVariant::Secondary }
                                 size=ButtonSize::Sm
-                                on_click=Callback::from(switch_completed)
+                                on_click=Callback::from(move |_: web_sys::MouseEvent| st_completed(TaskStatus::Completed))
                             >
                                 "Completed"
                             </Button>
                             <Button
                                 variant=if current == TaskStatus::Paused { ButtonVariant::Primary } else { ButtonVariant::Secondary }
                                 size=ButtonSize::Sm
-                                on_click=Callback::from(switch_paused)
+                                on_click=Callback::from(move |_: web_sys::MouseEvent| st_paused(TaskStatus::Paused))
                             >
                                 "Paused"
                             </Button>
@@ -255,7 +333,7 @@ pub fn TaskDetailPage() -> impl IntoView {
             // ── Details card ──────────────────────────────────────────────────
             <Card title="Details".to_string()>
                 {move || {
-                    task.get().task_description.map(|desc| view! {
+                    current_task().task_description.map(|desc| view! {
                         <div class="task-detail-section">
                             <h4 class="task-detail-label">"Description"</h4>
                             <p class="task-detail-value">{desc}</p>
@@ -263,7 +341,7 @@ pub fn TaskDetailPage() -> impl IntoView {
                     })
                 }}
                 {move || {
-                    task.get().task_deadline.map(|ts| {
+                    current_task().task_deadline.map(|ts| {
                         let s = format_timestamp(ts);
                         view! {
                             <div class="task-detail-section">
@@ -274,7 +352,7 @@ pub fn TaskDetailPage() -> impl IntoView {
                     })
                 }}
                 {move || {
-                    let kws: Vec<String> = task.get().task_keywords.into_iter().collect();
+                    let kws: Vec<String> = current_task().task_keywords.into_iter().collect();
                     if kws.is_empty() {
                         ().into_any()
                     } else {
@@ -294,14 +372,14 @@ pub fn TaskDetailPage() -> impl IntoView {
 
             // ── History / timeline ────────────────────────────────────────────
             <Card title="History".to_string()>
-                <p class="empty-text">"No history available."</p>
+                <p class="task-detail-empty">"No history available."</p>
             </Card>
 
             // ── Edit modal ────────────────────────────────────────────────────
             <TaskFormModal
                 open=MaybeSignal::from(show_edit_modal)
                 mode=TaskFormMode::Edit
-                initial_data=TaskFormData::from(task.get())
+                initial_data=TaskFormData::from(current_task())
                 on_submit=on_edit_submit
                 on_close=on_edit_cancel
             />

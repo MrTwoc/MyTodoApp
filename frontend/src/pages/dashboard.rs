@@ -100,31 +100,39 @@ pub fn DashboardPage() -> impl IntoView {
                 return;
             }
 
-            let on_state: Callback<(WsState,)> =
-                Callback::from(move |state: WsState| match state {
-                    WsState::Connecting => set_ws_status.set("Connecting".to_string()),
-                    WsState::Open => set_ws_status.set("Connected".to_string()),
-                    WsState::Closed => set_ws_status.set("Closed".to_string()),
-                    WsState::Error(msg) => set_ws_status.set(format!("Error: {msg}")),
-                });
+            let set_ws_status_inner = set_ws_status.clone();
+            let set_ws_logs_inner = set_ws_logs.clone();
+            let set_ws_count_inner = set_ws_count.clone();
 
-            let on_message: Callback<(WsEvent,)> = Callback::from(move |evt: WsEvent| {
-                let line = if evt.event.is_empty() {
-                    format!("raw: {}", task_payload_to_text(&evt.payload))
-                } else {
-                    format!("{}: {}", evt.event, task_payload_to_text(&evt.payload))
-                };
+            match connect_ws(&client, 
+                Callback::new(move |(state,): (WsState,)| {
+                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+                        match state {
+                            WsState::Connecting => set_ws_status_inner.set("Connecting".to_string()),
+                            WsState::Open => set_ws_status_inner.set("Connected".to_string()),
+                            WsState::Closed => set_ws_status_inner.set("Closed".to_string()),
+                            WsState::Error(msg) => set_ws_status_inner.set(format!("Error: {msg}")),
+                        }
+                    }));
+                }),
+                Callback::new(move |(evt,): (WsEvent,)| {
+                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+                        let line = if evt.event.is_empty() {
+                            format!("raw: {}", task_payload_to_text(&evt.payload))
+                        } else {
+                            format!("{}: {}", evt.event, task_payload_to_text(&evt.payload))
+                        };
 
-                set_ws_logs.update(|items| {
-                    items.insert(0, line);
-                    if items.len() > 5 {
-                        items.truncate(5);
-                    }
-                });
-                set_ws_count.update(|value| *value = value.saturating_add(1));
-            });
-
-            match connect_ws(&client, on_state, on_message) {
+                        set_ws_logs_inner.update(|items| {
+                            items.insert(0, line);
+                            if items.len() > 5 {
+                                items.truncate(5);
+                            }
+                        });
+                        set_ws_count_inner.update(|value| *value = value.saturating_add(1));
+                    }));
+                })
+            ) {
                 Ok(conn) => {
                     set_ws_conn.set(Some(Arc::new(Mutex::new(conn))));
                 }
@@ -157,13 +165,14 @@ pub fn DashboardPage() -> impl IntoView {
             set_initialized.set(true);
             load_dashboard.run(());
             connect_realtime.run(());
-            on_cleanup(move || {
-                if let Some(conn) = ws_conn.get_untracked() {
-                    conn.lock().unwrap().close();
-                }
-                set_ws_conn.set(None);
-            });
         }
+    });
+
+    on_cleanup(move || {
+        if let Some(conn) = ws_conn.get_untracked() {
+            conn.lock().unwrap().close();
+        }
+        set_ws_conn.set(None);
     });
 
     view! {

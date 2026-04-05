@@ -123,7 +123,7 @@ pub async fn list_tasks(depot: &mut Depot, req: &mut Request, res: &mut Response
         }
     };
 
-    match TaskService::list_tasks(&pool, user_id, None, query).await {
+    match TaskService::list_tasks(&pool, user_id, query.team_id, query).await {
         Ok(tasks) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({

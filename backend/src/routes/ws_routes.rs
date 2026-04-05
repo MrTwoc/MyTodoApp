@@ -7,7 +7,7 @@ use crate::middleware;
 use crate::ws;
 
 #[handler]
-async fn ws_connect(_depot: &mut Depot, req: &mut Request, res: &mut Response) {
+async fn ws_connect(req: &mut Request, res: &mut Response) {
     let mut rx = ws::subscribe();
 
     if WebSocketUpgrade::new()
@@ -51,9 +51,6 @@ async fn ws_connect(_depot: &mut Depot, req: &mut Request, res: &mut Response) {
 }
 
 pub fn ws_router() -> Router {
-    let auth_middleware = middleware::auth::auth_check;
-
     Router::with_path("ws")
-        .hoop(auth_middleware)
         .get(ws_connect)
 }

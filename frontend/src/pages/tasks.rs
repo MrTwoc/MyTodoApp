@@ -10,7 +10,7 @@ use crate::components::search::{Pagination, SearchInput};
 use crate::components::task_card::{TaskCard, TaskCardSkeleton};
 use crate::components::task_form::{TaskForm, TaskFormData, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
-use crate::store::{use_api_client, use_offline_task_store, use_task_store};
+use crate::store::{use_api_client, use_offline_task_store, use_task_store, use_team_store, use_user_store};
 use leptos::ev;
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
@@ -253,6 +253,8 @@ pub fn TasksPage() -> impl IntoView {
     let do_create_submit = {
         let offline_store = offline_store.clone();
         let task_store = task_store.clone();
+        let team_store = use_team_store();
+        let user_store = use_user_store();
         let client = use_api_client();
         let set_show_create_modal = set_show_create_modal;
         let set_offline_page = set_offline_page;
@@ -276,8 +278,13 @@ pub fn TasksPage() -> impl IntoView {
                 let task_keywords = data.task_keywords.clone();
                 let task_priority = data.task_priority;
                 let task_deadline = data.task_deadline;
-                let task_leader_id = data.task_leader_id;
                 let task_team_id = data.task_team_id;
+                let user_id = user_store.user_id().unwrap_or(0);
+                let team_id = if data.task_team_id.is_some() {
+                    data.task_team_id
+                } else {
+                    team_store.state.get().active_team_id
+                };
                 wasm_bindgen_futures::spawn_local(async move {
                     let req = CreateTaskRequest {
                         task_name,
@@ -285,8 +292,8 @@ pub fn TasksPage() -> impl IntoView {
                         task_keywords,
                         task_priority,
                         task_deadline,
-                        task_leader_id,
-                        task_team_id,
+                        task_leader_id: user_id,
+                        task_team_id: team_id,
                     };
                     match api_create_task(&client, &req).await {
                         Ok(task) => {
@@ -383,7 +390,7 @@ pub fn TasksPage() -> impl IntoView {
                 </div>
                 <div class="task-header-actions">
                     <div class="toggle-switch">
-                        <span class="toggle-label">"Online"</span>
+                        <span class="toggle-label online-label" class:checked=move || !is_offline_mode()>"Online"</span>
                         <label class="toggle">
                             <input
                                 type="checkbox"
@@ -392,7 +399,7 @@ pub fn TasksPage() -> impl IntoView {
                             />
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="toggle-label">"Offline"</span>
+                        <span class="toggle-label offline-label" class:checked=move || is_offline_mode()>"Offline"</span>
                     </div>
                     <Button
                         variant=ButtonVariant::Primary
@@ -569,23 +576,25 @@ pub fn TasksPage() -> impl IntoView {
             }}
 
             <Modal
-                title="Create Offline Task".to_string()
+                title="Create Task".to_string()
                 open=MaybeSignal::derive(move || show_create_modal.get())
                 on_close=do_create_close
             >
                 <TaskForm
+                    offline_mode=is_offline_mode()
                     on_submit=do_create_submit
                     on_cancel=do_create_cancel
                 />
             </Modal>
 
             <Modal
-                title="Edit Offline Task".to_string()
+                title="Edit Task".to_string()
                 open=MaybeSignal::derive(move || show_edit_modal.get())
                 on_close=do_edit_close
             >
                 <TaskForm
                     mode=TaskFormMode::Edit
+                    offline_mode=is_offline_mode()
                     initial_data=TaskFormData::from(editing_task.get().unwrap_or_default())
                     on_submit=do_edit_submit
                     on_cancel=do_edit_cancel

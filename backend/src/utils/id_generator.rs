@@ -18,12 +18,12 @@ ID 结构：[类型位(8位)] [雪花ID(56位)]
 use sonyflake::Sonyflake;
 
 // 测试sonflake id
-pub fn test_sonyflake_id() -> Result<u64, sonyflake::Error> {
-    let sf = Sonyflake::new()?;
-    let next_id = sf.next_id()?;
-    tracing::info!("sonyflake id: {}", next_id);
-    Ok(next_id)
-}
+// pub fn test_sonyflake_id() -> Result<u64, sonyflake::Error> {
+//     let sf = Sonyflake::new()?;
+//     let next_id = sf.next_id()?;
+//     tracing::info!("sonyflake id: {}", next_id);
+//     Ok(next_id)
+// }
 
 /// 实体类型枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

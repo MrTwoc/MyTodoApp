@@ -35,10 +35,10 @@ async fn main() {
         return;
     }
 
-    if let Err(e) = utils::id_generator::test_sonyflake_id() {
-        tracing::error!("测试sonflake id失败: {:?}", e);
-        return;
-    }
+    // if let Err(e) = utils::id_generator::test_sonyflake_id() {
+    //     tracing::error!("测试sonflake id失败: {:?}", e);
+    //     return;
+    // }
 
     let cors = Cors::new()
         .allow_origin([

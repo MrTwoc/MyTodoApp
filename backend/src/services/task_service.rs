@@ -49,6 +49,7 @@ pub struct ListTasksQuery {
     pub deadline_after: Option<i64>,
     pub limit: Option<u32>,
     pub offset: Option<u32>,
+    pub team_id: Option<u64>,
 }
 
 pub struct TaskService;
