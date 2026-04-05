@@ -58,6 +58,7 @@ pub fn TaskFormModal(
     #[prop(default = TaskFormData::default())] initial_data: TaskFormData,
     #[prop(default = false)] force_team_task: bool,
     #[prop(default = false)] offline_mode: bool,
+    #[prop(default = None)] active_team_id: Option<u64>,
     #[prop(optional)] on_submit: Option<Callback<(TaskFormData,)>>,
     #[prop(optional)] on_close: Option<Callback<()>>,
 ) -> impl IntoView {
@@ -80,7 +81,8 @@ pub fn TaskFormModal(
         }
     });
 
-    let can_select_team = !offline_mode;
+    // let can_select_team = !offline_mode;
+    let can_select_team = true;
 
     let initial_data_clone = initial_data.clone();
     let form_data = RwSignal::new(initial_data_clone);
@@ -167,6 +169,11 @@ pub fn TaskFormModal(
                             let value = event_target_value(&ev);
                             if value == "team" && can_select_team {
                                 is_team_task.set(true);
+                                if form_data.get_untracked().task_team_id.is_none() {
+                                    form_data.update(|data| {
+                                        data.task_team_id = active_team_id;
+                                    });
+                                }
                             } else {
                                 is_team_task.set(false);
                             }
@@ -260,6 +267,7 @@ pub fn TaskForm(
     #[prop(default = TaskFormData::default())] initial_data: TaskFormData,
     #[prop(default = false)] force_team_task: bool,
     #[prop(default = false)] offline_mode: bool,
+    #[prop(default = None)] active_team_id: Option<u64>,
     #[prop(optional)] on_submit: Option<Callback<(TaskFormData,)>>,
     #[prop(optional)] on_cancel: Option<Callback<()>>,
 ) -> impl IntoView {
@@ -277,7 +285,8 @@ pub fn TaskForm(
         }
     });
 
-    let can_select_team = !offline_mode;
+    // let can_select_team = !offline_mode;
+    let can_select_team = true;
 
     let initial_data_clone = initial_data.clone();
     let form_data = RwSignal::new(initial_data_clone);
@@ -354,13 +363,18 @@ pub fn TaskForm(
                     class="input-field"
                     prop:value=move || if is_team_task.get() { "team" } else { "personal" }
                     on:change=move |ev| {
-                        let value = event_target_value(&ev);
-                        if value == "team" && can_select_team {
-                            is_team_task.set(true);
-                        } else {
-                            is_team_task.set(false);
+                            let value = event_target_value(&ev);
+                            if value == "team" && can_select_team {
+                                is_team_task.set(true);
+                                if form_data.get_untracked().task_team_id.is_none() {
+                                    form_data.update(|data| {
+                                        data.task_team_id = active_team_id;
+                                    });
+                                }
+                            } else {
+                                is_team_task.set(false);
+                            }
                         }
-                    }
                 >
                     <option value="personal">Personal</option>
                     <option value="team" disabled=!can_select_team>

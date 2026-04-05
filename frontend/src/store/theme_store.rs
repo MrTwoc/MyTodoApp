@@ -1,7 +1,7 @@
 use crate::store::{get_local_storage_item, set_local_storage_item};
 use leptos::prelude::*;
-use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::MediaQueryList;
 
 const THEME_KEY: &str = "todo_theme";

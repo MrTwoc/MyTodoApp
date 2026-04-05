@@ -4,7 +4,7 @@ use crate::components::card::Card;
 use crate::components::modal::Modal;
 use crate::components::task_form::{TaskFormData, TaskFormModal, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
-use crate::store::{use_api_client, use_offline_task_store, use_task_store};
+use crate::store::{use_api_client, use_task_store};
 use chrono::Utc;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
@@ -105,23 +105,23 @@ pub fn TaskDetailPage() -> impl IntoView {
     let (show_edit_modal, set_show_edit_modal) = signal(false);
     let client = use_api_client();
     let task_store = use_task_store();
-    let offline_store = use_offline_task_store();
+    // let offline_store = use_offline_task_store();
 
-    let is_offline_mode = move || offline_store.state.get().enabled;
+    // let is_offline_mode = move || offline_store.state.get().enabled;
 
     let current_task = {
-        let offline_store = offline_store.clone();
+        // let offline_store = offline_store.clone();
         let task_signal = task.clone();
         let task_id = task_id;
-        let is_offline = is_offline_mode.clone();
+        // let is_offline = is_offline_mode.clone();
         move || {
-            if is_offline() {
-                let tasks = offline_store.state.get().tasks;
-                let offline_task = tasks.into_iter().find(|t| t.task_id == task_id);
-                if let Some(t) = offline_task {
-                    return t;
-                }
-            }
+            // if is_offline() {
+            //     let tasks = offline_store.state.get().tasks;
+            //     let offline_task = tasks.into_iter().find(|t| t.task_id == task_id);
+            //     if let Some(t) = offline_task {
+            //         return t;
+            //     }
+            // }
             task_signal.get()
         }
     };
@@ -135,17 +135,17 @@ pub fn TaskDetailPage() -> impl IntoView {
     let switch_to = {
         let task = task.clone();
         let set_task = set_task.clone();
-        let offline_store = offline_store.clone();
-        let is_offline = is_offline_mode.clone();
+        // let offline_store = offline_store.clone();
+        // let is_offline = is_offline_mode.clone();
         let task_id = task_id;
         move |new_status: TaskStatus| {
-            if is_offline() {
-                offline_store.set_task_status(task_id, new_status);
-            } else {
+            // if is_offline() {
+            //     offline_store.set_task_status(task_id, new_status);
+            // } else {
                 let mut t = task.get();
                 t.task_status = new_status;
                 set_task.set(t);
-            }
+            // }
         }
     };
 
@@ -166,22 +166,22 @@ pub fn TaskDetailPage() -> impl IntoView {
     let on_edit_submit: Callback<(TaskFormData,), ()> = {
         let task = task.clone();
         let set_task = set_task.clone();
-        let offline_store = offline_store.clone();
-        let is_offline = is_offline_mode.clone();
+        // let offline_store = offline_store.clone();
+        // let is_offline = is_offline_mode.clone();
         let task_id = task_id;
         Callback::from(move |data: TaskFormData| {
-            if is_offline() {
-                let mut state = offline_store.state.get();
-                if let Some(t) = state.tasks.iter_mut().find(|t| t.task_id == task_id) {
-                    t.task_name = data.task_name;
-                    t.task_description = data.task_description;
-                    t.task_keywords = data.task_keywords.into_iter().collect();
-                    t.task_priority = data.task_priority;
-                    t.task_deadline = data.task_deadline;
-                    t.task_update_time = Some(Utc::now().timestamp());
-                    offline_store.set_state.set(state);
-                }
-            } else {
+            // if is_offline() {
+            //     let mut state = offline_store.state.get();
+            //     if let Some(t) = state.tasks.iter_mut().find(|t| t.task_id == task_id) {
+            //         t.task_name = data.task_name;
+            //         t.task_description = data.task_description;
+            //         t.task_keywords = data.task_keywords.into_iter().collect();
+            //         t.task_priority = data.task_priority;
+            //         t.task_deadline = data.task_deadline;
+            //         t.task_update_time = Some(Utc::now().timestamp());
+            //         offline_store.set_state.set(state);
+            //     }
+            // } else {
                 let mut t = task.get();
                 t.task_name = data.task_name;
                 t.task_description = data.task_description;
@@ -189,7 +189,7 @@ pub fn TaskDetailPage() -> impl IntoView {
                 t.task_priority = data.task_priority;
                 t.task_deadline = data.task_deadline;
                 set_task.set(t);
-            }
+            // }
             set_show_edit_modal.set(false);
         })
     };
@@ -203,14 +203,14 @@ pub fn TaskDetailPage() -> impl IntoView {
         let navigate = navigate.clone();
         let client = client.clone();
         let task_store = task_store.clone();
-        let offline_store = offline_store.clone();
+        // let offline_store = offline_store.clone();
         let task_id = task_id;
-        let is_offline = is_offline_mode.clone();
+        // let is_offline = is_offline_mode.clone();
         Callback::from(move |_: web_sys::MouseEvent| {
-            if is_offline() {
-                offline_store.delete_task(task_id);
-                navigate("/tasks", Default::default());
-            } else {
+            // if is_offline() {
+            //     offline_store.delete_task(task_id);
+            //     navigate("/tasks", Default::default());
+            // } else {
                 let client = client.clone();
                 let task_store = task_store.clone();
                 let navigate = navigate.clone();
@@ -226,7 +226,7 @@ pub fn TaskDetailPage() -> impl IntoView {
                         }
                     }
                 });
-            }
+            // }
         })
     };
 

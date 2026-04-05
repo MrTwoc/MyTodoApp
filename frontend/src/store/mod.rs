@@ -1,4 +1,4 @@
-pub mod offline_task_store;
+// pub mod offline_task_store;
 pub mod task_store;
 pub mod team_store;
 pub mod theme_store;
@@ -11,7 +11,7 @@ pub struct Stores {
     pub theme: theme_store::ThemeStore,
     pub user: user_store::UserStore,
     pub task: task_store::TaskStore,
-    pub offline_task: offline_task_store::OfflineTaskStore,
+    // pub offline_task: offline_task_store::OfflineTaskStore,
     pub team: team_store::TeamStore,
     pub api: ApiClient,
 }
@@ -21,7 +21,7 @@ pub fn create_stores() -> Stores {
         theme: theme_store::create_theme_store(),
         user: user_store::create_user_store(),
         task: task_store::create_task_store(),
-        offline_task: offline_task_store::create_offline_task_store(),
+        //         offline_task: offline_task_store::create_offline_task_store(),
         team: team_store::create_team_store(),
         api: ApiClient::new(None),
     }
@@ -31,7 +31,7 @@ pub fn provide_stores(stores: Stores) {
     provide_context(stores.theme);
     provide_context(stores.user);
     provide_context(stores.task);
-    provide_context(stores.offline_task);
+    //     provide_context(stores.offline_task);
     provide_context(stores.team);
     provide_context(stores.api);
 }
@@ -52,10 +52,10 @@ pub fn use_team_store() -> team_store::TeamStore {
     use_context::<team_store::TeamStore>().expect("TeamStore not found in context.")
 }
 
-pub fn use_offline_task_store() -> offline_task_store::OfflineTaskStore {
-    use_context::<offline_task_store::OfflineTaskStore>()
-        .expect("OfflineTaskStore not found in context.")
-}
+// pub fn use_offline_task_store() -> offline_task_store::OfflineTaskStore {
+//     use_context::<offline_task_store::OfflineTaskStore>()
+//         .expect("OfflineTaskStore not found in context.")
+// }
 
 pub fn use_api_client() -> ApiClient {
     use_context::<ApiClient>().expect("ApiClient not found in context.")
