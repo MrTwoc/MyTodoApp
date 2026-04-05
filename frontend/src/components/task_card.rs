@@ -103,7 +103,7 @@ pub fn TaskCard(
             {if let Some(desc) = &task.task_description {
                 view! { <p class="task-card-desc">{desc.as_str()}</p> }.into_any()
             } else {
-                ().into_any()
+                view! { <div class="task-card-desc"></div> }.into_any()
             }}
 
             {if let Some(deadline) = task.task_deadline {
