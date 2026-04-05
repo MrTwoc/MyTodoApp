@@ -118,29 +118,30 @@ fn TeamTaskRow(task: Task) -> impl IntoView {
         .clone()
         .unwrap_or_else(|| "No description".to_string());
 
-    let on_open = Callback::from(move |_| {
+    let on_open = Callback::new(move |_| {
         let path = format!("/tasks/{}", task_id);
         navigate(&path, Default::default());
     });
 
     view! {
-        <Card title=name subtitle=status.clone()>
-            <span class=format!("task-status-badge {}", status_class)>
-                {status}
-            </span>
-            <p class="team-detail-desc">
-                {description}
-            </p>
-            <CardFooter>
+        <div class="team-task-card">
+            <div class="team-task-card-header">
+                <h4 class="team-task-card-title">{name}</h4>
+                <span class=format!("task-status-badge team-task-status {}", status_class)>
+                    {status}
+                </span>
+            </div>
+            <p class="team-task-card-desc">{description}</p>
+            <div class="team-task-card-footer">
                 <Button
                     variant=ButtonVariant::Ghost
                     size=ButtonSize::Sm
                     on_click=on_open
                 >
-                    "Open"
+                    "View Details"
                 </Button>
-            </CardFooter>
-        </Card>
+            </div>
+        </div>
     }
 }
 
@@ -656,34 +657,57 @@ pub fn TeamDetailPage() -> impl IntoView {
                                     <Card title="Team Information".to_string() subtitle="Basic team info".to_string()>
                                         <div class="team-detail-info">
                                             <p class="team-detail-field">
-                                                <span class="team-detail-label">"Team ID"</span>
-                                                <span>{team.team_id}</span>
+                                                <span class="team-detail-field-icon id">ID</span>
+                                                <span class="team-detail-field-content">
+                                                    <span class="team-detail-label">"Team ID"</span>
+                                                    <span>{team.team_id}</span>
+                                                </span>
                                             </p>
                                             <p class="team-detail-field">
-                                                <span class="team-detail-label">"Leader"</span>
-                                                <span>{team.team_leader_id}</span>
+                                                <span class="team-detail-field-icon leader">LD</span>
+                                                <span class="team-detail-field-content">
+                                                    <span class="team-detail-label">"Leader"</span>
+                                                    <span>{team.team_leader_id}</span>
+                                                </span>
                                             </p>
                                             <p class="team-detail-field">
-                                                <span class="team-detail-label">"Created"</span>
-                                                <span>{created}</span>
+                                                <span class="team-detail-field-icon created">CR</span>
+                                                <span class="team-detail-field-content">
+                                                    <span class="team-detail-label">"Created"</span>
+                                                    <span>{created}</span>
+                                                </span>
                                             </p>
                                             <p class="team-detail-field">
-                                                <span class="team-detail-label">"Members"</span>
-                                                <span>{total_members()}</span>
+                                                <span class="team-detail-field-icon members">MB</span>
+                                                <span class="team-detail-field-content">
+                                                    <span class="team-detail-label">"Members"</span>
+                                                    <span>{total_members()}</span>
+                                                </span>
                                             </p>
                                             <p class="team-detail-field">
-                                                <span class="team-detail-label">"Member limit"</span>
-                                                <span>{if member_limit == 0 { "Unlimited".to_string() } else { member_limit.to_string() }}</span>
+                                                <span class="team-detail-field-icon limit">LM</span>
+                                                <span class="team-detail-field-content">
+                                                    <span class="team-detail-label">"Member limit"</span>
+                                                    <span>{if member_limit == 0 { "Unlimited".to_string() } else { member_limit.to_string() }}</span>
+                                                </span>
                                             </p>
                                             <p class="team-detail-field">
-                                                <span class="team-detail-label">"Visibility"</span>
-                                                <span>{visibility}</span>
+                                                <span class="team-detail-field-icon visibility">VS</span>
+                                                <span class="team-detail-field-content">
+                                                    <span class="team-detail-label">"Visibility"</span>
+                                                    <span>{visibility}</span>
+                                                </span>
                                             </p>
-                                            <p class="team-detail-desc">{description}</p>
+                                            <p class="team-detail-field full-width">
+                                                <span class="team-detail-field-content">
+                                                    <span class="team-detail-label">"Description"</span>
+                                                    <span class="team-detail-desc">{description}</span>
+                                                </span>
+                                            </p>
                                         </div>
                                         <CardFooter>
                                             <Button
-                                                variant=ButtonVariant::Ghost
+                                                variant=ButtonVariant::Secondary
                                                 size=ButtonSize::Sm
                                                 on_click=Callback::from(move |_| {
                                                     if let Some(t) = current_team() {
