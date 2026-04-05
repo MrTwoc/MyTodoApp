@@ -81,6 +81,7 @@ impl DbSubTeamMember {
                 team_id: None,
                 sub_team_id: Some(row.get::<i64, _>("sub_team_id") as u64),
                 user_id: row.get::<i64, _>("user_id") as u64,
+                username: None,
                 level: row.get::<i32, _>("level") as u8,
                 join_time: row.get("join_time"),
             });

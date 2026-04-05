@@ -379,6 +379,21 @@ pub fn TeamDetailPage() -> impl IntoView {
         }
     };
 
+    let leader_username = {
+        let team_store = team_store.clone();
+        move || -> String {
+            let teams = team_store.state.get().teams.clone();
+            let team = teams.iter().find(|t| t.team_id == team_id);
+            if let Some(team) = team {
+                if let Some(member) = team.team_members.iter().find(|m| m.user_id == team.team_leader_id) {
+                    return member.username.clone().unwrap_or_else(|| team.team_leader_id.to_string());
+                }
+                return team.team_leader_id.to_string();
+            }
+            "Unknown".to_string()
+        }
+    };
+
     let total_members = move || current_team().map_or(0, |team| team.team_members.len());
 
     let current_members = move || {
@@ -669,7 +684,7 @@ pub fn TeamDetailPage() -> impl IntoView {
                                                 <span class="team-detail-field-icon leader">LD</span>
                                                 <span class="team-detail-field-content">
                                                     <span class="team-detail-label">"Leader"</span>
-                                                    <span>{team.team_leader_id}</span>
+                                                    <span>{leader_username()}</span>
                                                 </span>
                                             </p>
                                             <p class="team-detail-field">

@@ -226,10 +226,11 @@ impl DbTeam {
     pub async fn get_team_members(pool: &PgPool, team_id: u64) -> Result<Vec<Member>> {
         let result = sqlx::query(
             r#"
-            SELECT user_id, level, join_time
-            FROM team_members
-            WHERE team_id = $1
-            ORDER BY join_time ASC
+            SELECT tm.user_id, tm.level, tm.join_time, u.user_username
+            FROM team_members tm
+            LEFT JOIN users u ON tm.user_id = u.user_id
+            WHERE tm.team_id = $1
+            ORDER BY tm.join_time ASC
             "#,
         )
         .bind(team_id as i64)
@@ -241,6 +242,7 @@ impl DbTeam {
             let user_id: i64 = row.get("user_id");
             let level: i32 = row.get("level");
             let join_time: i64 = row.get("join_time");
+            let username: Option<String> = row.get("user_username");
 
             members.push(Member {
                 user_id: user_id as u64,
@@ -248,6 +250,7 @@ impl DbTeam {
                 join_time,
                 team_id: Some(team_id),
                 sub_team_id: None,
+                username,
             });
         }
 

@@ -15,7 +15,6 @@ pub fn TaskCard(
     #[prop(default = false)] interactive: bool,
     #[prop(default = TaskCardVariant::Default)] variant: TaskCardVariant,
     #[prop(optional)] on_click: Option<Callback<(ev::MouseEvent,)>>,
-    #[prop(optional)] on_status_change: Option<Callback<(TaskStatus,)>>,
     #[prop(optional)] extra_actions: Option<Children>,
 ) -> impl IntoView {
     let variant_class = match variant {
@@ -64,21 +63,6 @@ pub fn TaskCard(
         }
     };
 
-    let cycle_status = {
-        let cb = on_status_change.clone();
-        let current_status = task.task_status.clone();
-        move |_| {
-            if let Some(callback) = cb.as_ref() {
-                let next = match current_status {
-                    TaskStatus::Active => TaskStatus::Completed,
-                    TaskStatus::Completed => TaskStatus::Paused,
-                    TaskStatus::Paused => TaskStatus::Active,
-                };
-                callback.run((next,));
-            }
-        }
-    };
-
     view! {
         <div
             class=("task-card-wrapper", true)
@@ -122,16 +106,6 @@ pub fn TaskCard(
             }}
 
             <div class="task-card-footer">
-                <button
-                    class="task-card-action"
-                    on:click=cycle_status
-                >
-                    {match task.task_status {
-                        TaskStatus::Active => "Complete",
-                        TaskStatus::Completed => "Reopen",
-                        TaskStatus::Paused => "Activate",
-                    }}
-                </button>
                 {if let Some(actions) = extra_actions {
                     view! { <div class="task-card-extra-actions">{actions()}</div> }.into_any()
                 } else {

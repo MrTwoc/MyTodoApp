@@ -113,6 +113,7 @@ fn AppSidebar() -> impl IntoView {
         <aside class="app-sidebar">
             <div class="app-sidebar-header">
                 <a href="/dashboard" class="app-logo">"todoManager"</a>
+                <ThemeSwitcher />
             </div>
             <nav class="app-sidebar-nav">
                 <a
@@ -176,7 +177,6 @@ fn AppSidebar() -> impl IntoView {
                     </svg>
                     "Profile"
                 </a>
-                <ThemeSwitcher />
             </div>
         </aside>
     }

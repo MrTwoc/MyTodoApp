@@ -89,6 +89,7 @@ pub struct Member {
     pub team_id: Option<u64>,
     pub sub_team_id: Option<u64>,
     pub user_id: u64,
+    pub username: Option<String>,
     pub level: u8,
     pub join_time: i64,
 }
