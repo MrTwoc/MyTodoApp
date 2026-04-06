@@ -1,5 +1,5 @@
 use crate::api::ApiClient;
-use crate::api::task::{TaskListResponse, create_task, list_tasks};
+use crate::api::task::{TaskListResponse, list_tasks};
 use crate::api::team::{
     AddMemberRequest, UpdateRoleRequest, UpdateTeamRequest, add_member, get_members, get_team,
     remove_member, update_member_role, update_team,
@@ -11,10 +11,9 @@ use crate::components::input::Input;
 use crate::components::loading::{Loading, LoadingVariant};
 use crate::components::modal::Modal;
 use crate::components::search::SearchInput;
-use crate::components::task_form::{TaskFormData, TaskFormModal, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::team_store::{TeamMember, TeamStore};
-use crate::store::{use_api_client, use_team_store, use_user_store};
+use crate::store::{use_api_client, use_team_store};
 use leptos::ev;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
@@ -437,65 +436,6 @@ pub fn TeamDetailPage() -> impl IntoView {
             .count()
     };
 
-    let (show_create_task_modal, set_show_create_task_modal) = signal(false);
-    let (create_task_loading, set_create_task_loading) = signal(false);
-    let (create_task_error, set_create_task_error) = signal(Option::<String>::None);
-
-    let open_create_task = Callback::from(move |_| {
-        set_create_task_error.set(None);
-        set_show_create_task_modal.set(true);
-    });
-
-    let close_create_task = Callback::from(move || {
-        set_show_create_task_modal.set(false);
-    });
-
-    let do_create_task_submit = {
-        let client = client.clone();
-        let set_loading = set_create_task_loading;
-        let set_error = set_create_task_error;
-        let set_show = set_show_create_task_modal;
-        let set_tasks = set_team_tasks;
-        let current_tasks = team_tasks;
-        let team_id = team_id;
-        let user_store = use_user_store();
-        Callback::from(move |data: TaskFormData| {
-            set_loading.set(true);
-            set_error.set(None);
-            let leader_id = user_store.user_id().unwrap_or(0);
-            let req = crate::api::task::CreateTaskRequest {
-                task_name: data.task_name,
-                task_description: data.task_description,
-                task_keywords: data.task_keywords,
-                task_priority: data.task_priority,
-                task_deadline: data.task_deadline,
-                task_leader_id: leader_id,
-                task_team_id: Some(team_id),
-            };
-            let client = client.clone();
-            let set_tasks = set_tasks.clone();
-            let current_tasks = current_tasks.clone();
-            let set_loading = set_loading;
-            let set_error = set_error;
-            let set_show = set_show;
-            wasm_bindgen_futures::spawn_local(async move {
-                match create_task(&client, &req).await {
-                    Ok(task) => {
-                        let mut new_tasks = current_tasks.get();
-                        new_tasks.insert(0, task);
-                        set_tasks.set(new_tasks);
-                        set_show.set(false);
-                        set_loading.set(false);
-                    }
-                    Err(e) => {
-                        set_error.set(Some(e.message));
-                        set_loading.set(false);
-                    }
-                }
-            });
-        })
-    };
-
     let effect_client = client.clone();
     let effect_store = team_store.clone();
     let effect_page_error = set_page_error;
@@ -835,15 +775,6 @@ pub fn TeamDetailPage() -> impl IntoView {
                 </Card>
 
                 <Card title="Team Tasks".to_string() subtitle="Task list".to_string()>
-                    <div class="team-tasks-header">
-                        <Button
-                            variant=ButtonVariant::Primary
-                            size=ButtonSize::Sm
-                            on_click=open_create_task
-                        >
-                            "New Task"
-                        </Button>
-                    </div>
                     {move || {
                         if tasks_loading.get() {
                             view! {
@@ -881,14 +812,7 @@ pub fn TeamDetailPage() -> impl IntoView {
                     }}
                 </Card>
 
-                <TaskFormModal
-                    open=show_create_task_modal.into()
-                    mode=TaskFormMode::Create
-                    initial_data=TaskFormData::default()
-                    force_team_task=true
-                    on_submit=do_create_task_submit
-                    on_close=close_create_task
-                />
+
 
                     <Modal
                     open=show_edit_team_modal.into()

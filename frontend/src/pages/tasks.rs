@@ -60,6 +60,7 @@ pub fn TasksPage() -> impl IntoView {
     // let (offline_page, set_offline_page) = signal(1_u32);
     use leptos::prelude::RwSignal;
     let view_mode: RwSignal<&str> = RwSignal::new("card");
+    let team_store = use_team_store();
 
     let filter_all = {
         let store = task_store.clone();
@@ -187,7 +188,6 @@ pub fn TasksPage() -> impl IntoView {
 
     let do_create_submit = {
         let task_store = task_store.clone();
-        let team_store = use_team_store();
         let user_store = use_user_store();
         let client = use_api_client();
         let set_show_create_modal = set_show_create_modal;
@@ -484,6 +484,7 @@ pub fn TasksPage() -> impl IntoView {
             >
                 <TaskForm
                     // offline_mode=is_offline_mode()
+                    active_team_id=team_store.state.get().active_team_id
                     on_submit=do_create_submit
                     on_cancel=do_create_cancel
                 />
@@ -498,6 +499,7 @@ pub fn TasksPage() -> impl IntoView {
                     mode=TaskFormMode::Edit
                     // offline_mode=is_offline_mode()
                     initial_data=TaskFormData::from(editing_task.get().unwrap_or_default())
+                    active_team_id=team_store.state.get().active_team_id
                     on_submit=do_edit_submit
                     on_cancel=do_edit_cancel
                 />
