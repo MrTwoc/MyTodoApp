@@ -1,15 +1,12 @@
-use crate::api::task::delete_task as api_delete_task;
+use crate::api::task::{delete_task as api_delete_task, update_task as api_update_task};
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
-use crate::components::modal::Modal;
-use crate::components::task_form::{TaskFormData, TaskFormModal, TaskFormMode};
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::{use_api_client, use_task_store};
-use chrono::Utc;
+use leptos::ev;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
+use wasm_bindgen::JsCast;
 
 fn format_timestamp(ts: i64) -> String {
     let ms = (ts * 1000) as f64;
@@ -62,8 +59,6 @@ fn status_progress(s: &TaskStatus) -> u8 {
     }
 }
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
 fn mock_task(id: u64) -> Task {
     use std::collections::HashSet;
     let mut keywords = HashSet::new();
@@ -88,7 +83,30 @@ fn mock_task(id: u64) -> Task {
     }
 }
 
-// ── TaskDetailPage ────────────────────────────────────────────────────────────
+#[derive(Clone)]
+struct EditableTaskData {
+    task_name: String,
+    task_description: Option<String>,
+    task_priority: u8,
+    task_deadline: Option<i64>,
+    task_status: TaskStatus,
+}
+
+impl From<Task> for EditableTaskData {
+    fn from(task: Task) -> Self {
+        Self {
+            task_name: task.task_name,
+            task_description: task.task_description,
+            task_priority: task.task_priority,
+            task_deadline: task.task_deadline,
+            task_status: task.task_status,
+        }
+    }
+}
+
+fn event_target_value(ev: &ev::Event) -> String {
+    ev.target().unwrap().unchecked_into::<web_sys::HtmlInputElement>().value()
+}
 
 #[component]
 pub fn TaskDetailPage() -> impl IntoView {
@@ -102,28 +120,18 @@ pub fn TaskDetailPage() -> impl IntoView {
         .unwrap_or(0);
 
     let (task, set_task) = signal(mock_task(task_id));
-    let (show_edit_modal, set_show_edit_modal) = signal(false);
     let client = use_api_client();
     let task_store = use_task_store();
-    // let offline_store = use_offline_task_store();
 
-    // let is_offline_mode = move || offline_store.state.get().enabled;
+    let is_editing = RwSignal::new(false);
+    let is_saving = RwSignal::new(false);
+    let save_error = RwSignal::new(Option::<String>::None);
+
+    let edit_data = RwSignal::new(EditableTaskData::from(mock_task(task_id)));
 
     let current_task = {
-        // let offline_store = offline_store.clone();
         let task_signal = task.clone();
-        let task_id = task_id;
-        // let is_offline = is_offline_mode.clone();
-        move || {
-            // if is_offline() {
-            //     let tasks = offline_store.state.get().tasks;
-            //     let offline_task = tasks.into_iter().find(|t| t.task_id == task_id);
-            //     if let Some(t) = offline_task {
-            //         return t;
-            //     }
-            // }
-            task_signal.get()
-        }
+        move || task_signal.get()
     };
 
     let nav_back = {
@@ -131,134 +139,206 @@ pub fn TaskDetailPage() -> impl IntoView {
         move |_| n("/tasks", Default::default())
     };
 
-    // ── Status switch ─────────────────────────────────────────────────────────
-    let switch_to = {
+    let start_edit = {
         let task = task.clone();
-        let set_task = set_task.clone();
-        // let offline_store = offline_store.clone();
-        // let is_offline = is_offline_mode.clone();
-        let task_id = task_id;
-        move |new_status: TaskStatus| {
-            // if is_offline() {
-            //     offline_store.set_task_status(task_id, new_status);
-            // } else {
-                let mut t = task.get();
-                t.task_status = new_status;
-                set_task.set(t);
-            // }
-        }
-    };
-
-    let switch_active = {
-        let switch_to = switch_to.clone();
-        move |_: web_sys::MouseEvent| switch_to(TaskStatus::Active)
-    };
-    let switch_completed = {
-        let switch_to = switch_to.clone();
-        move |_: web_sys::MouseEvent| switch_to(TaskStatus::Completed)
-    };
-    let switch_paused = {
-        let switch_to = switch_to.clone();
-        move |_: web_sys::MouseEvent| switch_to(TaskStatus::Paused)
-    };
-
-    // ── Edit form callbacks ───────────────────────────────────────────────────
-    let on_edit_submit: Callback<(TaskFormData,), ()> = {
-        let task = task.clone();
-        let set_task = set_task.clone();
-        // let offline_store = offline_store.clone();
-        // let is_offline = is_offline_mode.clone();
-        let task_id = task_id;
-        Callback::from(move |data: TaskFormData| {
-            // if is_offline() {
-            //     let mut state = offline_store.state.get();
-            //     if let Some(t) = state.tasks.iter_mut().find(|t| t.task_id == task_id) {
-            //         t.task_name = data.task_name;
-            //         t.task_description = data.task_description;
-            //         t.task_keywords = data.task_keywords.into_iter().collect();
-            //         t.task_priority = data.task_priority;
-            //         t.task_deadline = data.task_deadline;
-            //         t.task_update_time = Some(Utc::now().timestamp());
-            //         offline_store.set_state.set(state);
-            //     }
-            // } else {
-                let mut t = task.get();
-                t.task_name = data.task_name;
-                t.task_description = data.task_description;
-                t.task_keywords = data.task_keywords.into_iter().collect();
-                t.task_priority = data.task_priority;
-                t.task_deadline = data.task_deadline;
-                set_task.set(t);
-            // }
-            set_show_edit_modal.set(false);
+        let edit_data = edit_data.clone();
+        Callback::from(move |_: web_sys::MouseEvent| {
+            let t = task.get();
+            edit_data.set(EditableTaskData::from(t));
+            is_editing.set(true);
+            save_error.set(None);
         })
     };
 
-    let on_edit_cancel: Callback<(), ()> = Callback::from(move || {
-        set_show_edit_modal.set(false);
+    let cancel_edit = Callback::from(move |_: web_sys::MouseEvent| {
+        is_editing.set(false);
+        save_error.set(None);
     });
 
-    // ── Delete handler ────────────────────────────────────────────────────────
+    let update_edit_field = move |field: &str, value: String| {
+        edit_data.update(|data| {
+            match field {
+                "task_name" => data.task_name = value,
+                "task_description" => data.task_description = if value.is_empty() { None } else { Some(value) },
+                "task_priority" => {
+                    if let Ok(p) = value.parse::<u8>() {
+                        data.task_priority = p;
+                    }
+                }
+                "task_deadline" => {
+                    if value.is_empty() {
+                        data.task_deadline = None;
+                    } else if let Ok(date) = chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d") {
+                        let timestamp = date.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp();
+                        data.task_deadline = Some(timestamp);
+                    }
+                }
+                "task_status" => {
+                    data.task_status = match value.as_str() {
+                        "Active" => TaskStatus::Active,
+                        "Completed" => TaskStatus::Completed,
+                        "Paused" => TaskStatus::Paused,
+                        _ => data.task_status.clone(),
+                    };
+                }
+                _ => {}
+            }
+        });
+    };
+
+    let save_edit = {
+        let task = task.clone();
+        let set_task = set_task.clone();
+        let edit_data = edit_data.clone();
+        let client = client.clone();
+        let task_id = task_id;
+        let task_store = task_store.clone();
+        Callback::from(move |_: web_sys::MouseEvent| {
+            let data = edit_data.get();
+            let client = client.clone();
+            let task_id = task_id;
+            let task = task.clone();
+            let set_task = set_task.clone();
+            let task_store = task_store.clone();
+            let is_saving = is_saving.clone();
+            let save_error = save_error.clone();
+            let is_editing = is_editing.clone();
+
+            is_saving.set(true);
+            save_error.set(None);
+
+            wasm_bindgen_futures::spawn_local(async move {
+                use crate::api::task::UpdateTaskRequest;
+
+                let req = UpdateTaskRequest {
+                    task_name: Some(data.task_name.clone()),
+                    task_description: data.task_description.clone(),
+                    task_keywords: None,
+                    task_priority: Some(data.task_priority),
+                    task_deadline: data.task_deadline,
+                    task_status: Some(match data.task_status {
+                        TaskStatus::Active => "Active".to_string(),
+                        TaskStatus::Completed => "Completed".to_string(),
+                        TaskStatus::Paused => "Paused".to_string(),
+                    }),
+                };
+
+                match api_update_task(&client, task_id, &req).await {
+                    Ok(updated_task) => {
+                        set_task.set(updated_task.clone());
+                        task_store.update_task(task_id, updated_task);
+                        is_editing.set(false);
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to update task: {}", e.message);
+                        save_error.set(Some(e.message));
+                    }
+                }
+                is_saving.set(false);
+            });
+        })
+    };
+
     let on_delete = {
         let navigate = navigate.clone();
         let client = client.clone();
         let task_store = task_store.clone();
-        // let offline_store = offline_store.clone();
         let task_id = task_id;
-        // let is_offline = is_offline_mode.clone();
         Callback::from(move |_: web_sys::MouseEvent| {
-            // if is_offline() {
-            //     offline_store.delete_task(task_id);
-            //     navigate("/tasks", Default::default());
-            // } else {
-                let client = client.clone();
-                let task_store = task_store.clone();
-                let navigate = navigate.clone();
-                let task_id = task_id;
-                wasm_bindgen_futures::spawn_local(async move {
-                    match api_delete_task(&client, task_id).await {
-                        Ok(_) => {
-                            task_store.remove_task(task_id);
-                            navigate("/tasks", Default::default());
-                        }
-                        Err(e) => {
-                            tracing::error!("Failed to delete task: {}", e.message);
-                        }
+            let client = client.clone();
+            let task_store = task_store.clone();
+            let navigate = navigate.clone();
+            let task_id = task_id;
+            wasm_bindgen_futures::spawn_local(async move {
+                match api_delete_task(&client, task_id).await {
+                    Ok(_) => {
+                        task_store.remove_task(task_id);
+                        navigate("/tasks", Default::default());
                     }
-                });
-            // }
+                    Err(e) => {
+                        tracing::error!("Failed to delete task: {}", e.message);
+                    }
+                }
+            });
         })
     };
 
     view! {
         <div class="page">
-            // ── Header ────────────────────────────────────────────────────────
             <header class="page-header task-detail-header">
                 <div>
                     <button class="back-btn" on:click=nav_back>"← Back"</button>
-                    <h1 class="page-title task-detail-title">{move || current_task().task_name.clone()}</h1>
+                    {move || {
+                        if is_editing.get() {
+                            view! {
+                                <input
+                                    type="text"
+                                    class="input-field task-title-input"
+                                    prop:value=move || edit_data.get().task_name.clone()
+                                    on:input=move |ev| update_edit_field("task_name", event_target_value(&ev))
+                                />
+                            }.into_any()
+                        } else {
+                            view! {
+                                <h1 class="page-title task-detail-title">{move || current_task().task_name.clone()}</h1>
+                            }.into_any()
+                        }
+                    }}
                 </div>
                 <div class="task-detail-actions">
-                    <Button
-                        variant=ButtonVariant::Secondary
-                        size=ButtonSize::Sm
-                        on_click=Callback::from(move |_: web_sys::MouseEvent| {
-                            set_show_edit_modal.set(true);
-                        })
-                    >
-                        "Edit"
-                    </Button>
-                    <Button
-                        variant=ButtonVariant::Danger
-                        size=ButtonSize::Sm
-                        on_click=on_delete
-                    >
-                        "Delete"
-                    </Button>
+                    {move || {
+                        if is_editing.get() {
+                            let saving = is_saving.get();
+                            view! {
+                                <Button
+                                    variant=ButtonVariant::Primary
+                                    size=ButtonSize::Sm
+                                    disabled=saving
+                                    on_click=save_edit
+                                >
+                                    {if saving { "Saving..." } else { "Save" }}
+                                </Button>
+                                <Button
+                                    variant=ButtonVariant::Secondary
+                                    size=ButtonSize::Sm
+                                    disabled=saving
+                                    on_click=cancel_edit
+                                >
+                                    "Cancel"
+                                </Button>
+                            }
+                        } else {
+                            view! {
+                                <Button
+                                    variant=ButtonVariant::Secondary
+                                    size=ButtonSize::Sm
+                                    on_click=start_edit
+                                >
+                                    "Edit"
+                                </Button>
+                                <Button
+                                    variant=ButtonVariant::Danger
+                                    size=ButtonSize::Sm
+                                    on_click=on_delete
+                                >
+                                    "Delete"
+                                </Button>
+                            }
+                        }
+                    }}
                 </div>
             </header>
 
-            // ── Status & Priority badges ──────────────────────────────────────
+            {move || {
+                if let Some(err) = save_error.get() {
+                    view! {
+                        <div class="error-toast">{err}</div>
+                    }.into_any()
+                } else {
+                    ().into_any()
+                }
+            }}
+
             <div class="task-detail-badges">
                 {move || {
                     let t = current_task();
@@ -273,7 +353,6 @@ pub fn TaskDetailPage() -> impl IntoView {
                 }}
             </div>
 
-            // ── Progress bar ──────────────────────────────────────────────────
             <div class="task-detail-progress">
                 <div class="task-detail-progress-label">
                     <span>"Progress"</span>
@@ -295,94 +374,168 @@ pub fn TaskDetailPage() -> impl IntoView {
                 </div>
             </div>
 
-            // ── Status switch ─────────────────────────────────────────────────
             <Card title="Status".to_string()>
                 <div class="status-switch">
                     {move || {
-                        let current = current_task().task_status.clone();
-                        let st_active = switch_to.clone();
-                        let st_completed = switch_to.clone();
-                        let st_paused = switch_to.clone();
-                        view! {
-                            <Button
-                                variant=if current == TaskStatus::Active { ButtonVariant::Primary } else { ButtonVariant::Secondary }
-                                size=ButtonSize::Sm
-                                on_click=Callback::from(move |_: web_sys::MouseEvent| st_active(TaskStatus::Active))
-                            >
-                                "Active"
-                            </Button>
-                            <Button
-                                variant=if current == TaskStatus::Completed { ButtonVariant::Primary } else { ButtonVariant::Secondary }
-                                size=ButtonSize::Sm
-                                on_click=Callback::from(move |_: web_sys::MouseEvent| st_completed(TaskStatus::Completed))
-                            >
-                                "Completed"
-                            </Button>
-                            <Button
-                                variant=if current == TaskStatus::Paused { ButtonVariant::Primary } else { ButtonVariant::Secondary }
-                                size=ButtonSize::Sm
-                                on_click=Callback::from(move |_: web_sys::MouseEvent| st_paused(TaskStatus::Paused))
-                            >
-                                "Paused"
-                            </Button>
+                        if is_editing.get() {
+                            view! {
+                                <select
+                                    class="input-field"
+                                    prop:value=move || status_label(&edit_data.get().task_status).to_string()
+                                    on:change=move |ev| {
+                                        let value = event_target_value(&ev);
+                                        edit_data.update(|data| {
+                                            data.task_status = match value.as_str() {
+                                                "Active" => TaskStatus::Active,
+                                                "Completed" => TaskStatus::Completed,
+                                                "Paused" => TaskStatus::Paused,
+                                                _ => data.task_status.clone(),
+                                            };
+                                        });
+                                    }
+                                >
+                                    <option value="Active">Active</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Paused">Paused</option>
+                                </select>
+                            }.into_any()
+                        } else {
+                            let current = current_task().task_status.clone();
+                            view! {
+                                <Button
+                                    variant=if current == TaskStatus::Active { ButtonVariant::Primary } else { ButtonVariant::Secondary }
+                                    size=ButtonSize::Sm
+                                    on_click=Callback::from(move |_: web_sys::MouseEvent| {
+                                        let mut t = task.get();
+                                        t.task_status = TaskStatus::Active;
+                                        set_task.set(t);
+                                    })
+                                >
+                                    "Active"
+                                </Button>
+                                <Button
+                                    variant=if current == TaskStatus::Completed { ButtonVariant::Primary } else { ButtonVariant::Secondary }
+                                    size=ButtonSize::Sm
+                                    on_click=Callback::from(move |_: web_sys::MouseEvent| {
+                                        let mut t = task.get();
+                                        t.task_status = TaskStatus::Completed;
+                                        set_task.set(t);
+                                    })
+                                >
+                                    "Completed"
+                                </Button>
+                                <Button
+                                    variant=if current == TaskStatus::Paused { ButtonVariant::Primary } else { ButtonVariant::Secondary }
+                                    size=ButtonSize::Sm
+                                    on_click=Callback::from(move |_: web_sys::MouseEvent| {
+                                        let mut t = task.get();
+                                        t.task_status = TaskStatus::Paused;
+                                        set_task.set(t);
+                                    })
+                                >
+                                    "Paused"
+                                </Button>
+                            }.into_any()
                         }
                     }}
                 </div>
             </Card>
 
-            // ── Details card ──────────────────────────────────────────────────
             <Card title="Details".to_string()>
-                {move || {
-                    current_task().task_description.map(|desc| view! {
-                        <div class="task-detail-section">
-                            <h4 class="task-detail-label">"Description"</h4>
-                            <p class="task-detail-value">{desc}</p>
-                        </div>
-                    })
-                }}
-                {move || {
-                    current_task().task_deadline.map(|ts| {
-                        let s = format_timestamp(ts);
-                        view! {
-                            <div class="task-detail-section">
-                                <h4 class="task-detail-label">"Deadline"</h4>
-                                <p class="task-detail-value">{s}</p>
-                            </div>
+                <div class="task-detail-section">
+                    <h4 class="task-detail-label">"Description"</h4>
+                    {move || {
+                        if is_editing.get() {
+                            view! {
+                                <textarea
+                                    class="input-field task-description-input"
+                                    prop:value=move || edit_data.get().task_description.clone().unwrap_or_default()
+                                    on:input=move |ev| update_edit_field("task_description", event_target_value(&ev))
+                                />
+                            }.into_any()
+                        } else {
+                            view! {
+                                <p class="task-detail-value">{move || current_task().task_description.clone().unwrap_or_default()}</p>
+                            }.into_any()
                         }
-                    })
-                }}
-                {move || {
-                    let kws: Vec<String> = current_task().task_keywords.into_iter().collect();
-                    if kws.is_empty() {
-                        ().into_any()
-                    } else {
-                        view! {
-                            <div class="task-detail-section">
-                                <h4 class="task-detail-label">"Tags"</h4>
+                    }}
+                </div>
+
+                <div class="task-detail-section">
+                    <h4 class="task-detail-label">"Deadline"</h4>
+                    {move || {
+                        if is_editing.get() {
+                            view! {
+                                <input
+                                    type="date"
+                                    class="input-field date-input"
+                                    prop:value=move || {
+                                        edit_data.get().task_deadline.map(|ts| {
+                                            let dt = chrono::DateTime::from_timestamp(ts, 0)
+                                                .unwrap_or_default()
+                                                .date_naive();
+                                            dt.format("%Y-%m-%d").to_string()
+                                        }).unwrap_or_default()
+                                    }
+                                    on:input=move |ev| update_edit_field("task_deadline", event_target_value(&ev))
+                                />
+                            }.into_any()
+                        } else {
+                            view! {
+                                <p class="task-detail-value">{move || {
+                                    current_task().task_deadline.map(|ts| format_timestamp(ts)).unwrap_or_default()
+                                }}</p>
+                            }.into_any()
+                        }
+                    }}
+                </div>
+
+                <div class="task-detail-section">
+                    <h4 class="task-detail-label">"Priority"</h4>
+                    {move || {
+                        if is_editing.get() {
+                            view! {
+                                <input
+                                    type="number"
+                                    class="input-field"
+                                    min="1"
+                                    max="10"
+                                    prop:value=move || edit_data.get().task_priority.to_string()
+                                    on:input=move |ev| update_edit_field("task_priority", event_target_value(&ev))
+                                />
+                            }.into_any()
+                        } else {
+                            view! {
+                                <p class="task-detail-value">{move || current_task().task_priority.to_string()}</p>
+                            }.into_any()
+                        }
+                    }}
+                </div>
+
+                <div class="task-detail-section">
+                    <h4 class="task-detail-label">"Tags"</h4>
+                    {move || {
+                        let kws: Vec<String> = current_task().task_keywords.iter().cloned().collect();
+                        if kws.is_empty() {
+                            view! {
+                                <p class="task-detail-value">"No tags"</p>
+                            }.into_any()
+                        } else {
+                            view! {
                                 <div class="tag-chips">
                                     {kws.into_iter().map(|k| view! {
                                         <span class="tag-chip">{k}</span>
                                     }).collect::<Vec<_>>()}
                                 </div>
-                            </div>
-                        }.into_any()
-                    }
-                }}
+                            }.into_any()
+                        }
+                    }}
+                </div>
             </Card>
 
-            // ── History / timeline ────────────────────────────────────────────
             <Card title="History".to_string()>
                 <p class="task-detail-empty">"No history available."</p>
             </Card>
-
-            // ── Edit modal ────────────────────────────────────────────────────
-            <TaskFormModal
-                open=MaybeSignal::from(show_edit_modal)
-                mode=TaskFormMode::Edit
-                initial_data=TaskFormData::from(current_task())
-                on_submit=on_edit_submit
-                on_close=on_edit_cancel
-            />
         </div>
     }
 }
