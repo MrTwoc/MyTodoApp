@@ -375,7 +375,7 @@ pub fn TaskDetailPage() -> impl IntoView {
             </div>
 
             <Card title="Status".to_string()>
-                <div class="status-switch">
+                <div class="task-detail-section">
                     {move || {
                         if is_editing.get() {
                             view! {
@@ -400,41 +400,8 @@ pub fn TaskDetailPage() -> impl IntoView {
                                 </select>
                             }.into_any()
                         } else {
-                            let current = current_task().task_status.clone();
                             view! {
-                                <Button
-                                    variant=if current == TaskStatus::Active { ButtonVariant::Primary } else { ButtonVariant::Secondary }
-                                    size=ButtonSize::Sm
-                                    on_click=Callback::from(move |_: web_sys::MouseEvent| {
-                                        let mut t = task.get();
-                                        t.task_status = TaskStatus::Active;
-                                        set_task.set(t);
-                                    })
-                                >
-                                    "Active"
-                                </Button>
-                                <Button
-                                    variant=if current == TaskStatus::Completed { ButtonVariant::Primary } else { ButtonVariant::Secondary }
-                                    size=ButtonSize::Sm
-                                    on_click=Callback::from(move |_: web_sys::MouseEvent| {
-                                        let mut t = task.get();
-                                        t.task_status = TaskStatus::Completed;
-                                        set_task.set(t);
-                                    })
-                                >
-                                    "Completed"
-                                </Button>
-                                <Button
-                                    variant=if current == TaskStatus::Paused { ButtonVariant::Primary } else { ButtonVariant::Secondary }
-                                    size=ButtonSize::Sm
-                                    on_click=Callback::from(move |_: web_sys::MouseEvent| {
-                                        let mut t = task.get();
-                                        t.task_status = TaskStatus::Paused;
-                                        set_task.set(t);
-                                    })
-                                >
-                                    "Paused"
-                                </Button>
+                                <p class="task-detail-value">{move || status_label(&current_task().task_status)}</p>
                             }.into_any()
                         }
                     }}
