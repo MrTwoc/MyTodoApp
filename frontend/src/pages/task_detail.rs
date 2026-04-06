@@ -1,4 +1,4 @@
-use crate::api::task::{delete_task as api_delete_task, update_task as api_update_task};
+use crate::api::task::{delete_task as api_delete_task, get_task as api_get_task, update_task as api_update_task};
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
 use crate::store::task_store::{Task, TaskStatus};
@@ -59,30 +59,6 @@ fn status_progress(s: &TaskStatus) -> u8 {
     }
 }
 
-fn mock_task(id: u64) -> Task {
-    use std::collections::HashSet;
-    let mut keywords = HashSet::new();
-    keywords.insert("example".to_string());
-    keywords.insert("mock".to_string());
-
-    Task {
-        task_id: id,
-        task_name: format!("Sample Task #{}", id),
-        task_description: Some(
-            "This is a placeholder task. Wire up the API to load real data.".to_string(),
-        ),
-        task_keywords: keywords,
-        task_priority: 3,
-        task_deadline: Some(1_800_000_000),
-        task_status: TaskStatus::Active,
-        task_create_time: 1_700_000_000,
-        task_leader_id: 1,
-        task_team_id: None,
-        task_update_time: None,
-        task_complete_time: None,
-    }
-}
-
 #[derive(Clone)]
 struct EditableTaskData {
     task_name: String,
@@ -90,6 +66,18 @@ struct EditableTaskData {
     task_priority: u8,
     task_deadline: Option<i64>,
     task_status: TaskStatus,
+}
+
+impl Default for EditableTaskData {
+    fn default() -> Self {
+        Self {
+            task_name: String::new(),
+            task_description: None,
+            task_priority: 5,
+            task_deadline: None,
+            task_status: TaskStatus::Active,
+        }
+    }
 }
 
 impl From<Task> for EditableTaskData {
@@ -119,15 +107,47 @@ pub fn TaskDetailPage() -> impl IntoView {
         .and_then(|s| s.parse().ok())
         .unwrap_or(0);
 
-    let (task, set_task) = signal(mock_task(task_id));
     let client = use_api_client();
     let task_store = use_task_store();
 
+    let is_loading = RwSignal::new(true);
     let is_editing = RwSignal::new(false);
     let is_saving = RwSignal::new(false);
     let save_error = RwSignal::new(Option::<String>::None);
 
-    let edit_data = RwSignal::new(EditableTaskData::from(mock_task(task_id)));
+    let (task, set_task) = signal(Task::default());
+    let edit_data = RwSignal::new(EditableTaskData::default());
+
+    let load_task = {
+        let client = client.clone();
+        let task_id = task_id;
+        let set_task = set_task.clone();
+        let edit_data = edit_data.clone();
+        let is_loading = is_loading.clone();
+        move || {
+            let client = client.clone();
+            let task_id = task_id;
+            let set_task = set_task.clone();
+            let edit_data = edit_data.clone();
+            let is_loading = is_loading.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                match api_get_task(&client, task_id).await {
+                    Ok(loaded_task) => {
+                        set_task.set(loaded_task.clone());
+                        edit_data.set(EditableTaskData::from(loaded_task));
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to load task: {}", e.message);
+                    }
+                }
+                is_loading.set(false);
+            });
+        }
+    };
+
+    Effect::new(move |_| {
+        load_task();
+    });
 
     let current_task = {
         let task_signal = task.clone();
