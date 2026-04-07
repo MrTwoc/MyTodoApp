@@ -14,6 +14,7 @@ use crate::components::search::SearchInput;
 use crate::components::task_form::{TaskFormData, TaskFormMode, TaskFormModal};
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::team_store::{TeamMember, TeamStore};
+use crate::store::user_store::UserStore;
 use crate::store::{use_api_client, use_team_store, use_user_store};
 use leptos::ev;
 use leptos::prelude::*;
@@ -47,11 +48,15 @@ fn load_team_detail_data(
     team_id: u64,
     client: ApiClient,
     team_store: TeamStore,
+    user_store: UserStore,
     set_page_error: WriteSignal<Option<String>>,
     set_member_action_error: WriteSignal<Option<String>>,
     set_tasks_error: WriteSignal<Option<String>>,
     set_tasks_loading: WriteSignal<bool>,
     set_team_tasks: WriteSignal<Vec<Task>>,
+    set_current_user_id_val: WriteSignal<u64>,
+    set_current_user_level_val: WriteSignal<u8>,
+    set_team_leader_id_val: WriteSignal<u64>,
 ) {
     if team_id == 0 {
         set_page_error.set(Some("Invalid team id".to_string()));
@@ -84,9 +89,20 @@ fn load_team_detail_data(
             }
         }
 
+        let user_id = user_store.user_id().unwrap_or(0);
+
         match get_members(&client, team_id).await {
             Ok(members) => {
+                let members_clone = members.clone();
                 team_store.set_team_members(team_id, members);
+                let my_member = members_clone.iter().find(|m| m.user_id == user_id);
+                if let Some(m) = my_member {
+                    set_current_user_level_val.set(m.level);
+                }
+                if let Some(team) = team_store.state.get().teams.iter().find(|t| t.team_id == team_id) {
+                    set_team_leader_id_val.set(team.team_leader_id);
+                }
+                set_current_user_id_val.set(user_id);
             }
             Err(e) => {
                 set_member_action_error.set(Some(e.message));
@@ -180,6 +196,9 @@ fn TeamTaskRow(task: Task) -> impl IntoView {
 fn TeamMemberRow(
     member: TeamMember,
     team_id: u64,
+    current_user_id: u64,
+    current_user_level: u8,
+    team_leader_id: u64,
     set_member_action_error: WriteSignal<Option<String>>,
     member_action_loading: ReadSignal<bool>,
     set_member_action_loading: WriteSignal<bool>,
@@ -189,6 +208,11 @@ fn TeamMemberRow(
     let user_id = member.user_id;
     let role = member.level;
     let (draft_role, set_draft_role) = signal(role.to_string());
+
+    let is_leader = user_id == team_leader_id;
+    let higher_or_equal_level = role >= current_user_level;
+    let can_edit = !is_leader && !higher_or_equal_level && current_user_id != user_id;
+    let is_self = user_id == current_user_id;
 
     let on_save = {
         let client_for_update = client.clone();
@@ -282,10 +306,23 @@ fn TeamMemberRow(
                     {user_id}
                 </span>
                 <span class="team-member-role">{format!("Level {}", role)}</span>
+                <Show when=move || is_leader>
+                    <span class="team-member-badge">"Leader"</span>
+                </Show>
+                <Show when=move || !can_edit && !is_self>
+                    <span class="team-member-badge locked">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        "Locked"
+                    </span>
+                </Show>
             </div>
             <div class="team-member-actions">
                 <Input
                     value=draft_role.get()
+                    disabled=!can_edit
                     on_input=Callback::from(move |v: String| {
                         set_draft_role.set(v);
                     })
@@ -293,7 +330,7 @@ fn TeamMemberRow(
                 <Button
                     variant=ButtonVariant::Primary
                     size=ButtonSize::Sm
-                    disabled=member_action_loading.get()
+                    disabled=member_action_loading.get() || !can_edit
                     on_click=on_save
                 >
                     "Save"
@@ -301,7 +338,7 @@ fn TeamMemberRow(
                 <Button
                     variant=ButtonVariant::Danger
                     size=ButtonSize::Sm
-                    disabled=member_action_loading.get()
+                    disabled=member_action_loading.get() || is_leader
                     on_click=on_remove
                 >
                     "Remove"
@@ -323,6 +360,7 @@ pub fn TeamDetailPage() -> impl IntoView {
     let team_store = use_team_store();
     let client = use_api_client();
     let navigate = use_navigate();
+    let user_store = use_user_store();
 
     let (loaded, set_loaded) = signal(false);
     let (page_error, set_page_error) = signal(Option::<String>::None);
@@ -439,6 +477,20 @@ pub fn TeamDetailPage() -> impl IntoView {
 
     let total_members = move || current_team().map_or(0, |team| team.team_members.len());
 
+    let (current_user_id_val, set_current_user_id_val) = signal(0u64);
+    let (current_user_level_val, set_current_user_level_val) = signal(0u8);
+    let (team_leader_id_val, set_team_leader_id_val) = signal(0u64);
+
+    let team_leader_id = move || team_leader_id_val.get();
+    let current_user_id = move || current_user_id_val.get();
+    let current_user_level = move || current_user_level_val.get();
+
+    let current_members = move || {
+        current_team()
+            .map(|team| team.team_members)
+            .unwrap_or_default()
+    };
+
     let current_members = move || {
         current_team()
             .map(|team| team.team_members)
@@ -487,6 +539,10 @@ pub fn TeamDetailPage() -> impl IntoView {
     let effect_tasks_error = set_tasks_error;
     let effect_tasks_loading = set_tasks_loading;
     let effect_team_tasks = set_team_tasks;
+    let effect_user_store = user_store.clone();
+    let effect_current_user_id = set_current_user_id_val;
+    let effect_current_level = set_current_user_level_val;
+    let effect_leader_id = set_team_leader_id_val;
     Effect::new(move |_| {
         if !loaded.get() {
             set_loaded.set(true);
@@ -494,11 +550,15 @@ pub fn TeamDetailPage() -> impl IntoView {
                 team_id,
                 effect_client.clone(),
                 effect_store.clone(),
+                effect_user_store.clone(),
                 effect_page_error,
                 effect_member_error,
                 effect_tasks_error,
                 effect_tasks_loading,
                 effect_team_tasks,
+                effect_current_user_id,
+                effect_current_level,
+                effect_leader_id,
             );
         }
     });
@@ -506,21 +566,29 @@ pub fn TeamDetailPage() -> impl IntoView {
     let on_refresh = Callback::from({
         let client = client.clone();
         let team_store = team_store.clone();
+        let user_store = user_store.clone();
         let set_page_error = set_page_error;
         let set_member_action_error = set_member_action_error;
         let set_tasks_error = set_tasks_error;
         let set_tasks_loading = set_tasks_loading;
         let set_team_tasks = set_team_tasks;
+        let set_current_user_id_val = set_current_user_id_val;
+        let set_current_user_level_val = set_current_user_level_val;
+        let set_team_leader_id_val = set_team_leader_id_val;
         move |_| {
             load_team_detail_data(
                 team_id,
                 client.clone(),
                 team_store.clone(),
+                user_store.clone(),
                 set_page_error,
                 set_member_action_error,
                 set_tasks_error,
                 set_tasks_loading,
                 set_team_tasks,
+                set_current_user_id_val,
+                set_current_user_level_val,
+                set_team_leader_id_val,
             );
         }
     });
@@ -531,7 +599,6 @@ pub fn TeamDetailPage() -> impl IntoView {
 
     let on_create_task_submit = {
         let client = client.clone();
-        let user_store = use_user_store();
         let set_show_create_task_modal = set_show_create_task_modal;
         let set_create_task_loading = set_create_task_loading;
         let set_create_task_error = set_create_task_error;
@@ -872,25 +939,31 @@ pub fn TeamDetailPage() -> impl IntoView {
 
                     {move || {
                     let members = filtered_members();
-                        if members.is_empty() {
-                            view! { <p class="empty-text">"No members found."</p> }.into_any()
-                        } else {
-                            let items = members
-                                .into_iter()
-                                .map(|member: TeamMember| {
-                                    view! {
-                                        <TeamMemberRow
-                                            member=member
-                                            team_id=team_id
-                                            set_member_action_error=set_member_action_error
-                                            member_action_loading=member_action_loading
-                                            set_member_action_loading=set_member_action_loading
-                                        />
-                                    }
-                                })
-                                .collect::<Vec<_>>();
-                            view! { <div class="team-member-list">{items}</div> }.into_any()
-                        }
+                    if members.is_empty() {
+                        view! { <p class="empty-text">"No members found."</p> }.into_any()
+                    } else {
+                        let uid = current_user_id();
+                        let ulvl = current_user_level();
+                        let lid = team_leader_id();
+                        let items = members
+                            .into_iter()
+                            .map(move |member: TeamMember| {
+                                view! {
+                                    <TeamMemberRow
+                                        member=member
+                                        team_id=team_id
+                                        current_user_id=uid
+                                        current_user_level=ulvl
+                                        team_leader_id=lid
+                                        set_member_action_error=set_member_action_error
+                                        member_action_loading=member_action_loading
+                                        set_member_action_loading=set_member_action_loading
+                                    />
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                        view! { <div class="team-member-list">{items}</div> }.into_any()
+                    }
                     }}
                 </Card>
 

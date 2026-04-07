@@ -134,10 +134,39 @@ impl TeamService {
     pub async fn update_member_role(
         pool: &PgPool,
         team_id: u64,
-        user_id: u64,
-        level: u8,
+        current_user_id: u64,
+        target_user_id: u64,
+        new_level: u8,
     ) -> Result<bool> {
-        DbTeam::update_member_role(pool, team_id, user_id, level).await
+        let team = DbTeam::get_team_by_id(pool, team_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Team not found"))?;
+
+        if target_user_id == team.team_leader_id {
+            return Err(anyhow::anyhow!("Forbidden: Cannot modify team leader's level"));
+        }
+
+        let current_user_level = team
+            .team_members
+            .iter()
+            .find(|m| m.user_id == current_user_id)
+            .map(|m| m.level)
+            .ok_or_else(|| anyhow::anyhow!("Current user is not a team member"))?;
+
+        let target_user_level = team
+            .team_members
+            .iter()
+            .find(|m| m.user_id == target_user_id)
+            .map(|m| m.level)
+            .ok_or_else(|| anyhow::anyhow!("Target user is not a team member"))?;
+
+        if current_user_level <= target_user_level {
+            return Err(anyhow::anyhow!(
+                "Forbidden: Cannot modify level of user with equal or higher level"
+            ));
+        }
+
+        DbTeam::update_member_role(pool, team_id, target_user_id, new_level).await
     }
 
     pub async fn check_membership(pool: &PgPool, team_id: u64, user_id: u64) -> Result<bool> {

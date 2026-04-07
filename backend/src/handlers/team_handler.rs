@@ -373,11 +373,24 @@ pub async fn remove_member(team_id: PathParam<u64>, user_id: PathParam<u64>, res
 pub async fn update_member_role(
     team_id: PathParam<u64>,
     user_id: PathParam<u64>,
+    depot: &mut Depot,
     req: &mut Request,
     res: &mut Response,
 ) {
     let team_id: u64 = team_id.into_inner();
-    let user_id: u64 = user_id.into_inner();
+    let target_user_id: u64 = user_id.into_inner();
+
+    let current_user_id = match depot.get::<i64>("user_id").ok() {
+        Some(id) => *id as u64,
+        None => {
+            res.status_code(StatusCode::UNAUTHORIZED);
+            res.render(Json(serde_json::json!({
+                "error": "Unauthorized",
+                "message": "User not authenticated"
+            })));
+            return;
+        }
+    };
 
     let request: UpdateRoleRequest = match req.parse_json().await {
         Ok(r) => r,
@@ -405,7 +418,7 @@ pub async fn update_member_role(
         }
     };
 
-    match TeamService::update_member_role(&pool, team_id, user_id, request.level).await {
+    match TeamService::update_member_role(&pool, team_id, current_user_id, target_user_id, request.level).await {
         Ok(true) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -420,11 +433,19 @@ pub async fn update_member_role(
         }
         Err(e) => {
             let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Failed to update member role",
-                "message": msg
-            })));
+            if msg.contains("Forbidden") {
+                res.status_code(StatusCode::FORBIDDEN);
+                res.render(Json(serde_json::json!({
+                    "error": "Forbidden",
+                    "message": msg
+                })));
+            } else {
+                res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
+                res.render(Json(serde_json::json!({
+                    "error": "Failed to update member role",
+                    "message": msg
+                })));
+            }
         }
     }
 }
