@@ -109,6 +109,7 @@ fn load_team_detail_data(
 #[component]
 fn TeamTaskRow(task: Task) -> impl IntoView {
     let navigate = use_navigate();
+    let team_store = use_team_store();
     let task_id = task.task_id;
     let status = status_text(&task.task_status).to_string();
     let status_class = status_color(&task.task_status);
@@ -117,6 +118,26 @@ fn TeamTaskRow(task: Task) -> impl IntoView {
         .task_description
         .clone()
         .unwrap_or_else(|| "No description".to_string());
+
+    let task_create_time = format_timestamp(task.task_create_time);
+
+    let task_leader = {
+        let team_store = team_store.clone();
+        let task_team_id = task.task_team_id;
+        let leader_id = task.task_leader_id;
+        move || -> String {
+            if let Some(team_id) = task_team_id {
+                let teams = team_store.state.get().teams.clone();
+                if let Some(team) = teams.iter().find(|t| t.team_id == team_id) {
+                    if let Some(member) = team.team_members.iter().find(|m| m.user_id == leader_id) {
+                        return member.username.clone().unwrap_or_else(|| leader_id.to_string());
+                    }
+                    return leader_id.to_string();
+                }
+            }
+            leader_id.to_string()
+        }
+    };
 
     let on_open = Callback::new(move |_| {
         let path = format!("/tasks/{}", task_id);
@@ -133,6 +154,16 @@ fn TeamTaskRow(task: Task) -> impl IntoView {
             </div>
             <p class="team-task-card-desc">{description}</p>
             <div class="team-task-card-footer">
+                <div class="team-task-card-meta">
+                    <span class="team-task-meta-item">
+                        <span class="team-task-meta-label">"Created: "</span>
+                        <span>{task_create_time}</span>
+                    </span>
+                    <span class="team-task-meta-item">
+                        <span class="team-task-meta-label">"Leader: "</span>
+                        <span>{task_leader()}</span>
+                    </span>
+                </div>
                 <Button
                     variant=ButtonVariant::Ghost
                     size=ButtonSize::Sm

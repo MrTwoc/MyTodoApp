@@ -2577,10 +2577,26 @@ input, textarea, select, button, .no-transition {
 
 .team-task-card-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   margin-top: auto;
   padding-top: 8px;
   border-top: 1px solid var(--border-secondary);
+}
+
+.team-task-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.team-task-meta-item {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.team-task-meta-label {
+  color: var(--text-tertiary);
 }
 
 .team-tasks-header {
