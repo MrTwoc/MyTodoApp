@@ -311,6 +311,8 @@ pub fn TeamDetailPage() -> impl IntoView {
     let (edit_member_limit, set_edit_member_limit) = signal(String::new());
     let (edit_visibility, set_edit_visibility) = signal(String::new());
     let (edit_description, set_edit_description) = signal(String::new());
+    // New: Team name editing state
+    let (edit_team_name, set_edit_team_name) = signal(String::new());
 
     let on_edit_team_submit = {
         let client = client.clone();
@@ -324,6 +326,13 @@ pub fn TeamDetailPage() -> impl IntoView {
             } else {
                 edit_member_limit.get().trim().parse().ok()
             };
+            // Validate team name input
+            let team_name_input = edit_team_name.get();
+            if team_name_input.trim().is_empty() {
+                set_edit_team_error.set(Some("Team name is required".to_string()));
+                set_edit_team_loading.set(false);
+                return;
+            }
             let visibility = if edit_visibility.get() == "Public" {
                 Some("Public".to_string())
             } else {
@@ -336,7 +345,7 @@ pub fn TeamDetailPage() -> impl IntoView {
             };
 
             let req = UpdateTeamRequest {
-                team_name: None,
+                team_name: Some(team_name_input.clone()),
                 team_description: description,
                 team_visibility: visibility,
                 team_member_limit: member_limit,
@@ -667,10 +676,13 @@ pub fn TeamDetailPage() -> impl IntoView {
                                                 variant=ButtonVariant::Secondary
                                                 size=ButtonSize::Sm
                                                 on_click=Callback::from(move |_| {
-                                                    if let Some(t) = current_team() {
+                                                if let Some(t) = current_team() {
+                                                        // Pre-fill existing team settings into edit modal fields
                                                         set_edit_member_limit.set(t.team_settings.team_member_limit.to_string());
                                                         set_edit_visibility.set(format!("{:?}", t.team_settings.team_visibility));
                                                         set_edit_description.set(t.team_settings.team_description.clone().unwrap_or_default());
+                                                        // Prefill team name as well
+                                                        set_edit_team_name.set(t.team_name.clone());
                                                     }
                                                     set_show_edit_team_modal.set(true);
                                                 })
@@ -814,20 +826,29 @@ pub fn TeamDetailPage() -> impl IntoView {
 
 
 
-                    <Modal
-                    open=show_edit_team_modal.into()
-                    title="Edit Team Information".to_string()
-                >
-                    <Form on_submit=on_edit_team_submit>
-                        <FormGroup label="Member limit".to_string() required=false>
-                            <Input
-                                value=edit_member_limit.get()
-                                placeholder="0 for unlimited".to_string()
-                                on_input=Callback::from(move |v: String| {
-                                    set_edit_member_limit.set(v);
-                                })
-                            />
-                        </FormGroup>
+            <Modal
+            open=show_edit_team_modal.into()
+            title="Edit Team Information".to_string()
+        >
+            <Form on_submit=on_edit_team_submit>
+                <FormGroup label="Team name".to_string() required=true>
+                    <Input
+                        value=edit_team_name.get()
+                        placeholder="Enter team name".to_string()
+                        on_input=Callback::from(move |v: String| {
+                            set_edit_team_name.set(v);
+                        })
+                    />
+                </FormGroup>
+                <FormGroup label="Member limit".to_string() required=false>
+                    <Input
+                        value=edit_member_limit.get()
+                        placeholder="0 for unlimited".to_string()
+                        on_input=Callback::from(move |v: String| {
+                            set_edit_member_limit.set(v);
+                        })
+                    />
+                </FormGroup>
                         <FormGroup label="Visibility".to_string() required=true>
                             <select
                                 class="input-field"
