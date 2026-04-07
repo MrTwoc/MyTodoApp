@@ -161,7 +161,15 @@ pub fn TaskDetailPage() -> impl IntoView {
 
     let nav_back = {
         let n = navigate.clone();
-        move |_| n("/tasks", Default::default())
+        let task = task.clone();
+        move |_| {
+            let t = task.get();
+            if let Some(team_id) = t.task_team_id {
+                n(&format!("/teams/{}", team_id), Default::default())
+            } else {
+                n("/tasks", Default::default())
+            }
+        }
     };
 
     let start_edit = {
