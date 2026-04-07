@@ -144,3 +144,14 @@ pub async fn get_task_logs(client: &ApiClient, task_id: u64) -> ApiResult<Vec<se
     let resp: LogsResponse = client.get(&path).await?;
     Ok(resp.logs)
 }
+
+pub async fn toggle_task_favorite(client: &ApiClient, task_id: u64) -> ApiResult<bool> {
+    let path = format!("/api/tasks/{}/favorite", task_id);
+    #[derive(Deserialize)]
+    struct FavoriteResponse {
+        is_favorite: bool,
+    }
+    let empty: Vec<u8> = vec![];
+    let resp: FavoriteResponse = client.post(&path, &empty).await?;
+    Ok(resp.is_favorite)
+}

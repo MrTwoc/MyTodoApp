@@ -174,23 +174,7 @@ impl TaskService {
         task_id: u64,
         status: TaskStatus,
     ) -> Result<Option<Task>> {
-        if status == TaskStatus::Completed {
-            DbTask::complete_task(pool, task_id).await?;
-        } else {
-            DbTask::update_task(
-                pool,
-                task_id,
-                None,
-                None,
-                None,
-                None,
-                None,
-                Some(status),
-                None,
-                None,
-            )
-            .await?;
-        }
+        DbTask::set_task_status(pool, task_id, status).await?;
         DbTask::get_task_by_id(pool, task_id).await
     }
 

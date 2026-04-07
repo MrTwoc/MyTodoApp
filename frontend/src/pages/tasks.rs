@@ -1,7 +1,7 @@
 use chrono::Utc;
 use std::collections::HashSet;
 
-use crate::api::task::{CreateTaskRequest, create_task as api_create_task, list_tasks};
+use crate::api::task::{CreateTaskRequest, create_task as api_create_task, list_tasks, toggle_task_favorite};
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
 use crate::components::loading::{Loading, LoadingVariant};
@@ -101,6 +101,25 @@ pub fn TasksPage() -> impl IntoView {
         Callback::from(move |query: String| {
             store.set_search_query(if query.is_empty() { None } else { Some(query) });
             // offline_page.set(1);
+        })
+    };
+
+    let handle_toggle_favorite = {
+        let store = task_store.clone();
+        let client = use_api_client();
+        Callback::from(move |task_id: u64| {
+            let store = store.clone();
+            let client = client.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                match toggle_task_favorite(&client, task_id).await {
+                    Ok(is_favorite) => {
+                        store.toggle_favorite(task_id);
+                    }
+                    Err(e) => {
+                        store.toggle_favorite(task_id);
+                    }
+                }
+            });
         })
     };
 
@@ -388,6 +407,19 @@ pub fn TasksPage() -> impl IntoView {
                 >
                     "Paused"
                 </Button>
+                <Button
+                    variant=ButtonVariant::Secondary
+                    size=ButtonSize::Sm
+                    on_click=Callback::from({
+                        let task_store = task_store.clone();
+                        move |_| {
+                            let current = task_store.state.get().filters.show_favorites_only.unwrap_or(false);
+                            task_store.set_show_favorites_only(!current);
+                        }
+                    })
+                >
+                    "Favorites"
+                </Button>
                 <div class="filter-bar-spacer"></div>
                 <Button
                     variant=ButtonVariant::Secondary
@@ -441,10 +473,12 @@ pub fn TasksPage() -> impl IntoView {
                                     .into_iter()
                                     .map(|task| {
                                         let task_id = task.task_id;
+                                        let on_fav = handle_toggle_favorite.clone();
                                         view! {
                                             <TaskCard
                                                 task=task
                                                 interactive=true
+                                                on_toggle_favorite=on_fav
                                                 on_click=Callback::from({
                                                     let navigator = navigate.clone();
                                                     move |_| {

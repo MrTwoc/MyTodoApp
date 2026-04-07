@@ -29,6 +29,7 @@ pub struct Task {
     pub task_leader_id: u64,
     pub task_team_id: Option<u64>,
     pub task_update_time: Option<i64>,
+    pub is_favorite: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
@@ -40,6 +41,7 @@ pub struct TaskFilters {
     pub assignee_id: Option<u64>,
     pub has_deadline: Option<bool>,
     pub search_query: Option<String>,
+    pub show_favorites_only: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -180,6 +182,21 @@ impl TaskStore {
         self.set_state.set(state);
     }
 
+    pub fn toggle_favorite(&self, task_id: u64) {
+        let mut state = self.state.get();
+        if let Some(task) = state.tasks.iter_mut().find(|t| t.task_id == task_id) {
+            task.is_favorite = !task.is_favorite;
+            self.set_state.set(state);
+        }
+    }
+
+    pub fn set_show_favorites_only(&self, show: bool) {
+        let mut state = self.state.get();
+        state.filters.show_favorites_only = Some(show);
+        state.pagination.page = 1;
+        self.set_state.set(state);
+    }
+
     pub fn filtered_tasks(&self) -> Vec<Task> {
         let state = self.state.get();
         let filters = &state.filters;
@@ -205,6 +222,9 @@ impl TaskStore {
                         .as_ref()
                         .is_some_and(|d| d.to_lowercase().contains(&q))
             });
+        }
+        if filters.show_favorites_only.is_some_and(|v| v) {
+            tasks.retain(|t| t.is_favorite);
         }
 
         tasks

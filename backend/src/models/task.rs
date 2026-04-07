@@ -31,6 +31,8 @@ pub struct Task {
     pub task_team_id: Option<u64>,
     // 任务更新时间，Unix时间戳
     pub task_update_time: Option<i64>,
+    // 是否收藏
+    pub is_favorite: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

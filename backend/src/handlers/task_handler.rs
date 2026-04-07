@@ -511,6 +511,52 @@ pub async fn update_task_priority(
 }
 
 #[endpoint]
+pub async fn toggle_task_favorite(task_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
+    let _user_id = match depot.get::<i64>("user_id").ok() {
+        Some(id) => *id as u64,
+        None => {
+            res.status_code(StatusCode::UNAUTHORIZED);
+            res.render(Json(serde_json::json!({
+                "error": "Unauthorized",
+                "message": "User not authenticated"
+            })));
+            return;
+        }
+    };
+
+    let task_id: u64 = task_id.into_inner();
+
+    let pool = match create_pool().await {
+        Ok(p) => p,
+        Err(e) => {
+            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
+            res.render(Json(serde_json::json!({
+                "error": "Database connection failed",
+                "message": e.to_string()
+            })));
+            return;
+        }
+    };
+
+    match crate::db::db_task::DbTask::toggle_favorite(&pool, task_id).await {
+        Ok(is_favorite) => {
+            res.status_code(StatusCode::OK);
+            res.render(Json(serde_json::json!({
+                "task_id": task_id,
+                "is_favorite": is_favorite
+            })));
+        }
+        Err(e) => {
+            res.status_code(StatusCode::BAD_REQUEST);
+            res.render(Json(serde_json::json!({
+                "error": "Failed to toggle favorite",
+                "message": e.to_string()
+            })));
+        }
+    }
+}
+
+#[endpoint]
 pub async fn get_task_logs(task_id: PathParam<u64>, res: &mut Response) {
     let _task_id: u64 = task_id.into_inner();
 

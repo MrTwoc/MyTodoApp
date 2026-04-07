@@ -15,6 +15,7 @@ pub fn TaskCard(
     #[prop(default = false)] interactive: bool,
     #[prop(default = TaskCardVariant::Default)] variant: TaskCardVariant,
     #[prop(optional)] on_click: Option<Callback<(ev::MouseEvent,)>>,
+    #[prop(optional)] on_toggle_favorite: Option<Callback<(u64,)>>,
     #[prop(optional)] extra_actions: Option<Children>,
 ) -> impl IntoView {
     let variant_class = match variant {
@@ -57,6 +58,13 @@ pub fn TaskCard(
         }
     };
 
+    let handle_favorite_click = move |ev: ev::MouseEvent| {
+        ev.stop_propagation();
+        if let Some(cb) = on_toggle_favorite.as_ref() {
+            cb.run((task.task_id,));
+        }
+    };
+
     view! {
         <div
             class=("task-card-wrapper", true)
@@ -71,6 +79,15 @@ pub fn TaskCard(
                 <span class=format!("task-priority-badge {}", priority_class)>
                     {priority_label}
                 </span>
+                <button
+                    class=format!("favorite-btn {}", if task.is_favorite { "favorited" } else { "" })
+                    on:click=handle_favorite_click
+                    title=if task.is_favorite { "Remove from favorites" } else { "Add to favorites" }
+                >
+                    <svg viewBox="0 0 24 24" fill=if task.is_favorite { "currentColor" } else { "none" } stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </button>
             </div>
 
             <h3 class="task-card-title">{task.task_name}</h3>

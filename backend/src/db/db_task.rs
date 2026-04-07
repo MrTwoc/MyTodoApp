@@ -32,6 +32,7 @@ impl DbTask {
         let task_status = TaskStatus::Active;
         let task_complete_time: Option<i64> = None;
         let task_update_time: Option<i64> = None;
+        let is_favorite = false;
 
         let task_keywords_json = serde_json::to_value(&task_keywords)?;
 
@@ -41,13 +42,13 @@ impl DbTask {
                 task_id, task_name, task_description, task_keywords,
                 task_priority, task_deadline, task_complete_time,
                 task_status, task_create_time, task_leader_id,
-                task_team_id, task_update_time
+                task_team_id, task_update_time, is_favorite
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             RETURNING task_id, task_name, task_description, task_keywords,
                       task_priority, task_deadline, task_complete_time,
                       task_status, task_create_time, task_leader_id,
-                      task_team_id, task_update_time
+                      task_team_id, task_update_time, is_favorite
             "#,
         )
         .bind(task_id as i64)
@@ -62,6 +63,7 @@ impl DbTask {
         .bind(task_leader_id as i64)
         .bind(task_team_id.map(|id| id as i64))
         .bind(task_update_time)
+        .bind(is_favorite)
         .fetch_one(pool)
         .await?;
 
@@ -77,7 +79,7 @@ impl DbTask {
             SELECT task_id, task_name, task_description, task_keywords,
                    task_priority, task_deadline, task_complete_time,
                    task_status, task_create_time, task_leader_id,
-                   task_team_id, task_update_time
+                   task_team_id, task_update_time, is_favorite
             FROM tasks
             WHERE task_id = $1
             "#,
@@ -108,7 +110,7 @@ impl DbTask {
             "SELECT task_id, task_name, task_description, task_keywords,
                     task_priority, task_deadline, task_complete_time,
                     task_status, task_create_time, task_leader_id,
-                    task_team_id, task_update_time
+                    task_team_id, task_update_time, is_favorite
              FROM tasks WHERE 1=1",
         );
         let mut param_count = 1;
@@ -255,7 +257,7 @@ impl DbTask {
 
         let set_clause = updates.join(", ");
         let query = format!(
-            "UPDATE tasks SET {} WHERE task_id = ${} RETURNING task_id, task_name, task_description, task_keywords, task_priority, task_deadline, task_complete_time, task_status, task_create_time, task_leader_id, task_team_id, task_update_time",
+            "UPDATE tasks SET {} WHERE task_id = ${} RETURNING task_id, task_name, task_description, task_keywords, task_priority, task_deadline, task_complete_time, task_status, task_create_time, task_leader_id, task_team_id, task_update_time, is_favorite",
             set_clause, param_count
         );
 
@@ -315,25 +317,19 @@ impl DbTask {
         Ok(affected > 0)
     }
 
-    /// 完成任务（状态变更特殊处理）
-    pub async fn complete_task(pool: &PgPool, task_id: u64) -> Result<bool> {
-        let complete_time = chrono::Utc::now().timestamp();
+    /// 切换任务收藏状态
+    pub async fn toggle_favorite(pool: &PgPool, task_id: u64) -> Result<bool> {
         let result = sqlx::query(
-            "UPDATE tasks SET task_status = 'Completed', task_complete_time = $1 WHERE task_id = $2",
+            "UPDATE tasks SET is_favorite = NOT is_favorite WHERE task_id = $1 RETURNING is_favorite",
         )
-        .bind(complete_time)
         .bind(task_id as i64)
-        .execute(pool)
+        .fetch_one(pool)
         .await?;
 
-        let affected = result.rows_affected();
-        tracing::info!(
-            "完成任务: task_id = {}, complete_time = {}, affected = {}",
-            task_id,
-            complete_time,
-            affected
-        );
-        Ok(affected > 0)
+        let new_status: bool = result.get("is_favorite");
+        tracing::info!("切换任务收藏状态: task_id = {}, is_favorite = {}", task_id, new_status);
+
+        Ok(new_status)
     }
 
     /// 按状态设置任务状态，并同步更新完成时间
@@ -383,6 +379,7 @@ impl DbTask {
         let task_leader_id: i64 = row.get("task_leader_id");
         let task_team_id: Option<i64> = row.get("task_team_id");
         let task_update_time: Option<i64> = row.get("task_update_time");
+        let is_favorite: bool = row.get("is_favorite");
 
         let task_status = match task_status.as_str() {
             "Active" => TaskStatus::Active,
@@ -404,6 +401,7 @@ impl DbTask {
             task_leader_id: task_leader_id as u64,
             task_team_id: task_team_id.map(|id| id as u64),
             task_update_time,
+            is_favorite,
         })
     }
 }

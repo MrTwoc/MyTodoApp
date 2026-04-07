@@ -17,6 +17,7 @@ pub fn task_router() -> Router {
                 .delete(task_handler::delete_task)
                 .push(Router::with_path("status").put(task_handler::update_task_status))
                 .push(Router::with_path("priority").put(task_handler::update_task_priority))
+                .push(Router::with_path("favorite").post(task_handler::toggle_task_favorite))
                 .push(Router::with_path("logs").get(task_handler::get_task_logs)),
         )
 }

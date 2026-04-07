@@ -1800,6 +1800,34 @@ input, textarea, select, button, .no-transition {
   gap: 8px;
   margin-bottom: 8px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.favorite-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text-tertiary);
+  transition: color 0.2s;
+}
+
+.favorite-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.favorite-btn:hover {
+  color: var(--accent-primary);
+}
+
+.favorite-btn.favorited {
+  color: #f59e0b;
+}
+
+.favorite-btn.favorited:hover {
+  color: #d97706;
 }
 
 .task-status-badge {
