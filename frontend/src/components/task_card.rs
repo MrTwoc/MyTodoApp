@@ -1,5 +1,5 @@
 use crate::store::task_store::{Task, TaskStatus};
-use crate::store::use_team_store;
+use crate::store::{use_team_store, use_user_store};
 use leptos::ev;
 use leptos::prelude::*;
 
@@ -70,6 +70,7 @@ pub fn TaskCard(
 
     let task_leader = {
         let team_store = use_team_store();
+        let user_store = use_user_store();
         let task_team_id = task.task_team_id;
         let leader_id = task.task_leader_id;
         move || -> String {
@@ -83,7 +84,11 @@ pub fn TaskCard(
                             .clone()
                             .unwrap_or_else(|| leader_id.to_string());
                     }
-                    return leader_id.to_string();
+                }
+            }
+            if let Some(profile) = user_store.state.get().profile {
+                if profile.user_id == leader_id {
+                    return profile.username;
                 }
             }
             leader_id.to_string()
