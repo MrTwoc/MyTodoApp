@@ -22,6 +22,7 @@ pub struct Task {
     pub task_description: Option<String>,
     pub task_keywords: HashSet<String>,
     pub task_priority: u8,
+    pub task_difficulty: u8,
     pub task_deadline: Option<i64>,
     pub task_complete_time: Option<i64>,
     pub task_status: TaskStatus,

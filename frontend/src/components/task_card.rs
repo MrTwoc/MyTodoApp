@@ -79,6 +79,9 @@ pub fn TaskCard(
                 <span class=format!("task-priority-badge {}", priority_class)>
                     {priority_label}
                 </span>
+                <span class="task-difficulty-badge">
+                    {"难度: "}{task.task_difficulty}
+                </span>
                 <button
                     class=format!("favorite-btn {}", if task.is_favorite { "favorited" } else { "" })
                     on:click=handle_favorite_click

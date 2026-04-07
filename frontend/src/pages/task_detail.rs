@@ -65,6 +65,7 @@ struct EditableTaskData {
     task_name: String,
     task_description: Option<String>,
     task_priority: u8,
+    task_difficulty: u8,
     task_deadline: Option<i64>,
     task_status: TaskStatus,
 }
@@ -75,6 +76,7 @@ impl Default for EditableTaskData {
             task_name: String::new(),
             task_description: None,
             task_priority: 5,
+            task_difficulty: 0,
             task_deadline: None,
             task_status: TaskStatus::Active,
         }
@@ -87,6 +89,7 @@ impl From<Task> for EditableTaskData {
             task_name: task.task_name,
             task_description: task.task_description,
             task_priority: task.task_priority,
+            task_difficulty: task.task_difficulty,
             task_deadline: task.task_deadline,
             task_status: task.task_status,
         }
@@ -184,7 +187,12 @@ pub fn TaskDetailPage() -> impl IntoView {
                 "task_description" => data.task_description = if value.is_empty() { None } else { Some(value) },
                 "task_priority" => {
                     if let Ok(p) = value.parse::<u8>() {
-                        data.task_priority = p;
+                        data.task_priority = p.min(10);
+                    }
+                }
+                "task_difficulty" => {
+                    if let Ok(d) = value.parse::<u8>() {
+                        data.task_difficulty = d.min(10);
                     }
                 }
                 "task_deadline" => {
@@ -237,6 +245,7 @@ pub fn TaskDetailPage() -> impl IntoView {
                     task_description: data.task_description.clone(),
                     task_keywords: None,
                     task_priority: Some(data.task_priority),
+                    task_difficulty: Some(data.task_difficulty),
                     task_deadline: data.task_deadline,
                     task_status: Some(match data.task_status {
                         TaskStatus::Active => "Active".to_string(),
@@ -498,7 +507,7 @@ pub fn TaskDetailPage() -> impl IntoView {
                                 <input
                                     type="number"
                                     class="input-field"
-                                    min="1"
+                                    min="0"
                                     max="10"
                                     prop:value=move || edit_data.get().task_priority.to_string()
                                     on:input=move |ev| update_edit_field("task_priority", event_target_value(&ev))
@@ -507,6 +516,28 @@ pub fn TaskDetailPage() -> impl IntoView {
                         } else {
                             view! {
                                 <p class="task-detail-value">{move || current_task().task_priority.to_string()}</p>
+                            }.into_any()
+                        }
+                    }}
+                </div>
+
+                <div class="task-detail-section">
+                    <h4 class="task-detail-label">"Difficulty"</h4>
+                    {move || {
+                        if is_editing.get() {
+                            view! {
+                                <input
+                                    type="number"
+                                    class="input-field"
+                                    min="0"
+                                    max="10"
+                                    prop:value=move || edit_data.get().task_difficulty.to_string()
+                                    on:input=move |ev| update_edit_field("task_difficulty", event_target_value(&ev))
+                                />
+                            }.into_any()
+                        } else {
+                            view! {
+                                <p class="task-detail-value">{move || current_task().task_difficulty.to_string()}</p>
                             }.into_any()
                         }
                     }}

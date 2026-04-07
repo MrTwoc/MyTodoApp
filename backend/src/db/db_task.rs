@@ -23,6 +23,7 @@ impl DbTask {
         task_description: Option<&str>,
         task_keywords: HashSet<String>,
         task_priority: u8,
+        task_difficulty: u8,
         task_deadline: Option<i64>,
         task_leader_id: u64,
         task_team_id: Option<u64>,
@@ -40,13 +41,13 @@ impl DbTask {
             r#"
             INSERT INTO tasks (
                 task_id, task_name, task_description, task_keywords,
-                task_priority, task_deadline, task_complete_time,
+                task_priority, task_difficulty, task_deadline, task_complete_time,
                 task_status, task_create_time, task_leader_id,
                 task_team_id, task_update_time, is_favorite
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING task_id, task_name, task_description, task_keywords,
-                      task_priority, task_deadline, task_complete_time,
+                      task_priority, task_difficulty, task_deadline, task_complete_time,
                       task_status, task_create_time, task_leader_id,
                       task_team_id, task_update_time, is_favorite
             "#,
@@ -56,6 +57,7 @@ impl DbTask {
         .bind(task_description)
         .bind(task_keywords_json)
         .bind(task_priority as i32)
+        .bind(task_difficulty as i16)
         .bind(task_deadline)
         .bind(task_complete_time)
         .bind(Self::task_status_to_db_string(&task_status))
@@ -77,7 +79,7 @@ impl DbTask {
         let result = sqlx::query(
             r#"
             SELECT task_id, task_name, task_description, task_keywords,
-                   task_priority, task_deadline, task_complete_time,
+                   task_priority, task_difficulty, task_deadline, task_complete_time,
                    task_status, task_create_time, task_leader_id,
                    task_team_id, task_update_time, is_favorite
             FROM tasks
@@ -108,7 +110,7 @@ impl DbTask {
     ) -> Result<Vec<Task>> {
         let mut query = String::from(
             "SELECT task_id, task_name, task_description, task_keywords,
-                    task_priority, task_deadline, task_complete_time,
+                    task_priority, task_difficulty, task_deadline, task_complete_time,
                     task_status, task_create_time, task_leader_id,
                     task_team_id, task_update_time, is_favorite
              FROM tasks WHERE 1=1",
@@ -207,6 +209,7 @@ impl DbTask {
         task_description: Option<&str>,
         task_keywords: Option<HashSet<String>>,
         task_priority: Option<u8>,
+        task_difficulty: Option<u8>,
         task_deadline: Option<Option<i64>>, // Option<Option> 表示可以更新为None
         task_status: Option<TaskStatus>,
         task_leader_id: Option<u64>,
@@ -229,6 +232,10 @@ impl DbTask {
         }
         if task_priority.is_some() {
             updates.push(format!("task_priority = ${}", param_count));
+            param_count += 1;
+        }
+        if task_difficulty.is_some() {
+            updates.push(format!("task_difficulty = ${}", param_count));
             param_count += 1;
         }
         if task_deadline.is_some() {
@@ -257,7 +264,7 @@ impl DbTask {
 
         let set_clause = updates.join(", ");
         let query = format!(
-            "UPDATE tasks SET {} WHERE task_id = ${} RETURNING task_id, task_name, task_description, task_keywords, task_priority, task_deadline, task_complete_time, task_status, task_create_time, task_leader_id, task_team_id, task_update_time, is_favorite",
+            "UPDATE tasks SET {} WHERE task_id = ${} RETURNING task_id, task_name, task_description, task_keywords, task_priority, task_difficulty, task_deadline, task_complete_time, task_status, task_create_time, task_leader_id, task_team_id, task_update_time, is_favorite",
             set_clause, param_count
         );
 
@@ -274,6 +281,9 @@ impl DbTask {
             row_result = row_result.bind(keywords_json);
         }
         if let Some(v) = task_priority {
+            row_result = row_result.bind(v as i32);
+        }
+        if let Some(v) = task_difficulty {
             row_result = row_result.bind(v as i32);
         }
         if let Some(v) = task_deadline {
@@ -327,7 +337,11 @@ impl DbTask {
         .await?;
 
         let new_status: bool = result.get("is_favorite");
-        tracing::info!("切换任务收藏状态: task_id = {}, is_favorite = {}", task_id, new_status);
+        tracing::info!(
+            "切换任务收藏状态: task_id = {}, is_favorite = {}",
+            task_id,
+            new_status
+        );
 
         Ok(new_status)
     }
@@ -372,6 +386,7 @@ impl DbTask {
         let task_keywords: HashSet<String> =
             serde_json::from_value(task_keywords).unwrap_or_default();
         let task_priority: i32 = row.get("task_priority");
+        let task_difficulty: i16 = row.get("task_difficulty");
         let task_deadline: Option<i64> = row.get("task_deadline");
         let task_complete_time: Option<i64> = row.get("task_complete_time");
         let task_status: String = row.get("task_status");
@@ -394,6 +409,7 @@ impl DbTask {
             task_description,
             task_keywords,
             task_priority: task_priority as u8,
+            task_difficulty: task_difficulty as u8,
             task_deadline,
             task_complete_time,
             task_status,
@@ -427,6 +443,7 @@ mod tests {
             Some("这是一个测试任务"),
             keywords.clone(),
             2,
+            0,
             Some(chrono::Utc::now().timestamp() + 86400), // 1天后
             1,                                            // 假设存在用户ID 1
             None,
@@ -462,6 +479,7 @@ mod tests {
             Some("更新后的描述"),
             None,
             Some(3),
+            Some(5),
             Some(None), // 移除截止时间
             None,
             None,
@@ -476,7 +494,9 @@ mod tests {
         assert!(updated.task_deadline.is_none());
 
         // 完成任务
-        let completed = DbTask::complete_task(&pool, task.task_id).await.unwrap();
+        let completed = DbTask::set_task_status(&pool, task.task_id, TaskStatus::Completed)
+            .await
+            .unwrap();
         assert!(completed);
         let completed_task = DbTask::get_task_by_id(&pool, task.task_id)
             .await

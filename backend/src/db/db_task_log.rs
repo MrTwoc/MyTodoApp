@@ -207,6 +207,7 @@ mod tests {
             Some("测试任务描述"),
             std::collections::HashSet::new(),
             1,
+            0,
             None,
             test_user.user_id,
             None,

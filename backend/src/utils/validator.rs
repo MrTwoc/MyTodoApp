@@ -152,6 +152,13 @@ pub fn validate_task_priority(priority: u8) -> Result<()> {
     Ok(())
 }
 
+pub fn validate_task_difficulty(difficulty: u8) -> Result<()> {
+    if difficulty > 10 {
+        return Err(anyhow::anyhow!("任务难度值不能超过10"));
+    }
+    Ok(())
+}
+
 pub fn validate_task_deadline(deadline: i64) -> Result<()> {
     let now = chrono::Utc::now().timestamp();
     if deadline < now - 86400 {

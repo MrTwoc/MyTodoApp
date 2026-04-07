@@ -1872,6 +1872,21 @@ input, textarea, select, button, .no-transition {
   font-family: var(--font-mono);
 }
 
+.task-difficulty-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--text-secondary);
+}
+
 .priority-low {
   background-color: transparent;
   color: var(--text-tertiary);

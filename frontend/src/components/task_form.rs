@@ -16,6 +16,7 @@ pub struct TaskFormData {
     pub task_description: Option<String>,
     pub task_keywords: Vec<String>,
     pub task_priority: u8,
+    pub task_difficulty: u8,
     pub task_deadline: Option<i64>,
     pub task_leader_id: u64,
     pub task_team_id: Option<u64>,
@@ -29,6 +30,7 @@ impl Default for TaskFormData {
             task_description: None,
             task_keywords: Vec::new(),
             task_priority: 5,
+            task_difficulty: 0,
             task_deadline: None,
             task_leader_id: 0,
             task_team_id: None,
@@ -44,6 +46,7 @@ impl From<Task> for TaskFormData {
             task_description: task.task_description,
             task_keywords: task.task_keywords.into_iter().collect(),
             task_priority: task.task_priority,
+            task_difficulty: task.task_difficulty,
             task_deadline: task.task_deadline,
             task_leader_id: task.task_leader_id,
             task_team_id: task.task_team_id,
@@ -108,7 +111,14 @@ pub fn TaskFormModal(
     let update_priority = move |ev: ev::Event| {
         let value = event_target_value(&ev);
         if let Ok(priority) = value.parse::<u8>() {
-            form_data.update(|data| data.task_priority = priority);
+            form_data.update(|data| data.task_priority = priority.min(10));
+        }
+    };
+
+    let update_difficulty = move |ev: ev::Event| {
+        let value = event_target_value(&ev);
+        if let Ok(difficulty) = value.parse::<u8>() {
+            form_data.update(|data| data.task_difficulty = difficulty.min(10));
         }
     };
 
@@ -219,14 +229,26 @@ pub fn TaskFormModal(
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Priority (1-10)</label>
+                    <label class="form-label">Priority (0-10)</label>
                     <input
                         type="number"
                         class="input-field"
-                        min="1"
+                        min="0"
                         max="10"
                         prop:value=move || form_data.get().task_priority.to_string()
                         on:input=update_priority
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Difficulty (0-10)</label>
+                    <input
+                        type="number"
+                        class="input-field"
+                        min="0"
+                        max="10"
+                        prop:value=move || form_data.get().task_difficulty.to_string()
+                        on:input=update_difficulty
                     />
                 </div>
 
@@ -312,7 +334,14 @@ pub fn TaskForm(
     let update_priority = move |ev: ev::Event| {
         let value = event_target_value(&ev);
         if let Ok(priority) = value.parse::<u8>() {
-            form_data.update(|data| data.task_priority = priority);
+            form_data.update(|data| data.task_priority = priority.min(10));
+        }
+    };
+
+    let update_difficulty = move |ev: ev::Event| {
+        let value = event_target_value(&ev);
+        if let Ok(difficulty) = value.parse::<u8>() {
+            form_data.update(|data| data.task_difficulty = difficulty.min(10));
         }
     };
 
@@ -416,14 +445,26 @@ pub fn TaskForm(
             </div>
 
             <div class="form-group">
-                <label class="form-label">Priority (1-10)</label>
+                <label class="form-label">Priority (0-10)</label>
                 <input
                     type="number"
                     class="input-field"
-                    min="1"
+                    min="0"
                     max="10"
                     prop:value=move || form_data.get().task_priority.to_string()
                     on:input=update_priority
+                />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Difficulty (0-10)</label>
+                <input
+                    type="number"
+                    class="input-field"
+                    min="0"
+                    max="10"
+                    prop:value=move || form_data.get().task_difficulty.to_string()
+                    on:input=update_difficulty
                 />
             </div>
 

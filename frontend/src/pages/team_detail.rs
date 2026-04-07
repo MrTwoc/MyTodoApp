@@ -544,12 +544,14 @@ pub fn TeamDetailPage() -> impl IntoView {
             let task_description = data.task_description.clone();
             let task_keywords = data.task_keywords.clone();
             let task_priority = data.task_priority;
+            let task_difficulty = data.task_difficulty;
             let task_deadline = data.task_deadline;
             let req = CreateTaskRequest {
                 task_name,
                 task_description,
                 task_keywords,
                 task_priority,
+                task_difficulty,
                 task_deadline,
                 task_leader_id: user_id,
                 task_team_id: Some(team_id),

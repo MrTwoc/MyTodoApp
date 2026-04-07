@@ -1,8 +1,8 @@
 use crate::db::db_task::DbTask;
 use crate::models::task::{Task, TaskStatus};
 use crate::utils::validator::{
-    validate_task_deadline, validate_task_description, validate_task_keywords, validate_task_name,
-    validate_task_priority,
+    validate_task_deadline, validate_task_description, validate_task_difficulty,
+    validate_task_keywords, validate_task_name, validate_task_priority,
 };
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -15,6 +15,7 @@ pub struct CreateTaskRequest {
     pub task_description: Option<String>,
     pub task_keywords: Option<Vec<String>>,
     pub task_priority: Option<u8>,
+    pub task_difficulty: Option<u8>,
     pub task_deadline: Option<i64>,
     pub task_team_id: Option<u64>,
 }
@@ -25,6 +26,7 @@ pub struct UpdateTaskRequest {
     pub task_description: Option<String>,
     pub task_keywords: Option<Vec<String>>,
     pub task_priority: Option<u8>,
+    pub task_difficulty: Option<u8>,
     pub task_deadline: Option<Option<i64>>,
     pub task_status: Option<TaskStatus>,
     pub task_leader_id: Option<u64>,
@@ -70,6 +72,10 @@ impl TaskService {
             validate_task_priority(priority)?;
         }
 
+        if let Some(difficulty) = request.task_difficulty {
+            validate_task_difficulty(difficulty)?;
+        }
+
         if let Some(deadline) = request.task_deadline {
             validate_task_deadline(deadline)?;
         }
@@ -90,6 +96,7 @@ impl TaskService {
             request.task_description.as_deref(),
             keywords,
             request.task_priority.unwrap_or(0),
+            request.task_difficulty.unwrap_or(0),
             request.task_deadline,
             user_id,
             request.task_team_id,
@@ -140,6 +147,10 @@ impl TaskService {
             validate_task_priority(priority)?;
         }
 
+        if let Some(difficulty) = request.task_difficulty {
+            validate_task_difficulty(difficulty)?;
+        }
+
         if let Some(Some(deadline)) = request.task_deadline {
             validate_task_deadline(deadline)?;
         }
@@ -157,6 +168,7 @@ impl TaskService {
                 .task_keywords
                 .map(|k| k.into_iter().collect::<HashSet<String>>()),
             request.task_priority,
+            request.task_difficulty,
             request.task_deadline,
             request.task_status,
             request.task_leader_id,
@@ -190,6 +202,7 @@ impl TaskService {
             None,
             None,
             Some(priority),
+            None,
             None,
             None,
             None,

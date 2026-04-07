@@ -8,6 +8,7 @@ pub struct CreateTaskRequest {
     pub task_description: Option<String>,
     pub task_keywords: Vec<String>,
     pub task_priority: u8,
+    pub task_difficulty: u8,
     pub task_deadline: Option<i64>,
     pub task_leader_id: u64,
     pub task_team_id: Option<u64>,
@@ -23,6 +24,8 @@ pub struct UpdateTaskRequest {
     pub task_keywords: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub task_priority: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub task_difficulty: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub task_deadline: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -229,6 +229,7 @@ pub fn TasksPage() -> impl IntoView {
                 let task_description = data.task_description.clone();
                 let task_keywords = data.task_keywords.clone();
                 let task_priority = data.task_priority;
+                let task_difficulty = data.task_difficulty;
                 let task_deadline = data.task_deadline;
                 let task_team_id = data.task_team_id;
                 let user_id = user_store.user_id().unwrap_or(0);
@@ -243,6 +244,7 @@ pub fn TasksPage() -> impl IntoView {
                         task_description,
                         task_keywords,
                         task_priority,
+                        task_difficulty,
                         task_deadline,
                         task_leader_id: user_id,
                         task_team_id: team_id,
