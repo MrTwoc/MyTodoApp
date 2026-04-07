@@ -167,8 +167,14 @@ pub fn TaskFormModal(
         }
     };
 
+    let modal_on_close = Callback::new(move |_: (ev::MouseEvent,)| {
+        if let Some(callback) = on_close {
+            callback.run(());
+        }
+    });
+
     view! {
-        <Modal open=open title={title.to_string()}>
+        <Modal open=open title={title.to_string()} on_close=modal_on_close>
             <form class="form" on:submit=handle_submit>
                 <div class="form-group">
                     <label class="form-label">Task Type</label>
