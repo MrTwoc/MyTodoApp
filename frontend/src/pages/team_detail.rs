@@ -1,5 +1,5 @@
 use crate::api::ApiClient;
-use crate::api::task::{TaskListResponse, list_tasks};
+use crate::api::task::{CreateTaskRequest, TaskListResponse, create_task, list_tasks};
 use crate::api::team::{
     AddMemberRequest, UpdateRoleRequest, UpdateTeamRequest, add_member, get_members, get_team,
     remove_member, update_member_role, update_team,
@@ -11,9 +11,10 @@ use crate::components::input::Input;
 use crate::components::loading::{Loading, LoadingVariant};
 use crate::components::modal::Modal;
 use crate::components::search::SearchInput;
+use crate::components::task_form::{TaskFormData, TaskFormMode, TaskFormModal};
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::team_store::{TeamMember, TeamStore};
-use crate::store::{use_api_client, use_team_store};
+use crate::store::{use_api_client, use_team_store, use_user_store};
 use leptos::ev;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
@@ -311,8 +312,11 @@ pub fn TeamDetailPage() -> impl IntoView {
     let (edit_member_limit, set_edit_member_limit) = signal(String::new());
     let (edit_visibility, set_edit_visibility) = signal(String::new());
     let (edit_description, set_edit_description) = signal(String::new());
-    // New: Team name editing state
     let (edit_team_name, set_edit_team_name) = signal(String::new());
+
+    let (show_create_task_modal, set_show_create_task_modal) = signal(false);
+    let (create_task_loading, set_create_task_loading) = signal(false);
+    let (create_task_error, set_create_task_error) = signal(Option::<String>::None);
 
     let on_edit_team_submit = {
         let client = client.clone();
@@ -488,6 +492,77 @@ pub fn TeamDetailPage() -> impl IntoView {
                 set_team_tasks,
             );
         }
+    });
+
+    let on_create_task = Callback::from(move |_| {
+        set_show_create_task_modal.set(true);
+    });
+
+    let on_create_task_submit = {
+        let client = client.clone();
+        let user_store = use_user_store();
+        let set_show_create_task_modal = set_show_create_task_modal;
+        let set_create_task_loading = set_create_task_loading;
+        let set_create_task_error = set_create_task_error;
+        let set_team_tasks = set_team_tasks;
+        let set_tasks_loading = set_tasks_loading;
+        let set_tasks_error = set_tasks_error;
+        Callback::from(move |data: TaskFormData| {
+            let user_id = user_store.user_id().unwrap_or(0);
+            let task_name = data.task_name.clone();
+            let task_description = data.task_description.clone();
+            let task_keywords = data.task_keywords.clone();
+            let task_priority = data.task_priority;
+            let task_deadline = data.task_deadline;
+            let req = CreateTaskRequest {
+                task_name,
+                task_description,
+                task_keywords,
+                task_priority,
+                task_deadline,
+                task_leader_id: user_id,
+                task_team_id: Some(team_id),
+            };
+
+            set_create_task_loading.set(true);
+            set_create_task_error.set(None);
+
+            let client = client.clone();
+            let set_show_create_task_modal = set_show_create_task_modal;
+            let set_create_task_loading = set_create_task_loading;
+            let set_create_task_error = set_create_task_error;
+            let set_team_tasks = set_team_tasks;
+            let set_tasks_loading = set_tasks_loading;
+            let set_tasks_error = set_tasks_error;
+
+            wasm_bindgen_futures::spawn_local(async move {
+                match create_task(&client, &req).await {
+                    Ok(_) => {
+                        set_show_create_task_modal.set(false);
+                        set_create_task_loading.set(false);
+                        set_tasks_loading.set(true);
+                        match list_tasks(&client, 1, 50, None, Some(team_id)).await {
+                            Ok(TaskListResponse { tasks, .. }) => {
+                                set_team_tasks.set(tasks);
+                            }
+                            Err(e) => {
+                                set_tasks_error.set(Some(e.message));
+                            }
+                        }
+                        set_tasks_loading.set(false);
+                    }
+                    Err(e) => {
+                        set_create_task_error.set(Some(e.message));
+                        set_create_task_loading.set(false);
+                    }
+                }
+            });
+        })
+    };
+
+    let on_create_task_close = Callback::from(move || {
+        set_show_create_task_modal.set(false);
+        set_create_task_error.set(None);
     });
 
     let on_add_member = {
@@ -787,6 +862,15 @@ pub fn TeamDetailPage() -> impl IntoView {
                 </Card>
 
                 <Card title="Team Tasks".to_string() subtitle="Task list".to_string()>
+                    <div class="team-task-header">
+                        <Button
+                            variant=ButtonVariant::Primary
+                            size=ButtonSize::Sm
+                            on_click=on_create_task
+                        >
+                            "Create Task"
+                        </Button>
+                    </div>
                     {move || {
                         if tasks_loading.get() {
                             view! {
@@ -898,6 +982,15 @@ pub fn TeamDetailPage() -> impl IntoView {
                         </FormActions>
                     </Form>
                 </Modal>
+
+            <TaskFormModal
+                open=show_create_task_modal.into()
+                mode=TaskFormMode::Create
+                force_team_task=true
+                active_team_id=Some(team_id)
+                on_submit=on_create_task_submit
+                on_close=on_create_task_close
+            />
             </Show>
         </div>
     }
