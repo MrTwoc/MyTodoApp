@@ -128,7 +128,7 @@ fn AppSidebar() -> impl IntoView {
     view! {
         <aside class="app-sidebar">
             <div class="app-sidebar-header">
-                <a href="/dashboard" class="app-logo">{logo_text()}</a>
+                <a href="/profile" class="app-logo">{logo_text()}</a>
                 <ThemeSwitcher />
             </div>
             <nav class="app-sidebar-nav">
