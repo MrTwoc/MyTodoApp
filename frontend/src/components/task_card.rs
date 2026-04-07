@@ -1,4 +1,5 @@
 use crate::store::task_store::{Task, TaskStatus};
+use crate::store::use_team_store;
 use leptos::ev;
 use leptos::prelude::*;
 
@@ -65,6 +66,30 @@ pub fn TaskCard(
         }
     };
 
+    let task_create_time = format_timestamp(task.task_create_time);
+
+    let task_leader = {
+        let team_store = use_team_store();
+        let task_team_id = task.task_team_id;
+        let leader_id = task.task_leader_id;
+        move || -> String {
+            if let Some(team_id) = task_team_id {
+                let teams = team_store.state.get().teams.clone();
+                if let Some(team) = teams.iter().find(|t| t.team_id == team_id) {
+                    if let Some(member) = team.team_members.iter().find(|m| m.user_id == leader_id)
+                    {
+                        return member
+                            .username
+                            .clone()
+                            .unwrap_or_else(|| leader_id.to_string());
+                    }
+                    return leader_id.to_string();
+                }
+            }
+            leader_id.to_string()
+        }
+    };
+
     view! {
         <div
             class=("task-card-wrapper", true)
@@ -115,6 +140,21 @@ pub fn TaskCard(
             } else {
                 ().into_any()
             }}
+
+            <div class="task-card-deadline">
+                <svg class="task-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+                <span>{task_create_time}</span>
+            </div>
+
+            <div class="task-card-deadline">
+                <svg class="task-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span>{task_leader()}</span>
+            </div>
 
             <div class="task-card-footer">
                 {if let Some(actions) = extra_actions {
