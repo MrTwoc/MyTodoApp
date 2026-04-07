@@ -102,8 +102,24 @@ fn App() -> impl IntoView {
 #[component]
 fn AppSidebar() -> impl IntoView {
     use leptos_router::hooks::use_location;
+    use store::use_user_store;
 
     let location = use_location();
+    let user_store = use_user_store();
+
+    let logo_text = move || {
+        let state = user_store.state.get();
+        if state.is_authenticated {
+            state.profile.as_ref()
+                .and_then(|p| {
+                    let username = &p.username;
+                    if username.is_empty() { None } else { Some(username.clone()) }
+                })
+                .unwrap_or_else(|| "todoManager".to_string())
+        } else {
+            "todoManager".to_string()
+        }
+    };
 
     let is_active = move |path: &str| -> bool {
         location.pathname.get().starts_with(path)
@@ -112,7 +128,7 @@ fn AppSidebar() -> impl IntoView {
     view! {
         <aside class="app-sidebar">
             <div class="app-sidebar-header">
-                <a href="/dashboard" class="app-logo">"todoManager"</a>
+                <a href="/dashboard" class="app-logo">{logo_text()}</a>
                 <ThemeSwitcher />
             </div>
             <nav class="app-sidebar-nav">
