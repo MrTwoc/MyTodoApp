@@ -134,18 +134,37 @@ pub fn LoginPage() -> impl IntoView {
                     </FormGroup>
                     <FormGroup label="Password".to_string() required=true error=(move || password_error.get().unwrap_or_default())()>
                         <div class="password-input-wrapper">
-                            <Input
-                                input_type=((move || if show_password.get() { InputType::Text } else { InputType::Password }))()
-                                placeholder="Enter your password".to_string()
-                                on_input=Callback::from(move |v: String| {
-                                    set_password.set(v.clone());
-                                    if !v.is_empty() {
-                                        validate_password(&v);
-                                    } else {
-                                        set_password_error.set(None);
-                                    }
-                                })
-                            />
+                            {move || if show_password.get() {
+                                view! {
+                                    <Input
+                                        input_type=InputType::Text
+                                        placeholder="Enter your password".to_string()
+                                        on_input=Callback::from(move |v: String| {
+                                            set_password.set(v.clone());
+                                            if !v.is_empty() {
+                                                validate_password(&v);
+                                            } else {
+                                                set_password_error.set(None);
+                                            }
+                                        })
+                                    />
+                                }.into_any()
+                            } else {
+                                view! {
+                                    <Input
+                                        input_type=InputType::Password
+                                        placeholder="Enter your password".to_string()
+                                        on_input=Callback::from(move |v: String| {
+                                            set_password.set(v.clone());
+                                            if !v.is_empty() {
+                                                validate_password(&v);
+                                            } else {
+                                                set_password_error.set(None);
+                                            }
+                                        })
+                                    />
+                                }.into_any()
+                            }}
                             <button
                                 type="button"
                                 class="password-toggle"

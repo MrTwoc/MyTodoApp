@@ -285,21 +285,43 @@ pub fn RegisterPage() -> impl IntoView {
                     </FormGroup>
                     <FormGroup label="Password".to_string() required=true error=(move || password_error.get().unwrap_or_default())()>
                         <div class="password-input-wrapper">
-                            <Input
-                                input_type=((move || if show_password.get() { InputType::Text } else { InputType::Password }))()
-                                placeholder="Create a password".to_string()
-                                on_input=Callback::from(move |v: String| {
-                                    set_password.set(v.clone());
-                                    if !v.is_empty() {
-                                        validate_password(&v);
-                                    } else {
-                                        set_password_error.set(None);
-                                    }
-                                    if !confirm_password.get().is_empty() {
-                                        validate_confirm_password(&confirm_password.get());
-                                    }
-                                })
-                            />
+                            {move || if show_password.get() {
+                                view! {
+                                    <Input
+                                        input_type=InputType::Text
+                                        placeholder="Create a password".to_string()
+                                        on_input=Callback::from(move |v: String| {
+                                            set_password.set(v.clone());
+                                            if !v.is_empty() {
+                                                validate_password(&v);
+                                            } else {
+                                                set_password_error.set(None);
+                                            }
+                                            if !confirm_password.get().is_empty() {
+                                                validate_confirm_password(&confirm_password.get());
+                                            }
+                                        })
+                                    />
+                                }.into_any()
+                            } else {
+                                view! {
+                                    <Input
+                                        input_type=InputType::Password
+                                        placeholder="Create a password".to_string()
+                                        on_input=Callback::from(move |v: String| {
+                                            set_password.set(v.clone());
+                                            if !v.is_empty() {
+                                                validate_password(&v);
+                                            } else {
+                                                set_password_error.set(None);
+                                            }
+                                            if !confirm_password.get().is_empty() {
+                                                validate_confirm_password(&confirm_password.get());
+                                            }
+                                        })
+                                    />
+                                }.into_any()
+                            }}
                             <button
                                 type="button"
                                 class="password-toggle"
@@ -323,18 +345,37 @@ pub fn RegisterPage() -> impl IntoView {
                     </FormGroup>
                     <FormGroup label="Confirm Password".to_string() required=true error=(move || confirm_password_error.get().unwrap_or_default())()>
                         <div class="password-input-wrapper">
-                            <Input
-                                input_type=((move || if show_confirm_password.get() { InputType::Text } else { InputType::Password }))()
-                                placeholder="Confirm your password".to_string()
-                                on_input=Callback::from(move |v: String| {
-                                    set_confirm_password.set(v.clone());
-                                    if !v.is_empty() {
-                                        validate_confirm_password(&v);
-                                    } else {
-                                        set_confirm_password_error.set(None);
-                                    }
-                                })
-                            />
+                            {move || if show_confirm_password.get() {
+                                view! {
+                                    <Input
+                                        input_type=InputType::Text
+                                        placeholder="Confirm your password".to_string()
+                                        on_input=Callback::from(move |v: String| {
+                                            set_confirm_password.set(v.clone());
+                                            if !v.is_empty() {
+                                                validate_confirm_password(&v);
+                                            } else {
+                                                set_confirm_password_error.set(None);
+                                            }
+                                        })
+                                    />
+                                }.into_any()
+                            } else {
+                                view! {
+                                    <Input
+                                        input_type=InputType::Password
+                                        placeholder="Confirm your password".to_string()
+                                        on_input=Callback::from(move |v: String| {
+                                            set_confirm_password.set(v.clone());
+                                            if !v.is_empty() {
+                                                validate_confirm_password(&v);
+                                            } else {
+                                                set_confirm_password_error.set(None);
+                                            }
+                                        })
+                                    />
+                                }.into_any()
+                            }}
                             <button
                                 type="button"
                                 class="password-toggle"
