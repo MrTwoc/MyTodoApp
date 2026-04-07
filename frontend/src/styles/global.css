@@ -2790,3 +2790,20 @@ input, textarea, select, button, .no-transition {
   background-color: var(--warning-subtle);
   color: var(--warning);
 }
+
+.delete-confirm-content {
+  padding: 8px 0;
+}
+
+.delete-confirm-message {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}

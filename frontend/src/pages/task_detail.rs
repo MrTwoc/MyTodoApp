@@ -1,6 +1,7 @@
 use crate::api::task::{delete_task as api_delete_task, get_task as api_get_task, update_task as api_update_task};
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
+use crate::components::modal::Modal;
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::{use_api_client, use_task_store};
 use leptos::ev;
@@ -114,6 +115,7 @@ pub fn TaskDetailPage() -> impl IntoView {
     let is_editing = RwSignal::new(false);
     let is_saving = RwSignal::new(false);
     let save_error = RwSignal::new(Option::<String>::None);
+    let show_delete_confirm = RwSignal::new(false);
 
     let (task, set_task) = signal(Task::default());
     let edit_data = RwSignal::new(EditableTaskData::default());
@@ -259,16 +261,23 @@ pub fn TaskDetailPage() -> impl IntoView {
         })
     };
 
-    let on_delete = {
+    let on_delete = Callback::from(move |_: web_sys::MouseEvent| {
+        show_delete_confirm.set(true);
+    });
+
+    let confirm_delete = {
         let navigate = navigate.clone();
         let client = client.clone();
         let task_store = task_store.clone();
         let task_id = task_id;
+        let set_show_delete_confirm = show_delete_confirm.clone();
         Callback::from(move |_: web_sys::MouseEvent| {
             let client = client.clone();
             let task_store = task_store.clone();
             let navigate = navigate.clone();
             let task_id = task_id;
+            let set_show_delete_confirm = set_show_delete_confirm.clone();
+            set_show_delete_confirm.set(false);
             wasm_bindgen_futures::spawn_local(async move {
                 match api_delete_task(&client, task_id).await {
                     Ok(_) => {
@@ -282,6 +291,10 @@ pub fn TaskDetailPage() -> impl IntoView {
             });
         })
     };
+
+    let cancel_delete = Callback::from(move |_: web_sys::MouseEvent| {
+        show_delete_confirm.set(false);
+    });
 
     view! {
         <div class="page">
@@ -523,6 +536,33 @@ pub fn TaskDetailPage() -> impl IntoView {
             <Card title="History".to_string()>
                 <p class="task-detail-empty">"No history available."</p>
             </Card>
+
+            <Modal
+                title="Confirm Delete".to_string()
+                open=MaybeSignal::derive(move || show_delete_confirm.get())
+                close_on_overlay=false
+                on_close=cancel_delete
+            >
+                <div class="delete-confirm-content">
+                    <p class="delete-confirm-message">"Are you sure you want to delete this task? This action cannot be undone."</p>
+                    <div class="delete-confirm-actions">
+                        <Button
+                            variant=ButtonVariant::Secondary
+                            size=ButtonSize::Sm
+                            on_click=cancel_delete
+                        >
+                            "Cancel"
+                        </Button>
+                        <Button
+                            variant=ButtonVariant::Danger
+                            size=ButtonSize::Sm
+                            on_click=confirm_delete
+                        >
+                            "Delete"
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     }
 }
