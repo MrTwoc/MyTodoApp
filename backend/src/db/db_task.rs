@@ -122,11 +122,25 @@ impl DbTask {
         );
         let mut param_count = 1;
 
+        let mut user_team_ids: Vec<i64> = Vec::new();
+        
         if let Some(leader_id) = task_leader_id {
-            query.push_str(&format!(" AND task_leader_id = ${}", param_count));
-            param_count += 1;
-        }
-        if let Some(team_id) = task_team_id {
+            let teams = crate::db::db_team::DbTeam::list_teams(pool, None, Some(leader_id)).await?;
+            user_team_ids = teams.into_iter().map(|t| t.team_id as i64).collect();
+            
+            if user_team_ids.is_empty() {
+                query.push_str(&format!(" AND task_leader_id = ${}", param_count));
+                param_count += 1;
+            } else {
+                let team_ids_str: Vec<String> = user_team_ids.iter().map(|id| id.to_string()).collect();
+                query.push_str(&format!(
+                    " AND (task_leader_id = ${} OR task_team_id IN ({}))",
+                    param_count,
+                    team_ids_str.join(", ")
+                ));
+                param_count += 1;
+            }
+        } else if let Some(team_id) = task_team_id {
             query.push_str(&format!(" AND task_team_id = ${}", param_count));
             param_count += 1;
         }
