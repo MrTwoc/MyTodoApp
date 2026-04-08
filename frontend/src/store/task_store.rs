@@ -31,6 +31,8 @@ pub struct Task {
     pub task_team_id: Option<u64>,
     pub task_update_time: Option<i64>,
     pub is_favorite: bool,
+    pub is_deleted: bool,
+    pub deleted_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]

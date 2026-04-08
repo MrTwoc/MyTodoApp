@@ -56,7 +56,19 @@ impl DashboardService {
             .collect::<Vec<u64>>();
 
         let personal_tasks = list_tasks_with_stats(
-            DbTask::list_tasks(pool, Some(user_id), None, None, None, None, None, None, None).await?,
+            DbTask::list_tasks(
+                pool,
+                Some(user_id),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                false,
+            )
+            .await?,
         );
 
         let mut all_team_tasks = Vec::<Task>::new();
@@ -73,6 +85,7 @@ impl DashboardService {
                 None,
                 None,
                 None,
+                false,
             )
             .await?;
             team_stats = accumulate_stats(&team_stats, &tasks);
@@ -96,6 +109,7 @@ impl DashboardService {
             None,
             Some(10),
             None,
+            false,
         )
         .await?;
         // keep deterministic order and trim explicit fields for frontend list size
@@ -118,7 +132,7 @@ impl DashboardService {
 
     pub async fn tasks(pool: &PgPool, user_id: u64) -> Result<DashboardTaskStats> {
         let personal_tasks = list_tasks_with_stats(
-            DbTask::list_tasks(pool, Some(user_id), None, None, None, None, None, None, None).await?,
+            DbTask::list_tasks(pool, Some(user_id), None, None, None, None, None, None, None, false).await?,
         );
 
         let mut team_stats = TaskStatusStats::default();
@@ -138,6 +152,7 @@ impl DashboardService {
                 None,
                 None,
                 None,
+                false,
             )
             .await?;
             team_stats = accumulate_stats(&team_stats, &tasks);
@@ -166,6 +181,7 @@ impl DashboardService {
                 None,
                 None,
                 None,
+                false,
             )
             .await?;
             output.teams.push(stat_for_team(team, &tasks));

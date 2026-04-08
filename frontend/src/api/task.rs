@@ -158,3 +158,32 @@ pub async fn toggle_task_favorite(client: &ApiClient, task_id: u64) -> ApiResult
     let resp: FavoriteResponse = client.post(&path, &empty).await?;
     Ok(resp.is_favorite)
 }
+
+pub async fn get_recycle_bin(client: &ApiClient) -> ApiResult<Vec<Task>> {
+    #[derive(Deserialize)]
+    struct RecycleBinResponse {
+        tasks: Vec<Task>,
+    }
+    let resp: RecycleBinResponse = client.get("/api/tasks/recycle-bin").await?;
+    Ok(resp.tasks)
+}
+
+pub async fn restore_task(client: &ApiClient, task_id: u64) -> ApiResult<()> {
+    let path = format!("/api/tasks/{}/restore", task_id);
+    #[derive(Deserialize)]
+    struct RestoreResponse {
+        message: String,
+    }
+    let _: RestoreResponse = client.post(&path, &()).await?;
+    Ok(())
+}
+
+pub async fn permanent_delete_task(client: &ApiClient, task_id: u64) -> ApiResult<()> {
+    let path = format!("/api/tasks/{}/permanent", task_id);
+    #[derive(Deserialize)]
+    struct DeleteResponse {
+        message: String,
+    }
+    let _: DeleteResponse = client.delete(&path).await?;
+    Ok(())
+}

@@ -10,6 +10,7 @@ pub fn task_router() -> Router {
         .hoop(auth_middleware)
         .post(task_handler::create_task)
         .get(task_handler::list_tasks)
+        .push(Router::with_path("recycle-bin").get(task_handler::get_recycle_bin))
         .push(
             Router::with_path("{task_id}")
                 .get(task_handler::get_task)
@@ -18,6 +19,8 @@ pub fn task_router() -> Router {
                 .push(Router::with_path("status").put(task_handler::update_task_status))
                 .push(Router::with_path("priority").put(task_handler::update_task_priority))
                 .push(Router::with_path("favorite").post(task_handler::toggle_task_favorite))
-                .push(Router::with_path("logs").get(task_handler::get_task_logs)),
+                .push(Router::with_path("logs").get(task_handler::get_task_logs))
+                .push(Router::with_path("restore").post(task_handler::restore_task))
+                .push(Router::with_path("permanent").delete(task_handler::permanent_delete_task)),
         )
 }

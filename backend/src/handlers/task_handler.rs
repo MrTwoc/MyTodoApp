@@ -486,3 +486,167 @@ pub async fn get_task_logs(task_id: PathParam<u64>, res: &mut Response) {
         "logs": []
     })));
 }
+
+#[endpoint]
+pub async fn get_recycle_bin(depot: &mut Depot, res: &mut Response) {
+    let user_id = match depot.get::<i64>("user_id").ok() {
+        Some(id) => Some(*id as u64),
+        None => None,
+    };
+
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+
+    match TaskService::list_deleted_tasks(pool, user_id, None, None).await {
+        Ok(tasks) => {
+            res.status_code(StatusCode::OK);
+            res.render(Json(serde_json::json!({
+                "tasks": tasks.iter().map(|t| serde_json::to_value(t).unwrap_or_default()).collect::<Vec<_>>()
+            })));
+        }
+        Err(e) => {
+            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
+            res.render(Json(serde_json::json!({
+                "error": "Failed to fetch recycle bin",
+                "message": e.to_string()
+            })));
+        }
+    }
+}
+
+#[endpoint]
+pub async fn restore_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
+    let task_id: u64 = task_id.into_inner();
+
+    let user_id = match depot.get::<i64>("user_id").ok() {
+        Some(id) => *id as u64,
+        None => {
+            res.status_code(StatusCode::UNAUTHORIZED);
+            res.render(Json(serde_json::json!({
+                "error": "Unauthorized",
+                "message": "User not authenticated"
+            })));
+            return;
+        }
+    };
+
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+
+    match TaskService::get_task_by_id(pool, task_id).await {
+        Ok(Some(task)) => {
+            if task.task_leader_id != user_id {
+                res.status_code(StatusCode::FORBIDDEN);
+                res.render(Json(serde_json::json!({
+                    "error": "Forbidden",
+                    "message": "You don't have permission to restore this task"
+                })));
+                return;
+            }
+        }
+        Ok(None) => {
+            res.status_code(StatusCode::NOT_FOUND);
+            res.render(Json(serde_json::json!({
+                "error": "Task not found"
+            })));
+            return;
+        }
+        Err(e) => {
+            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
+            res.render(Json(serde_json::json!({
+                "error": "Failed to fetch task",
+                "message": e.to_string()
+            })));
+            return;
+        }
+    }
+
+    match TaskService::restore_task(pool, task_id).await {
+        Ok(true) => {
+            res.status_code(StatusCode::OK);
+            res.render(Json(serde_json::json!({
+                "message": "Task restored successfully"
+            })));
+        }
+        Ok(false) => {
+            res.status_code(StatusCode::NOT_FOUND);
+            res.render(Json(serde_json::json!({
+                "error": "Task not found"
+            })));
+        }
+        Err(e) => {
+            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
+            res.render(Json(serde_json::json!({
+                "error": "Failed to restore task",
+                "message": e.to_string()
+            })));
+        }
+    }
+}
+
+#[endpoint]
+pub async fn permanent_delete_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
+    let task_id: u64 = task_id.into_inner();
+
+    let user_id = match depot.get::<i64>("user_id").ok() {
+        Some(id) => *id as u64,
+        None => {
+            res.status_code(StatusCode::UNAUTHORIZED);
+            res.render(Json(serde_json::json!({
+                "error": "Unauthorized",
+                "message": "User not authenticated"
+            })));
+            return;
+        }
+    };
+
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+
+    match TaskService::get_task_by_id(pool, task_id).await {
+        Ok(Some(task)) => {
+            if task.task_leader_id != user_id {
+                res.status_code(StatusCode::FORBIDDEN);
+                res.render(Json(serde_json::json!({
+                    "error": "Forbidden",
+                    "message": "You don't have permission to permanently delete this task"
+                })));
+                return;
+            }
+        }
+        Ok(None) => {
+            res.status_code(StatusCode::NOT_FOUND);
+            res.render(Json(serde_json::json!({
+                "error": "Task not found"
+            })));
+            return;
+        }
+        Err(e) => {
+            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
+            res.render(Json(serde_json::json!({
+                "error": "Failed to fetch task",
+                "message": e.to_string()
+            })));
+            return;
+        }
+    }
+
+    match TaskService::permanent_delete_task(pool, task_id).await {
+        Ok(true) => {
+            res.status_code(StatusCode::OK);
+            res.render(Json(serde_json::json!({
+                "message": "Task permanently deleted"
+            })));
+        }
+        Ok(false) => {
+            res.status_code(StatusCode::NOT_FOUND);
+            res.render(Json(serde_json::json!({
+                "error": "Task not found"
+            })));
+        }
+        Err(e) => {
+            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
+            res.render(Json(serde_json::json!({
+                "error": "Failed to permanently delete task",
+                "message": e.to_string()
+            })));
+        }
+    }
+}

@@ -13,6 +13,7 @@ use pages::login::LoginPage;
 use pages::not_found::NotFoundPage;
 use pages::profile::ProfilePage;
 use pages::protected_route::ProtectedRoute;
+use pages::recycle_bin::RecycleBinPage;
 use pages::register::RegisterPage;
 use pages::settings::SettingsPage;
 use pages::task_detail::TaskDetailPage;
@@ -64,6 +65,14 @@ fn App() -> impl IntoView {
                             view=|| view! {
                                 <ProtectedRoute>
                                     <TeamsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path=path!("/recycle-bin")
+                            view=|| view! {
+                                <ProtectedRoute>
+                                    <RecycleBinPage />
                                 </ProtectedRoute>
                             }
                         />
@@ -168,6 +177,19 @@ fn AppSidebar() -> impl IntoView {
                         <path d="M16 3.13a4 4 0 010 7.75"/>
                     </svg>
                     "Teams"
+                </a>
+                <a
+                    href="/recycle-bin"
+                    class="sidebar-link"
+                    class:active=move || is_active("/recycle-bin")
+                >
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                    "Recycle Bin"
                 </a>
                 <a
                     href="/settings"

@@ -34,6 +34,8 @@ impl DbTask {
         let task_complete_time: Option<i64> = None;
         let task_update_time: Option<i64> = None;
         let is_favorite = false;
+        let is_deleted = false;
+        let deleted_at: Option<i64> = None;
 
         let task_keywords_json = serde_json::to_value(&task_keywords)?;
 
@@ -43,13 +45,13 @@ impl DbTask {
                 task_id, task_name, task_description, task_keywords,
                 task_priority, task_difficulty, task_deadline, task_complete_time,
                 task_status, task_create_time, task_leader_id,
-                task_team_id, task_update_time, is_favorite
+                task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             RETURNING task_id, task_name, task_description, task_keywords,
                       task_priority, task_difficulty, task_deadline, task_complete_time,
                       task_status, task_create_time, task_leader_id,
-                      task_team_id, task_update_time, is_favorite
+                      task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
             "#,
         )
         .bind(task_id as i64)
@@ -66,6 +68,8 @@ impl DbTask {
         .bind(task_team_id.map(|id| id as i64))
         .bind(task_update_time)
         .bind(is_favorite)
+        .bind(is_deleted)
+        .bind(deleted_at)
         .fetch_one(pool)
         .await?;
 
@@ -81,7 +85,7 @@ impl DbTask {
             SELECT task_id, task_name, task_description, task_keywords,
                    task_priority, task_difficulty, task_deadline, task_complete_time,
                    task_status, task_create_time, task_leader_id,
-                   task_team_id, task_update_time, is_favorite
+                   task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
             FROM tasks
             WHERE task_id = $1
             "#,
@@ -107,13 +111,14 @@ impl DbTask {
         task_deadline_after: Option<i64>,
         limit: Option<u32>,
         offset: Option<u32>,
+        include_deleted: bool,
     ) -> Result<Vec<Task>> {
         let mut query = String::from(
             "SELECT task_id, task_name, task_description, task_keywords,
                     task_priority, task_difficulty, task_deadline, task_complete_time,
                     task_status, task_create_time, task_leader_id,
-                    task_team_id, task_update_time, is_favorite
-             FROM tasks WHERE 1=1",
+                    task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
+             FROM tasks WHERE is_deleted = false",
         );
         let mut param_count = 1;
 
@@ -264,7 +269,7 @@ impl DbTask {
 
         let set_clause = updates.join(", ");
         let query = format!(
-            "UPDATE tasks SET {} WHERE task_id = ${} RETURNING task_id, task_name, task_description, task_keywords, task_priority, task_difficulty, task_deadline, task_complete_time, task_status, task_create_time, task_leader_id, task_team_id, task_update_time, is_favorite",
+            "UPDATE tasks SET {} WHERE task_id = ${} RETURNING task_id, task_name, task_description, task_keywords, task_priority, task_difficulty, task_deadline, task_complete_time, task_status, task_create_time, task_leader_id, task_team_id, task_update_time, is_favorite, is_deleted, deleted_at",
             set_clause, param_count
         );
 
@@ -315,16 +320,97 @@ impl DbTask {
         }
     }
 
-    /// 删除任务
+    /// 删除任务（软删除）
     pub async fn delete_task(pool: &PgPool, task_id: u64) -> Result<bool> {
+        let delete_time = chrono::Utc::now().timestamp();
+        let result = sqlx::query("UPDATE tasks SET is_deleted = true, deleted_at = $1 WHERE task_id = $2")
+            .bind(delete_time)
+            .bind(task_id as i64)
+            .execute(pool)
+            .await?;
+
+        let affected = result.rows_affected();
+        tracing::info!("软删除任务: task_id = {}, affected = {}", task_id, affected);
+        Ok(affected > 0)
+    }
+
+    /// 恢复已删除的任务
+    pub async fn restore_task(pool: &PgPool, task_id: u64) -> Result<bool> {
+        let update_time = chrono::Utc::now().timestamp();
+        let result = sqlx::query("UPDATE tasks SET is_deleted = false, deleted_at = NULL, task_update_time = $1 WHERE task_id = $2")
+            .bind(update_time)
+            .bind(task_id as i64)
+            .execute(pool)
+            .await?;
+
+        let affected = result.rows_affected();
+        tracing::info!("恢复任务: task_id = {}, affected = {}", task_id, affected);
+        Ok(affected > 0)
+    }
+
+    /// 永久删除任务
+    pub async fn permanent_delete_task(pool: &PgPool, task_id: u64) -> Result<bool> {
         let result = sqlx::query("DELETE FROM tasks WHERE task_id = $1")
             .bind(task_id as i64)
             .execute(pool)
             .await?;
 
         let affected = result.rows_affected();
-        tracing::info!("删除任务: task_id = {}, affected = {}", task_id, affected);
+        tracing::info!("永久删除任务: task_id = {}, affected = {}", task_id, affected);
         Ok(affected > 0)
+    }
+
+    /// 获取已删除的任务列表（回收站）
+    pub async fn list_deleted_tasks(
+        pool: &PgPool,
+        task_leader_id: Option<u64>,
+        limit: Option<u32>,
+        offset: Option<u32>,
+    ) -> Result<Vec<Task>> {
+        let mut query = String::from(
+            "SELECT task_id, task_name, task_description, task_keywords,
+                    task_priority, task_difficulty, task_deadline, task_complete_time,
+                    task_status, task_create_time, task_leader_id,
+                    task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
+             FROM tasks WHERE is_deleted = true",
+        );
+        let mut param_count = 1;
+
+        if let Some(leader_id) = task_leader_id {
+            query.push_str(&format!(" AND task_leader_id = ${}", param_count));
+            param_count += 1;
+        }
+
+        query.push_str(" ORDER BY deleted_at DESC");
+
+        if let Some(limit_val) = limit {
+            query.push_str(&format!(" LIMIT ${}", param_count));
+            param_count += 1;
+        }
+        if let Some(offset_val) = offset {
+            query.push_str(&format!(" OFFSET ${}", param_count));
+            param_count += 1;
+        }
+
+        let mut query_builder = sqlx::query(&query);
+
+        if let Some(leader_id) = task_leader_id {
+            query_builder = query_builder.bind(leader_id as i64);
+        }
+        if let Some(limit_val) = limit {
+            query_builder = query_builder.bind(limit_val as i32);
+        }
+        if let Some(offset_val) = offset {
+            query_builder = query_builder.bind(offset_val as i32);
+        }
+
+        let rows = query_builder.fetch_all(pool).await?;
+
+        let mut tasks = Vec::with_capacity(rows.len());
+        for row in rows {
+            tasks.push(Self::row_to_task(row)?);
+        }
+        Ok(tasks)
     }
 
     /// 切换任务收藏状态
@@ -395,6 +481,8 @@ impl DbTask {
         let task_team_id: Option<i64> = row.get("task_team_id");
         let task_update_time: Option<i64> = row.get("task_update_time");
         let is_favorite: bool = row.get("is_favorite");
+        let is_deleted: bool = row.get("is_deleted");
+        let deleted_at: Option<i64> = row.get("deleted_at");
 
         let task_status = match task_status.as_str() {
             "Active" => TaskStatus::Active,
@@ -418,6 +506,8 @@ impl DbTask {
             task_team_id: task_team_id.map(|id| id as u64),
             task_update_time,
             is_favorite,
+            is_deleted,
+            deleted_at,
         })
     }
 }
@@ -466,7 +556,7 @@ mod tests {
 
         // 测试列表查询
         let tasks =
-            DbTask::list_tasks(&pool, Some(1), None, None, None, None, None, Some(10), None)
+            DbTask::list_tasks(&pool, Some(1), None, None, None, None, None, Some(10), None, false)
                 .await
                 .unwrap();
         assert!(tasks.len() >= 1);

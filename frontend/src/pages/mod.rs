@@ -3,6 +3,7 @@ pub mod login;
 pub mod not_found;
 pub mod profile;
 pub mod protected_route;
+pub mod recycle_bin;
 pub mod register;
 pub mod settings;
 pub mod task_detail;

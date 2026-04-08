@@ -126,8 +126,26 @@ impl TaskService {
             query.deadline_after,
             query.limit,
             query.offset,
+            false,
         )
         .await
+    }
+
+    pub async fn list_deleted_tasks(
+        pool: &PgPool,
+        user_id: Option<u64>,
+        limit: Option<u32>,
+        offset: Option<u32>,
+    ) -> Result<Vec<Task>> {
+        DbTask::list_deleted_tasks(pool, user_id, limit, offset).await
+    }
+
+    pub async fn restore_task(pool: &PgPool, task_id: u64) -> Result<bool> {
+        DbTask::restore_task(pool, task_id).await
+    }
+
+    pub async fn permanent_delete_task(pool: &PgPool, task_id: u64) -> Result<bool> {
+        DbTask::permanent_delete_task(pool, task_id).await
     }
 
     pub async fn update_task(

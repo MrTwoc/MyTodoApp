@@ -35,6 +35,10 @@ pub struct Task {
     pub task_difficulty: u8,
     // 是否收藏
     pub is_favorite: bool,
+    // 是否已删除（软删除）
+    pub is_deleted: bool,
+    // 删除时间
+    pub deleted_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
