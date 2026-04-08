@@ -2982,6 +2982,16 @@ input, textarea, select, button, .no-transition {
   color: var(--text-tertiary);
 }
 
+.task-detail-meta-item .meta-label {
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.task-detail-meta-item .meta-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .task-detail-meta-item svg {
   width: 14px;
   height: 14px;

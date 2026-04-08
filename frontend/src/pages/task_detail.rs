@@ -1,8 +1,10 @@
 use crate::api::task::{delete_task as api_delete_task, get_task as api_get_task, update_task as api_update_task};
+use crate::api::user::get_user as api_get_user;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
 use crate::components::modal::Modal;
 use crate::store::task_store::{Task, TaskStatus};
+use crate::store::user_store::UserProfile;
 use crate::store::{use_api_client, use_task_store};
 use leptos::ev;
 use leptos::prelude::*;
@@ -121,25 +123,37 @@ pub fn TaskDetailPage() -> impl IntoView {
     let show_delete_confirm = RwSignal::new(false);
 
     let (task, set_task) = signal(Task::default());
+    let (creator, set_creator) = signal(Option::<UserProfile>::None);
     let edit_data = RwSignal::new(EditableTaskData::default());
 
     let load_task = {
         let client = client.clone();
         let task_id = task_id;
         let set_task = set_task.clone();
+        let set_creator = set_creator.clone();
         let edit_data = edit_data.clone();
         let is_loading = is_loading.clone();
         move || {
             let client = client.clone();
             let task_id = task_id;
             let set_task = set_task.clone();
+            let set_creator = set_creator.clone();
             let edit_data = edit_data.clone();
             let is_loading = is_loading.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 match api_get_task(&client, task_id).await {
                     Ok(loaded_task) => {
                         set_task.set(loaded_task.clone());
-                        edit_data.set(EditableTaskData::from(loaded_task));
+                        edit_data.set(EditableTaskData::from(loaded_task.clone()));
+                        
+                        match api_get_user(&client, loaded_task.task_leader_id).await {
+                            Ok(user) => {
+                                set_creator.set(Some(user));
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to load creator: {}", e.message);
+                            }
+                        }
                     }
                     Err(e) => {
                         tracing::error!("Failed to load task: {}", e.message);
@@ -455,6 +469,37 @@ pub fn TaskDetailPage() -> impl IntoView {
                             }.into_any()
                         }
                     }}
+                </div>
+            </Card>
+
+            <Card title="Metadata".to_string()>
+                <div class="task-detail-meta">
+                    <div class="task-detail-meta-item">
+                        <span class="meta-label">"Created By"</span>
+                        <span class="meta-value">
+                            {move || creator.get().map(|u| u.username.clone()).unwrap_or_else(|| "Loading...".to_string())}
+                        </span>
+                    </div>
+                    <div class="task-detail-meta-item">
+                        <span class="meta-label">"Created At"</span>
+                        <span class="meta-value">{move || format_timestamp(current_task().task_create_time)}</span>
+                    </div>
+                    <div class="task-detail-meta-item">
+                        <span class="meta-label">"Updated At"</span>
+                        <span class="meta-value">
+                            {move || current_task().task_update_time.map(|ts| format_timestamp(ts)).unwrap_or_else(|| "N/A".to_string())}
+                        </span>
+                    </div>
+                    <div class="task-detail-meta-item">
+                        <span class="meta-label">"Completed At"</span>
+                        <span class="meta-value">
+                            {move || current_task().task_complete_time.map(|ts| format_timestamp(ts)).unwrap_or_else(|| "N/A".to_string())}
+                        </span>
+                    </div>
+                    <div class="task-detail-meta-item">
+                        <span class="meta-label">"Favorite"</span>
+                        <span class="meta-value">{move || if current_task().is_favorite { "★ Yes" } else { "☆ No" }}</span>
+                    </div>
                 </div>
             </Card>
 
