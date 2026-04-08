@@ -1,7 +1,7 @@
 use salvo::oapi::extract::PathParam;
 use salvo::prelude::*;
 
-use crate::db::pool::create_pool;
+use crate::db::pool::DbPool;
 use crate::services::task_service::{
     CreateTaskRequest, ListTasksQuery, TaskService, UpdateTaskPriorityRequest, UpdateTaskRequest,
     UpdateTaskStatusRequest,
@@ -33,19 +33,9 @@ pub async fn create_task(req: &mut Request, depot: &mut Depot, res: &mut Respons
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TaskService::create_task(&pool, user_id, request).await {
+    match TaskService::create_task(pool, user_id, request).await {
         Ok(task) => {
             res.status_code(StatusCode::CREATED);
             res.render(Json(serde_json::json!({
@@ -64,22 +54,12 @@ pub async fn create_task(req: &mut Request, depot: &mut Depot, res: &mut Respons
 }
 
 #[endpoint]
-pub async fn get_task(task_id: PathParam<u64>, res: &mut Response) {
+pub async fn get_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
     let task_id: u64 = task_id.into_inner();
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TaskService::get_task_by_id(&pool, task_id).await {
+    match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -111,19 +91,9 @@ pub async fn list_tasks(depot: &mut Depot, req: &mut Request, res: &mut Response
 
     let query: ListTasksQuery = req.parse_queries().unwrap_or_default();
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TaskService::list_tasks(&pool, user_id, query.team_id, query).await {
+    match TaskService::list_tasks(pool, user_id, query.team_id, query).await {
         Ok(tasks) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -173,19 +143,9 @@ pub async fn update_task(
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TaskService::get_task_by_id(&pool, task_id).await {
+    match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
             if task.task_leader_id != user_id {
                 res.status_code(StatusCode::FORBIDDEN);
@@ -213,7 +173,7 @@ pub async fn update_task(
         }
     }
 
-    match TaskService::update_task(&pool, task_id, request).await {
+    match TaskService::update_task(pool, task_id, request).await {
         Ok(Some(task)) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -253,19 +213,9 @@ pub async fn delete_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut R
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TaskService::get_task_by_id(&pool, task_id).await {
+    match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
             if task.task_leader_id != user_id {
                 res.status_code(StatusCode::FORBIDDEN);
@@ -293,7 +243,7 @@ pub async fn delete_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut R
         }
     }
 
-    match TaskService::delete_task(&pool, task_id).await {
+    match TaskService::delete_task(pool, task_id).await {
         Ok(true) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -349,19 +299,9 @@ pub async fn update_task_status(
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TaskService::get_task_by_id(&pool, task_id).await {
+    match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
             if task.task_leader_id != user_id {
                 res.status_code(StatusCode::FORBIDDEN);
@@ -389,7 +329,7 @@ pub async fn update_task_status(
         }
     }
 
-    match TaskService::update_task_status(&pool, task_id, request.task_status).await {
+    match TaskService::update_task_status(pool, task_id, request.task_status).await {
         Ok(Some(task)) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -446,19 +386,9 @@ pub async fn update_task_priority(
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TaskService::get_task_by_id(&pool, task_id).await {
+    match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
             if task.task_leader_id != user_id {
                 res.status_code(StatusCode::FORBIDDEN);
@@ -486,7 +416,7 @@ pub async fn update_task_priority(
         }
     }
 
-    match TaskService::update_task_priority(&pool, task_id, request.task_priority).await {
+    match TaskService::update_task_priority(pool, task_id, request.task_priority).await {
         Ok(Some(task)) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -526,19 +456,9 @@ pub async fn toggle_task_favorite(task_id: PathParam<u64>, depot: &mut Depot, re
 
     let task_id: u64 = task_id.into_inner();
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match crate::db::db_task::DbTask::toggle_favorite(&pool, task_id).await {
+    match crate::db::db_task::DbTask::toggle_favorite(pool, task_id).await {
         Ok(is_favorite) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({

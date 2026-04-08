@@ -5,7 +5,7 @@ use salvo::{cors::Cors, oapi::extract::*};
 mod db;
 mod models;
 use db::migrations::init_database;
-use db::pool::create_pool;
+use db::pool::DbPool;
 
 mod middleware;
 use middleware::logging::{logger, request_logger};
@@ -35,10 +35,13 @@ async fn main() {
         return;
     }
 
-    // if let Err(e) = utils::id_generator::test_sonyflake_id() {
-    //     tracing::error!("测试sonflake id失败: {:?}", e);
-    //     return;
-    // }
+    let pool = match db::pool::create_pool().await {
+        Ok(p) => p,
+        Err(e) => {
+            tracing::error!("创建数据库连接池失败: {:?}", e);
+            return;
+        }
+    };
 
     let cors = Cors::new()
         .allow_origin([
@@ -59,7 +62,7 @@ async fn main() {
         .into_handler();
 
     let router = Router::new()
-        // .hoop(cors)
+        .hoop(affix_state::insert("db_pool", pool))
         .push(Router::with_path("hello").post(hello))
         .push(user_routes::user_router())
         .push(task_routes::task_router())
@@ -82,7 +85,6 @@ async fn main() {
 }
 
 async fn run_database() -> Result<(), Box<dyn std::error::Error>> {
-    let _pool = init_database().await?;
-    create_pool().await?;
+    init_database().await?;
     Ok(())
 }

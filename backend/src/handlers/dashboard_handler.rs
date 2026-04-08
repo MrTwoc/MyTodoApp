@@ -1,4 +1,4 @@
-use crate::db::pool::create_pool;
+use crate::db::pool::DbPool;
 use crate::services::dashboard_service::{DashboardService, DashboardTeamStats, DashboardTaskStats};
 use salvo::prelude::*;
 
@@ -16,19 +16,9 @@ pub async fn get_overview(depot: &mut Depot, res: &mut Response) {
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match DashboardService::overview(&pool, user_id).await {
+    match DashboardService::overview(pool, user_id).await {
         Ok(data) => {
             res.status_code(StatusCode::OK);
             let payload = serde_json::to_value(data).unwrap_or_else(|_| {
@@ -65,19 +55,9 @@ pub async fn get_task_overview(depot: &mut Depot, res: &mut Response) {
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match DashboardService::tasks(&pool, user_id).await {
+    match DashboardService::tasks(pool, user_id).await {
         Ok(data) => {
             let payload = DashboardTaskStats {
                 personal_tasks: data.personal_tasks,
@@ -116,19 +96,9 @@ pub async fn get_team_overview(depot: &mut Depot, res: &mut Response) {
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match DashboardService::teams(&pool, user_id).await {
+    match DashboardService::teams(pool, user_id).await {
         Ok(data) => {
             let payload = DashboardTeamStats { teams: data.teams };
             res.status_code(StatusCode::OK);

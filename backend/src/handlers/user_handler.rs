@@ -1,29 +1,19 @@
 use salvo::oapi::extract::{JsonBody, PathParam};
 use salvo::prelude::*;
 
-use crate::db::pool::create_pool;
+use crate::db::pool::DbPool;
 use crate::services::user_service::{
     ChangePasswordRequest, LoginRequest, RegisterRequest, UpdateSettingsRequest, UpdateUserRequest,
     UserService,
 };
 
 #[endpoint]
-pub async fn register(req: &mut Request, res: &mut Response, body: JsonBody<RegisterRequest>) {
+pub async fn register(req: &mut Request, depot: &mut Depot, res: &mut Response, body: JsonBody<RegisterRequest>) {
     let request: RegisterRequest = body.into_inner();
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match UserService::register(&pool, request).await {
+    match UserService::register(pool, request).await {
         Ok(response) => {
             res.status_code(StatusCode::CREATED);
             res.render(Json(serde_json::json!({
@@ -44,7 +34,7 @@ pub async fn register(req: &mut Request, res: &mut Response, body: JsonBody<Regi
 }
 
 #[endpoint]
-pub async fn login(req: &mut Request, res: &mut Response) {
+pub async fn login(req: &mut Request, depot: &mut Depot, res: &mut Response) {
     let request: LoginRequest = match req.parse_json().await {
         Ok(req) => req,
         Err(e) => {
@@ -57,19 +47,9 @@ pub async fn login(req: &mut Request, res: &mut Response) {
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match UserService::login(&pool, request).await {
+    match UserService::login(pool, request).await {
         Ok(response) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -110,19 +90,9 @@ pub async fn get_user(user_id: PathParam<u64>, depot: &mut Depot, res: &mut Resp
         return;
     }
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match UserService::get_user_by_id(&pool, user_id).await {
+    match UserService::get_user_by_id(pool, user_id).await {
         Ok(Some(user)) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -175,19 +145,9 @@ pub async fn update_user(
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match UserService::update_user(&pool, user_id, request).await {
+    match UserService::update_user(pool, user_id, request).await {
         Ok(Some(user)) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -241,19 +201,9 @@ pub async fn change_password(
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match UserService::change_password(&pool, user_id, request).await {
+    match UserService::change_password(pool, user_id, request).await {
         Ok(_) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -300,19 +250,9 @@ pub async fn update_settings(
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match UserService::update_settings(&pool, user_id, request).await {
+    match UserService::update_settings(pool, user_id, request).await {
         Ok(Some(user)) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -349,19 +289,9 @@ pub async fn get_user_teams(user_id: PathParam<u64>, depot: &mut Depot, res: &mu
         return;
     }
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match UserService::get_user_teams(&pool, user_id).await {
+    match UserService::get_user_teams(pool, user_id).await {
         Ok(teams) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({

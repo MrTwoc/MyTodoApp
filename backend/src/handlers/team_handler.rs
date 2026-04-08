@@ -1,7 +1,7 @@
 use salvo::oapi::extract::PathParam;
 use salvo::prelude::*;
 
-use crate::db::pool::create_pool;
+use crate::db::pool::DbPool;
 use crate::services::team_service::{
     CreateTeamRequest, ListTeamsQuery, TeamService, UpdateTeamRequest,
 };
@@ -58,20 +58,9 @@ pub async fn create_team(req: &mut Request, depot: &mut Depot, res: &mut Respons
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TeamService::create_team(&pool, user_id, request).await {
+    match TeamService::create_team(pool, user_id, request).await {
         Ok(team) => {
             res.status_code(StatusCode::CREATED);
             res.render(Json(serde_json::json!({
@@ -91,23 +80,12 @@ pub async fn create_team(req: &mut Request, depot: &mut Depot, res: &mut Respons
 }
 
 #[endpoint]
-pub async fn get_team(team_id: PathParam<u64>, res: &mut Response) {
+pub async fn get_team(team_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
     let team_id: u64 = team_id.into_inner();
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TeamService::get_team(&pool, team_id).await {
+    match TeamService::get_team(pool, team_id).await {
         Ok(Some(team)) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -137,23 +115,12 @@ pub async fn list_teams(depot: &mut Depot, req: &mut Request, res: &mut Response
 
     let query: ListTeamsQuery = req.parse_queries().unwrap_or_default();
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
     // Query params override depot user_id for filtering
     let filter_user_id = query.user_id.or(auth_user_id);
 
-    match TeamService::list_teams(&pool, filter_user_id, query.leader_id).await {
+    match TeamService::list_teams(pool, filter_user_id, query.leader_id).await {
         Ok(teams) => {
             let total = teams.len() as u32;
             let teams_json: Vec<serde_json::Value> = teams
@@ -194,7 +161,7 @@ pub async fn update_team(team_id: PathParam<u64>, req: &mut Request, res: &mut R
         }
     };
 
-    let pool = match create_pool().await {
+    let pool = match crate::db::pool::create_pool().await {
         Ok(p) => p,
         Err(e) => {
             let msg = e.to_string();
@@ -236,7 +203,7 @@ pub async fn update_team(team_id: PathParam<u64>, req: &mut Request, res: &mut R
 pub async fn delete_team(team_id: PathParam<u64>, res: &mut Response) {
     let team_id: u64 = team_id.into_inner();
 
-    let pool = match create_pool().await {
+    let pool = match crate::db::pool::create_pool().await {
         Ok(p) => p,
         Err(e) => {
             let msg = e.to_string();
@@ -290,7 +257,7 @@ pub async fn add_member(team_id: PathParam<u64>, req: &mut Request, res: &mut Re
         }
     };
 
-    let pool = match create_pool().await {
+    let pool = match crate::db::pool::create_pool().await {
         Ok(p) => p,
         Err(e) => {
             let msg = e.to_string();
@@ -328,24 +295,13 @@ pub async fn add_member(team_id: PathParam<u64>, req: &mut Request, res: &mut Re
 }
 
 #[endpoint]
-pub async fn remove_member(team_id: PathParam<u64>, user_id: PathParam<u64>, res: &mut Response) {
+pub async fn remove_member(team_id: PathParam<u64>, user_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
     let team_id: u64 = team_id.into_inner();
     let user_id: u64 = user_id.into_inner();
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TeamService::remove_member(&pool, team_id, user_id).await {
+    match TeamService::remove_member(pool, team_id, user_id).await {
         Ok(true) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -405,20 +361,9 @@ pub async fn update_member_role(
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TeamService::update_member_role(&pool, team_id, current_user_id, target_user_id, request.level).await {
+    match TeamService::update_member_role(pool, team_id, current_user_id, target_user_id, request.level).await {
         Ok(true) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
@@ -451,23 +396,12 @@ pub async fn update_member_role(
 }
 
 #[endpoint]
-pub async fn get_members(team_id: PathParam<u64>, res: &mut Response) {
+pub async fn get_members(team_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
     let team_id: u64 = team_id.into_inner();
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TeamService::get_members(&pool, team_id).await {
+    match TeamService::get_members(pool, team_id).await {
         Ok(members) => {
             let members_json: Vec<serde_json::Value> = members
                 .iter()
@@ -523,21 +457,10 @@ pub async fn create_invite(
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
     match TeamService::create_invite(
-        &pool,
+        pool,
         team_id,
         inviter_id,
         request.invitee_ids,
@@ -579,20 +502,9 @@ pub async fn create_join_request(team_id: PathParam<u64>, depot: &mut Depot, res
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TeamService::create_join_request(&pool, team_id, user_id).await {
+    match TeamService::create_join_request(pool, team_id, user_id).await {
         Ok(join_req) => {
             res.status_code(StatusCode::CREATED);
             res.render(Json(serde_json::json!({
@@ -616,6 +528,7 @@ pub async fn update_join_request_status(
     team_id: PathParam<u64>,
     request_id: PathParam<u64>,
     req: &mut Request,
+    depot: &mut Depot,
     res: &mut Response,
 ) {
     let _team_id: u64 = team_id.into_inner();
@@ -634,21 +547,10 @@ pub async fn update_join_request_status(
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
     match TeamService::update_join_request_status(
-        &pool,
+        pool,
         request_id,
         &body.status,
         body.reviewer_id,
@@ -680,23 +582,12 @@ pub async fn update_join_request_status(
 }
 
 #[endpoint]
-pub async fn get_team_logs(team_id: PathParam<u64>, res: &mut Response) {
+pub async fn get_team_logs(team_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
     let team_id: u64 = team_id.into_inner();
 
-    let pool = match create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TeamService::get_team_logs(&pool, team_id).await {
+    match TeamService::get_team_logs(pool, team_id).await {
         Ok(logs) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({

@@ -1,12 +1,12 @@
 use salvo::oapi::extract::PathParam;
 use salvo::prelude::*;
 
-use crate::db::pool::create_pool;
+use crate::db::pool::DbPool;
 use crate::services::sub_task_service::{CreateSubTaskRequest, SubTaskService, UpdateSubTaskRequest};
 use crate::ws;
 
 #[endpoint]
-pub async fn create_sub_task(task_id: PathParam<u64>, req: &mut Request, res: &mut Response) {
+pub async fn create_sub_task(task_id: PathParam<u64>, req: &mut Request, depot: &mut Depot, res: &mut Response) {
     let task_id: u64 = task_id.into_inner();
 
     let request: CreateSubTaskRequest = match req.parse_json().await {
@@ -21,19 +21,9 @@ pub async fn create_sub_task(task_id: PathParam<u64>, req: &mut Request, res: &m
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match SubTaskService::create_sub_task(&pool, task_id, request).await {
+    match SubTaskService::create_sub_task(pool, task_id, request).await {
         Ok(sub_task) => {
             let payload = serde_json::to_value(&sub_task).unwrap_or_default();
             ws::push(
@@ -61,22 +51,12 @@ pub async fn create_sub_task(task_id: PathParam<u64>, req: &mut Request, res: &m
 }
 
 #[endpoint]
-pub async fn list_sub_tasks(task_id: PathParam<u64>, res: &mut Response) {
+pub async fn list_sub_tasks(task_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
     let task_id: u64 = task_id.into_inner();
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match SubTaskService::list_sub_tasks(&pool, task_id).await {
+    match SubTaskService::list_sub_tasks(pool, task_id).await {
         Ok(sub_tasks) => {
             let sub_tasks: Vec<serde_json::Value> =
                 sub_tasks
@@ -103,6 +83,7 @@ pub async fn update_sub_task(
     task_id: PathParam<u64>,
     sub_task_id: PathParam<u64>,
     req: &mut Request,
+    depot: &mut Depot,
     res: &mut Response,
 ) {
     let task_id: u64 = task_id.into_inner();
@@ -120,19 +101,9 @@ pub async fn update_sub_task(
         }
     };
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match SubTaskService::update_sub_task(&pool, task_id, sub_task_id, request).await {
+    match SubTaskService::update_sub_task(pool, task_id, sub_task_id, request).await {
         Ok(Some(sub_task)) => {
             let payload = serde_json::to_value(&sub_task).unwrap_or_default();
             ws::push(
@@ -165,23 +136,13 @@ pub async fn update_sub_task(
 }
 
 #[endpoint]
-pub async fn delete_sub_task(task_id: PathParam<u64>, sub_task_id: PathParam<u64>, res: &mut Response) {
+pub async fn delete_sub_task(task_id: PathParam<u64>, sub_task_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
     let task_id: u64 = task_id.into_inner();
     let sub_task_id: u64 = sub_task_id.into_inner();
 
-    let pool = match create_pool().await {
-        Ok(pool) => pool,
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": e.to_string()
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match SubTaskService::delete_sub_task(&pool, task_id, sub_task_id).await {
+    match SubTaskService::delete_sub_task(pool, task_id, sub_task_id).await {
         Ok(true) => {
             ws::push(
                 "subtask.deleted",
