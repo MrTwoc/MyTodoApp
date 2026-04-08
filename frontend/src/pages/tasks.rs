@@ -2,6 +2,7 @@ use chrono::Utc;
 use std::collections::HashSet;
 
 use crate::api::task::{CreateTaskRequest, create_task as api_create_task, list_tasks, toggle_task_favorite};
+use crate::api::team::list_teams;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
 use crate::components::loading::{Loading, LoadingVariant};
@@ -128,13 +129,30 @@ pub fn TasksPage() -> impl IntoView {
 
     let client_load = client.clone();
     let store_load = task_store.clone();
+    let client_teams = client.clone();
+    let team_store_load = team_store.clone();
+
+    let teams_state = team_store.state;
+    let need_load_teams = teams_state.get_untracked().teams.is_empty();
+
     // let is_offline_check = is_offline_mode.clone();
     Effect::new(move |_| {
         // if !is_offline_check() {
             let client = client_load.clone();
             let store = store_load.clone();
+            let client_teams = client_teams.clone();
+            let team_store = team_store_load.clone();
+
             wasm_bindgen_futures::spawn_local(async move {
                 store.set_loading(true);
+
+                if need_load_teams {
+                    let teams_result = list_teams(&client_teams).await;
+                    if let Ok(teams) = teams_result {
+                        team_store.set_teams(teams);
+                    }
+                }
+
                 match list_tasks(&client, 1, 20, None, None).await {
                     Ok(resp) => {
                         store.set_tasks(resp.tasks, resp.total.unwrap_or(0));
