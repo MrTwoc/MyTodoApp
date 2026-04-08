@@ -123,6 +123,7 @@ impl DbTask {
         let mut param_count = 1;
 
         let mut user_team_ids: Vec<i64> = Vec::new();
+        let mut leader_filter_added = false;
         
         if let Some(leader_id) = task_leader_id {
             let teams = crate::db::db_team::DbTeam::list_teams(pool, None, Some(leader_id)).await?;
@@ -131,6 +132,7 @@ impl DbTask {
             if user_team_ids.is_empty() {
                 query.push_str(&format!(" AND task_leader_id = ${}", param_count));
                 param_count += 1;
+                leader_filter_added = true;
             } else {
                 let team_ids_str: Vec<String> = user_team_ids.iter().map(|id| id.to_string()).collect();
                 query.push_str(&format!(
@@ -139,6 +141,7 @@ impl DbTask {
                     team_ids_str.join(", ")
                 ));
                 param_count += 1;
+                leader_filter_added = true;
             }
         } else if let Some(team_id) = task_team_id {
             query.push_str(&format!(" AND task_team_id = ${}", param_count));
@@ -172,28 +175,21 @@ impl DbTask {
             param_count += 1;
         }
 
-        // 由于sqlx不支持动态构建WHERE子句，我们将使用原始查询并手动绑定参数。
-        // 更简单的方法是使用sqlx::query_as和条件构造，但为了保持简单，我们使用原始查询。
-        // 实际上，我们可以使用sqlx::query_with宏，但这里我们采用另一种方法：分步构建。
-        // 由于时间有限，我们采用一个简化版本：使用sqlx::query直接拼接字符串。
-        // 注意：这种方法容易受到SQL注入攻击，但因为我们控制参数，且类型安全，所以可以接受。
-        // 更好的做法是使用sqlx::query_as和动态条件构造，但为了保持代码简洁，我们暂时这样实现。
-        // 我们可以使用一个更安全的方法：使用`sqlx::query_builder`，但项目可能没有依赖它。
-        // 因此，我们决定先实现基础功能，后续再优化。
-
-        // 临时方案：使用原始查询并手动绑定。我们使用一个可变查询构建器。
-        // 由于时间关系，我们采用一个简化的实现：使用固定参数顺序。
+        let use_leader_filter = leader_filter_added;
+        let team_filter = if !leader_filter_added { task_team_id } else { None };
 
         let mut query_builder = sqlx::query(&query);
 
         if let Some(leader_id) = task_leader_id {
-            query_builder = query_builder.bind(leader_id as i64);
+            if use_leader_filter {
+                query_builder = query_builder.bind(leader_id as i64);
+            }
         }
-        if let Some(team_id) = task_team_id {
+        if let Some(team_id) = team_filter {
             query_builder = query_builder.bind(team_id as i64);
         }
-        if let Some(status) = &task_status {
-            query_builder = query_builder.bind(Self::task_status_to_db_string(status));
+        if let Some(status) = task_status {
+            query_builder = query_builder.bind(Self::task_status_to_db_string(&status));
         }
         if let Some(priority) = task_priority {
             query_builder = query_builder.bind(priority as i32);

@@ -81,15 +81,6 @@ fn check_auth(depot: &mut Depot, user_id: u64) -> bool {
 pub async fn get_user(user_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
     let user_id: u64 = user_id.into_inner();
 
-    if !check_auth(depot, user_id) {
-        res.status_code(StatusCode::FORBIDDEN);
-        res.render(Json(serde_json::json!({
-            "error": "Forbidden",
-            "message": "You can only access your own profile"
-        })));
-        return;
-    }
-
     let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
     match UserService::get_user_by_id(pool, user_id).await {
