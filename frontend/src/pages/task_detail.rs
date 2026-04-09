@@ -163,6 +163,7 @@ pub fn TaskDetailPage() -> impl IntoView {
     let (creator, set_creator) = signal(Option::<UserProfile>::None);
     let edit_data = RwSignal::new(EditableTaskData::default());
     let (task_logs, set_task_logs) = signal(Vec::<serde_json::Value>::new());
+    let (operator_names, set_operator_names) = signal(std::collections::HashMap::<u64, String>::new());
 
     let load_task = {
         let client = client.clone();
@@ -170,6 +171,7 @@ pub fn TaskDetailPage() -> impl IntoView {
         let set_task = set_task.clone();
         let set_creator = set_creator.clone();
         let set_task_logs = set_task_logs.clone();
+        let set_operator_names = set_operator_names.clone();
         let edit_data = edit_data.clone();
         let is_loading = is_loading.clone();
         move || {
@@ -178,6 +180,7 @@ pub fn TaskDetailPage() -> impl IntoView {
             let set_task = set_task.clone();
             let set_creator = set_creator.clone();
             let set_task_logs = set_task_logs.clone();
+            let set_operator_names = set_operator_names.clone();
             let edit_data = edit_data.clone();
             let is_loading = is_loading.clone();
             wasm_bindgen_futures::spawn_local(async move {
@@ -202,7 +205,27 @@ pub fn TaskDetailPage() -> impl IntoView {
 
                 match api_get_task_logs(&client, task_id).await {
                     Ok(logs) => {
-                        set_task_logs.set(logs);
+                        set_task_logs.set(logs.clone());
+                        
+                        let mut unique_ops = std::collections::HashSet::new();
+                        for log in &logs {
+                            if let Some(op_id) = log.get("operator_id").and_then(|v| v.as_u64()) {
+                                unique_ops.insert(op_id);
+                            }
+                        }
+                        
+                        let mut names = std::collections::HashMap::new();
+                        for op_id in unique_ops {
+                            match api_get_user(&client, op_id).await {
+                                Ok(user) => {
+                                    names.insert(op_id, user.username);
+                                }
+                                Err(_) => {
+                                    names.insert(op_id, format!("User {}", op_id));
+                                }
+                            }
+                        }
+                        set_operator_names.set(names);
                     }
                     Err(e) => {
                         tracing::error!("Failed to load task logs: {}", e.message);
@@ -682,6 +705,7 @@ pub fn TaskDetailPage() -> impl IntoView {
                                     let action = log.get("action").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
                                     let details = log.get("details").and_then(|v| v.as_str()).unwrap_or("").to_string();
                                     let operator_id = log.get("operator_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                                    let operator_name = operator_names.get().get(&operator_id).cloned().unwrap_or_else(|| format!("User {}", operator_id));
                                     
                                     view! {
                                         <div class="task-history-item">
@@ -691,12 +715,10 @@ pub fn TaskDetailPage() -> impl IntoView {
                                             <div class="task-history-content">
                                                 <span class="task-history-action">
                                                     {format_action_type(&action)}
+                                                    {" by "}{operator_name}
                                                 </span>
                                                 <span class="task-history-details">
                                                     {details}
-                                                </span>
-                                                <span class="task-history-operator">
-                                                    {"Operator: "}{operator_id}
                                                 </span>
                                             </div>
                                         </div>
