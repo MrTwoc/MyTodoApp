@@ -1,6 +1,7 @@
 use salvo::oapi::extract::PathParam;
 use salvo::prelude::*;
 
+use crate::db::db_task_log::{DbTaskLog, TaskLogAction};
 use crate::db::pool::DbPool;
 use crate::services::task_service::{
     CreateTaskRequest, ListTasksQuery, TaskService, UpdateTaskPriorityRequest, UpdateTaskRequest,
@@ -34,7 +35,9 @@ pub async fn create_task(req: &mut Request, depot: &mut Depot, res: &mut Respons
         }
     };
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match TaskService::create_task(pool, user_id, request).await {
         Ok(task) => {
@@ -58,7 +61,9 @@ pub async fn create_task(req: &mut Request, depot: &mut Depot, res: &mut Respons
 pub async fn get_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
     let task_id: u64 = task_id.into_inner();
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
@@ -92,7 +97,9 @@ pub async fn list_tasks(depot: &mut Depot, req: &mut Request, res: &mut Response
 
     let query: ListTasksQuery = req.parse_queries().unwrap_or_default();
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match TaskService::list_tasks(pool, user_id, query.team_id, query).await {
         Ok(tasks) => {
@@ -144,7 +151,9 @@ pub async fn update_task(
         }
     };
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
@@ -176,6 +185,17 @@ pub async fn update_task(
 
     match TaskService::update_task(pool, task_id, request).await {
         Ok(Some(task)) => {
+            let _ = DbTaskLog::create_task_log(
+                pool,
+                task_id,
+                user_id,
+                TaskLogAction::Updated,
+                None,
+                None,
+                Some("Task updated"),
+            )
+            .await;
+
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
                 "message": "Task updated successfully",
@@ -214,7 +234,9 @@ pub async fn delete_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut R
         }
     };
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
@@ -256,6 +278,17 @@ pub async fn delete_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut R
 
     match TaskService::delete_task(pool, task_id).await {
         Ok(true) => {
+            let _ = DbTaskLog::create_task_log(
+                pool,
+                task_id,
+                user_id,
+                TaskLogAction::Deleted,
+                None,
+                None,
+                Some("Task deleted"),
+            )
+            .await;
+
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
                 "message": "Task deleted successfully"
@@ -310,7 +343,9 @@ pub async fn update_task_status(
         }
     };
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
@@ -340,8 +375,24 @@ pub async fn update_task_status(
         }
     }
 
-    match TaskService::update_task_status(pool, task_id, request.task_status).await {
+    match TaskService::update_task_status(pool, task_id, request.task_status.clone()).await {
         Ok(Some(task)) => {
+            let old_status = task.task_status.to_string();
+            let new_status = request.task_status.to_string();
+            let _ = DbTaskLog::create_task_log(
+                pool,
+                task_id,
+                user_id,
+                TaskLogAction::StatusChanged,
+                Some(&old_status),
+                Some(&new_status),
+                Some(&format!(
+                    "Status changed from {} to {}",
+                    old_status, new_status
+                )),
+            )
+            .await;
+
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
                 "message": "Task status updated successfully",
@@ -397,7 +448,9 @@ pub async fn update_task_priority(
         }
     };
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
@@ -429,6 +482,18 @@ pub async fn update_task_priority(
 
     match TaskService::update_task_priority(pool, task_id, request.task_priority).await {
         Ok(Some(task)) => {
+            let new_priority = task.task_priority.to_string();
+            let _ = DbTaskLog::create_task_log(
+                pool,
+                task_id,
+                user_id,
+                TaskLogAction::PriorityChanged,
+                None,
+                Some(&new_priority),
+                Some(&format!("Priority changed to {}", new_priority)),
+            )
+            .await;
+
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
                 "message": "Task priority updated successfully",
@@ -467,7 +532,9 @@ pub async fn toggle_task_favorite(task_id: PathParam<u64>, depot: &mut Depot, re
 
     let task_id: u64 = task_id.into_inner();
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match crate::db::db_task::DbTask::toggle_favorite(pool, task_id).await {
         Ok(is_favorite) => {
@@ -488,14 +555,29 @@ pub async fn toggle_task_favorite(task_id: PathParam<u64>, depot: &mut Depot, re
 }
 
 #[endpoint]
-pub async fn get_task_logs(task_id: PathParam<u64>, res: &mut Response) {
-    let _task_id: u64 = task_id.into_inner();
+pub async fn get_task_logs(task_id: PathParam<u64>, depot: &mut Depot, res: &mut Response) {
+    let task_id: u64 = task_id.into_inner();
 
-    res.status_code(StatusCode::OK);
-    res.render(Json(serde_json::json!({
-        "message": "Task logs endpoint - to be implemented",
-        "logs": []
-    })));
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
+
+    match crate::db::db_task_log::DbTaskLog::get_task_logs(pool, task_id, Some(50), None).await {
+        Ok(logs) => {
+            res.status_code(StatusCode::OK);
+            res.render(Json(serde_json::json!({
+                "logs": logs.iter().map(|log| serde_json::to_value(log).unwrap_or_default()).collect::<Vec<_>>()
+            })));
+        }
+        Err(e) => {
+            tracing::error!("Failed to get task logs: {}", e);
+            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
+            res.render(Json(serde_json::json!({
+                "error": "Failed to fetch task logs",
+                "message": e.to_string()
+            })));
+        }
+    }
 }
 
 #[endpoint]
@@ -505,7 +587,9 @@ pub async fn get_recycle_bin(depot: &mut Depot, res: &mut Response) {
         None => None,
     };
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match TaskService::list_deleted_tasks(pool, user_id, None, None).await {
         Ok(tasks) => {
@@ -540,7 +624,9 @@ pub async fn restore_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut 
         }
     };
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
@@ -619,7 +705,9 @@ pub async fn permanent_delete_task(task_id: PathParam<u64>, depot: &mut Depot, r
         }
     };
 
-    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
 
     match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {

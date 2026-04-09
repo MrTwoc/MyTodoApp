@@ -1,7 +1,7 @@
 /*
     任务操作日志数据库操作
 */
-use crate::models::task_log::{Log_TaskLog, TaskLogAction};
+pub use crate::models::task_log::{Log_TaskLog, TaskLogAction};
 use anyhow::Result;
 use sqlx::{PgPool, Row};
 

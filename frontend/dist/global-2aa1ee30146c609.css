@@ -2965,6 +2965,50 @@ input, textarea, select, button, .no-transition {
   font-style: italic;
 }
 
+.task-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-history-item {
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-primary);
+}
+
+.task-history-time {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  min-width: 130px;
+}
+
+.task-history-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-history-action {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.task-history-details {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.task-history-operator {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
 .task-detail-meta {
   display: flex;
   gap: 24px;

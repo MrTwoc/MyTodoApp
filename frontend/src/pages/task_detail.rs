@@ -1,4 +1,4 @@
-use crate::api::task::{delete_task as api_delete_task, get_task as api_get_task, update_task as api_update_task};
+use crate::api::task::{delete_task as api_delete_task, get_task as api_get_task, get_task_logs as api_get_task_logs, update_task as api_update_task};
 use crate::api::user::get_user as api_get_user;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
@@ -18,6 +18,43 @@ fn format_timestamp(ts: i64) -> String {
     let month = date.get_month() + 1;
     let day = date.get_date();
     format!("{:04}/{:02}/{:02}", year, month, day)
+}
+
+fn format_log_timestamp(ts: i64) -> String {
+    let ms = (ts * 1000) as f64;
+    let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_f64(ms));
+    let year = date.get_full_year();
+    let month = date.get_month() + 1;
+    let day = date.get_date();
+    let hours = date.get_hours();
+    let minutes = date.get_minutes();
+    format!("{:04}/{:02}/{:02} {:02}:{:02}", year, month, day, hours, minutes)
+}
+
+fn format_action_type(action: &str) -> String {
+    if action.contains("Created") {
+        "Created".to_string()
+    } else if action.contains("Updated") {
+        "Updated".to_string()
+    } else if action.contains("Deleted") {
+        "Deleted".to_string()
+    } else if action.contains("StatusChanged") {
+        "Status Changed".to_string()
+    } else if action.contains("PriorityChanged") {
+        "Priority Changed".to_string()
+    } else if action.contains("DeadlineChanged") {
+        "Deadline Changed".to_string()
+    } else if action.contains("LeaderChanged") {
+        "Leader Changed".to_string()
+    } else if action.contains("TeamChanged") {
+        "Team Changed".to_string()
+    } else if action.contains("CommentAdded") {
+        "Comment Added".to_string()
+    } else if action.contains("AttachmentAdded") {
+        "Attachment Added".to_string()
+    } else {
+        action.to_string()
+    }
 }
 
 fn priority_label(p: u8) -> &'static str {
@@ -125,12 +162,14 @@ pub fn TaskDetailPage() -> impl IntoView {
     let (task, set_task) = signal(Task::default());
     let (creator, set_creator) = signal(Option::<UserProfile>::None);
     let edit_data = RwSignal::new(EditableTaskData::default());
+    let (task_logs, set_task_logs) = signal(Vec::<serde_json::Value>::new());
 
     let load_task = {
         let client = client.clone();
         let task_id = task_id;
         let set_task = set_task.clone();
         let set_creator = set_creator.clone();
+        let set_task_logs = set_task_logs.clone();
         let edit_data = edit_data.clone();
         let is_loading = is_loading.clone();
         move || {
@@ -138,6 +177,7 @@ pub fn TaskDetailPage() -> impl IntoView {
             let task_id = task_id;
             let set_task = set_task.clone();
             let set_creator = set_creator.clone();
+            let set_task_logs = set_task_logs.clone();
             let edit_data = edit_data.clone();
             let is_loading = is_loading.clone();
             wasm_bindgen_futures::spawn_local(async move {
@@ -159,6 +199,16 @@ pub fn TaskDetailPage() -> impl IntoView {
                         tracing::error!("Failed to load task: {}", e.message);
                     }
                 }
+
+                match api_get_task_logs(&client, task_id).await {
+                    Ok(logs) => {
+                        set_task_logs.set(logs);
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to load task logs: {}", e.message);
+                    }
+                }
+
                 is_loading.set(false);
             });
         }
@@ -618,7 +668,44 @@ pub fn TaskDetailPage() -> impl IntoView {
             </Card>
 
             <Card title="History".to_string()>
-                <p class="task-detail-empty">"No history available."</p>
+                <div class="task-history-list">
+                    {move || {
+                        let logs = task_logs.get();
+                        if logs.is_empty() {
+                            view! {
+                                <p class="task-detail-empty">"No history available."</p>
+                            }.into_any()
+                        } else {
+                            view! {
+                                {logs.into_iter().map(|log| {
+                                    let timestamp = log.get("created_at").and_then(|v| v.as_i64()).unwrap_or(0);
+                                    let action = log.get("action").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
+                                    let details = log.get("details").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                    let operator_id = log.get("operator_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                                    
+                                    view! {
+                                        <div class="task-history-item">
+                                            <div class="task-history-time">
+                                                {format_log_timestamp(timestamp)}
+                                            </div>
+                                            <div class="task-history-content">
+                                                <span class="task-history-action">
+                                                    {format_action_type(&action)}
+                                                </span>
+                                                <span class="task-history-details">
+                                                    {details}
+                                                </span>
+                                                <span class="task-history-operator">
+                                                    {"Operator: "}{operator_id}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            }.into_any()
+                        }
+                    }}
+                </div>
             </Card>
 
             <Modal

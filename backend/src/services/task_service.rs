@@ -1,4 +1,5 @@
 use crate::db::db_task::DbTask;
+use crate::db::db_task_log::{DbTaskLog, TaskLogAction};
 use crate::models::task::{Task, TaskStatus};
 use crate::utils::validator::{
     validate_task_deadline, validate_task_description, validate_task_difficulty,
@@ -102,6 +103,17 @@ impl TaskService {
             request.task_team_id,
         )
         .await?;
+
+        let _ = DbTaskLog::create_task_log(
+            pool,
+            task.task_id,
+            user_id,
+            TaskLogAction::Created,
+            None,
+            None,
+            Some("Task created"),
+        )
+        .await;
 
         Ok(task)
     }

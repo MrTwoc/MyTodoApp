@@ -48,6 +48,16 @@ pub enum TaskStatus {
     Paused,    // 已暂停
 }
 
+impl std::fmt::Display for TaskStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TaskStatus::Active => write!(f, "Active"),
+            TaskStatus::Completed => write!(f, "Completed"),
+            TaskStatus::Paused => write!(f, "Paused"),
+        }
+    }
+}
+
 impl Default for TaskStatus {
     fn default() -> Self {
         Self::Active
