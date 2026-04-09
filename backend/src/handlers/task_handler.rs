@@ -6,6 +6,7 @@ use crate::services::task_service::{
     CreateTaskRequest, ListTasksQuery, TaskService, UpdateTaskPriorityRequest, UpdateTaskRequest,
     UpdateTaskStatusRequest,
 };
+use crate::services::team_service::TeamService;
 
 #[endpoint]
 pub async fn create_task(req: &mut Request, depot: &mut Depot, res: &mut Response) {
@@ -217,7 +218,17 @@ pub async fn delete_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut R
 
     match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
-            if task.task_leader_id != user_id {
+            let is_task_leader = task.task_leader_id == user_id;
+            let is_team_leader = if let Some(team_id) = task.task_team_id {
+                match TeamService::get_team(pool, team_id).await {
+                    Ok(Some(team)) => team.team_leader_id == user_id,
+                    _ => false,
+                }
+            } else {
+                false
+            };
+
+            if !is_task_leader && !is_team_leader {
                 res.status_code(StatusCode::FORBIDDEN);
                 res.render(Json(serde_json::json!({
                     "error": "Forbidden",
@@ -533,7 +544,17 @@ pub async fn restore_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut 
 
     match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
-            if task.task_leader_id != user_id {
+            let is_task_leader = task.task_leader_id == user_id;
+            let is_team_leader = if let Some(team_id) = task.task_team_id {
+                match TeamService::get_team(pool, team_id).await {
+                    Ok(Some(team)) => team.team_leader_id == user_id,
+                    _ => false,
+                }
+            } else {
+                false
+            };
+
+            if !is_task_leader && !is_team_leader {
                 res.status_code(StatusCode::FORBIDDEN);
                 res.render(Json(serde_json::json!({
                     "error": "Forbidden",
@@ -602,7 +623,17 @@ pub async fn permanent_delete_task(task_id: PathParam<u64>, depot: &mut Depot, r
 
     match TaskService::get_task_by_id(pool, task_id).await {
         Ok(Some(task)) => {
-            if task.task_leader_id != user_id {
+            let is_task_leader = task.task_leader_id == user_id;
+            let is_team_leader = if let Some(team_id) = task.task_team_id {
+                match TeamService::get_team(pool, team_id).await {
+                    Ok(Some(team)) => team.team_leader_id == user_id,
+                    _ => false,
+                }
+            } else {
+                false
+            };
+
+            if !is_task_leader && !is_team_leader {
                 res.status_code(StatusCode::FORBIDDEN);
                 res.render(Json(serde_json::json!({
                     "error": "Forbidden",

@@ -384,21 +384,37 @@ impl DbTask {
                     task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
              FROM tasks WHERE is_deleted = true",
         );
-        let mut param_count = 1;
+
+        let user_team_ids: Vec<i64> = if let Some(leader_id) = task_leader_id {
+            let teams = crate::db::db_team::DbTeam::list_teams(pool, None, Some(leader_id)).await?;
+            teams.into_iter().map(|t| t.team_id as i64).collect()
+        } else {
+            Vec::new()
+        };
 
         if let Some(leader_id) = task_leader_id {
-            query.push_str(&format!(" AND task_leader_id = ${}", param_count));
-            param_count += 1;
+            if user_team_ids.is_empty() {
+                query.push_str(&format!(" AND task_leader_id = ${}", 1));
+            } else {
+                let team_ids_str: Vec<String> = user_team_ids.iter().map(|id| id.to_string()).collect();
+                query.push_str(&format!(
+                    " AND (task_leader_id = ${} OR task_team_id IN ({}))",
+                    1,
+                    team_ids_str.join(",")
+                ));
+            }
         }
 
         query.push_str(" ORDER BY deleted_at DESC");
 
+        let mut param_count = if task_leader_id.is_some() { 1 } else { 0 };
+
         if let Some(limit_val) = limit {
-            query.push_str(&format!(" LIMIT ${}", param_count));
+            query.push_str(&format!(" LIMIT ${}", param_count + 1));
             param_count += 1;
         }
         if let Some(offset_val) = offset {
-            query.push_str(&format!(" OFFSET ${}", param_count));
+            query.push_str(&format!(" OFFSET ${}", param_count + 1));
             param_count += 1;
         }
 
