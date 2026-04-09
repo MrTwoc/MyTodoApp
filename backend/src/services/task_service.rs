@@ -111,7 +111,7 @@ impl TaskService {
             TaskLogAction::Created,
             None,
             None,
-            Some("Task created"),
+            Some(&format!("Created task: {}", task.task_name)),
         )
         .await;
 

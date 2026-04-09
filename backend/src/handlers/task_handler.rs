@@ -151,40 +151,53 @@ pub async fn update_task(
         }
     };
 
-    let pool = depot
-        .get::<DbPool>("db_pool")
-        .expect("DbPool not found in depot");
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TaskService::get_task_by_id(pool, task_id).await {
-        Ok(Some(task)) => {
-            if task.task_leader_id != user_id {
-                res.status_code(StatusCode::FORBIDDEN);
-                res.render(Json(serde_json::json!({
-                    "error": "Forbidden",
-                    "message": "You don't have permission to update this task"
-                })));
-                return;
+    let old_task = TaskService::get_task_by_id(pool, task_id).await.ok().flatten();
+
+    let mut changes = Vec::new();
+    if let Some(ref old) = old_task {
+        if let Some(ref name) = request.task_name {
+            if &old.task_name != name {
+                changes.push(format!("name: {} → {}", old.task_name, name));
             }
         }
-        Ok(None) => {
-            res.status_code(StatusCode::NOT_FOUND);
-            res.render(Json(serde_json::json!({
-                "error": "Task not found"
-            })));
-            return;
+        if let Some(ref desc) = request.task_description {
+            if old.task_description.as_deref() != Some(desc) {
+                changes.push("description changed".to_string());
+            }
         }
-        Err(e) => {
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Failed to fetch task",
-                "message": e.to_string()
-            })));
-            return;
+        if let Some(priority) = request.task_priority {
+            if old.task_priority != priority {
+                changes.push(format!("priority: {} → {}", old.task_priority, priority));
+            }
+        }
+        if let Some(difficulty) = request.task_difficulty {
+            if old.task_difficulty != difficulty {
+                changes.push(format!("difficulty: {} → {}", old.task_difficulty, difficulty));
+            }
+        }
+        if let Some(Some(deadline)) = request.task_deadline {
+            let old_deadline = old.task_deadline.unwrap_or(0);
+            if old_deadline != deadline {
+                changes.push("deadline changed".to_string());
+            }
+        }
+        if let Some(ref status) = request.task_status {
+            if old.task_status != *status {
+                changes.push(format!("status: {} → {}", old.task_status, status));
+            }
         }
     }
 
     match TaskService::update_task(pool, task_id, request).await {
         Ok(Some(task)) => {
+            let details = if changes.is_empty() {
+                "Task updated".to_string()
+            } else {
+                changes.join(", ")
+            };
+
             let _ = DbTaskLog::create_task_log(
                 pool,
                 task_id,
@@ -192,7 +205,7 @@ pub async fn update_task(
                 TaskLogAction::Updated,
                 None,
                 None,
-                Some("Task updated"),
+                Some(&details),
             )
             .await;
 
@@ -278,6 +291,10 @@ pub async fn delete_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut R
 
     match TaskService::delete_task(pool, task_id).await {
         Ok(true) => {
+            let task_name = TaskService::get_task_by_id(pool, task_id).await
+                .ok().flatten()
+                .map(|t| t.task_name)
+                .unwrap_or_else(|| "Unknown".to_string());
             let _ = DbTaskLog::create_task_log(
                 pool,
                 task_id,
@@ -285,7 +302,7 @@ pub async fn delete_task(task_id: PathParam<u64>, depot: &mut Depot, res: &mut R
                 TaskLogAction::Deleted,
                 None,
                 None,
-                Some("Task deleted"),
+                Some(&format!("Deleted task: {}", task_name)),
             )
             .await;
 
