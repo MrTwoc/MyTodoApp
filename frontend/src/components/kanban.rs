@@ -52,6 +52,17 @@ pub fn KanbanCard(
     let has_description = task.task_description.is_some();
     let has_team = team_name.is_some();
 
+    let deadline_text = task.task_deadline.map(|ts| {
+        let date = js_sys::Date::new(&js_sys::Date::new_0());
+        date.set_milliseconds(ts as u32);
+        format!(
+            "{}/{:02}/{:02}",
+            date.get_full_year(),
+            date.get_month() + 1,
+            date.get_date()
+        )
+    });
+
     view! {
         <div
             class=format!("kanban-card {}", if compact { "compact" } else { "" })
@@ -79,7 +90,7 @@ pub fn KanbanCard(
                     {priority_label}
                 </span>
                 {if has_deadline {
-                    view! { <span class="deadline-badge">Due</span> }.into_any()
+                    view! { <span class="deadline-badge">{deadline_text.unwrap_or_default()}</span> }.into_any()
                 } else {
                     ().into_any()
                 }}
