@@ -9,4 +9,7 @@ pub mod settings;
 pub mod task_detail;
 pub mod tasks;
 pub mod team_detail;
+pub mod team_history;
+pub mod team_members;
+pub mod team_tasks;
 pub mod teams;

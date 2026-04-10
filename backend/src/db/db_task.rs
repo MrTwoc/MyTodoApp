@@ -125,7 +125,10 @@ impl DbTask {
         let mut user_team_ids: Vec<i64> = Vec::new();
         let mut leader_filter_added = false;
         
-        if let Some(leader_id) = task_leader_id {
+        if let Some(team_id) = task_team_id {
+            query.push_str(&format!(" AND task_team_id = ${}", param_count));
+            param_count += 1;
+        } else if let Some(leader_id) = task_leader_id {
             let teams = crate::db::db_team::DbTeam::list_teams(pool, None, Some(leader_id)).await?;
             user_team_ids = teams.into_iter().map(|t| t.team_id as i64).collect();
             
@@ -143,9 +146,6 @@ impl DbTask {
                 param_count += 1;
                 leader_filter_added = true;
             }
-        } else if let Some(team_id) = task_team_id {
-            query.push_str(&format!(" AND task_team_id = ${}", param_count));
-            param_count += 1;
         }
         if let Some(status) = &task_status {
             query.push_str(&format!(" AND task_status = ${}", param_count));

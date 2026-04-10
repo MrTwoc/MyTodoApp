@@ -742,13 +742,13 @@ pub fn TeamDetailPage() -> impl IntoView {
             <header class="page-header">
                 <div>
                     <button class="back-btn" on:click=on_back>"← Back"</button>
-                    <h1 class="page-title">
+                    <a href=move || format!("/teams/{}", team_id) class="page-title">
                         {move || {
                             current_team()
                                 .map(|team| team.team_name)
                                 .unwrap_or_else(|| "Team".to_string())
                         }}
-                    </h1>
+                    </a>
                     <TeamModuleNav team_id=team_id />
                 </div>
                 <Button
