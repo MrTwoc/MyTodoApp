@@ -12,6 +12,7 @@ use crate::components::loading::{Loading, LoadingVariant};
 use crate::components::modal::Modal;
 use crate::components::search::SearchInput;
 use crate::components::task_form::{TaskFormData, TaskFormMode, TaskFormModal};
+use crate::components::team_module_nav::TeamModuleNav;
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::team_store::{TeamMember, TeamStore};
 use crate::store::user_store::UserStore;
@@ -748,6 +749,7 @@ pub fn TeamDetailPage() -> impl IntoView {
                                 .unwrap_or_else(|| "Team".to_string())
                         }}
                     </h1>
+                    <TeamModuleNav team_id=team_id />
                 </div>
                 <Button
                     variant=ButtonVariant::Secondary

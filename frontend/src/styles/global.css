@@ -3378,6 +3378,59 @@ input, textarea, select, button, .no-transition {
   height: 100%;
 }
 
+/* Team Module Navigation */
+.team-module-nav {
+  margin-top: 16px;
+  padding: 0;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.team-module-nav-inner {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.team-module-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  transition: all var(--transition-fast);
+  background: transparent;
+}
+
+.team-module-nav-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-color: var(--border-primary);
+}
+
+.team-module-nav-link.active {
+  color: var(--accent-primary);
+  background: var(--accent-subtle);
+  border-color: var(--accent-primary);
+  border-bottom-color: var(--accent-subtle);
+}
+
+.team-module-nav-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
+}
+
+.team-module-nav-link.active .team-module-nav-icon {
+  opacity: 1;
+}
+
 /* Task Detail Page */
 .task-detail-header {
   display: flex;
