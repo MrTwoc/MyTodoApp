@@ -69,24 +69,26 @@ impl DbTeam {
         user_id: Option<u64>,
     ) -> Result<Vec<Team>> {
         let mut query = String::from(
-            "SELECT team_id, team_name, team_leader_id, team_create_time, sub_team_ids, team_settings FROM teams WHERE 1=1",
+            "SELECT DISTINCT t.team_id, t.team_name, t.team_leader_id, t.team_create_time, t.sub_team_ids, t.team_settings FROM teams t WHERE 1=1",
         );
         let mut param_count = 0;
 
         if leader_id.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND team_leader_id = ${}", param_count));
+            query.push_str(&format!(" AND t.team_leader_id = ${}", param_count));
         }
 
-        if user_id.is_some() {
+        if let Some(_) = user_id {
             param_count += 1;
             query.push_str(&format!(
-                " AND team_id IN (SELECT team_id FROM team_members WHERE user_id = ${})",
+                " AND (t.team_id IN (SELECT team_id FROM team_members WHERE user_id = ${}) OR t.team_settings->>'team_visibility' = 'Public')",
                 param_count
             ));
+        } else {
+            query.push_str(" AND t.team_settings->>'team_visibility' = 'Public'");
         }
 
-        query.push_str(" ORDER BY team_create_time DESC");
+        query.push_str(" ORDER BY t.team_create_time DESC");
 
         let mut sql_query = sqlx::query(&query);
 
