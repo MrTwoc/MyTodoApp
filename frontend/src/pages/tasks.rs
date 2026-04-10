@@ -63,7 +63,7 @@ pub fn TasksPage() -> impl IntoView {
     let (editing_task, set_editing_task) = signal(None::<Task>);
     // let (offline_page, set_offline_page) = signal(1_u32);
     use leptos::prelude::RwSignal;
-    let view_mode: RwSignal<&str> = RwSignal::new("card");
+    let view_mode: RwSignal<&str> = RwSignal::new("kanban");
     let team_store = use_team_store();
 
     let filter_all = {
