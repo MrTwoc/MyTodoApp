@@ -5,6 +5,7 @@ use crate::api::task::{CreateTaskRequest, create_task as api_create_task, list_t
 use crate::api::team::list_teams;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
+use crate::components::kanban::KanbanBoard;
 use crate::components::loading::{Loading, LoadingVariant};
 use crate::components::modal::Modal;
 use crate::components::search::{Pagination, SearchInput};
@@ -46,6 +47,8 @@ fn take_page<T>(items: Vec<T>, page: u32, page_size: u32) -> Vec<T> {
 #[component]
 pub fn TasksPage() -> impl IntoView {
     let task_store = use_task_store();
+    let store_for_filter = task_store.clone();
+    let store_for_render = task_store.clone();
     // let offline_store = use_offline_task_store();
     let client = use_api_client();
     let navigate = use_navigate();
@@ -335,10 +338,11 @@ pub fn TasksPage() -> impl IntoView {
         let vm = view_mode.clone();
         Callback::from(move |_| {
             let current = vm.get();
-            if current == "card" {
-                vm.set("list");
-            } else {
-                vm.set("card");
+            match current {
+                "card" => vm.set("list"),
+                "list" => vm.set("kanban"),
+                "kanban" => vm.set("card"),
+                _ => vm.set("card"),
             }
         })
     };
@@ -398,57 +402,96 @@ pub fn TasksPage() -> impl IntoView {
                 // </p>
             </div>
 
-            <div class="filter-bar">
-                <Button
-                    variant=ButtonVariant::Secondary
-                    size=ButtonSize::Sm
-                    on_click=filter_all
-                >
-                    "All"
-                </Button>
-                <Button
-                    variant=ButtonVariant::Secondary
-                    size=ButtonSize::Sm
-                    on_click=filter_active
-                >
-                    "Active"
-                </Button>
-                <Button
-                    variant=ButtonVariant::Secondary
-                    size=ButtonSize::Sm
-                    on_click=filter_completed
-                >
-                    "Completed"
-                </Button>
-                <Button
-                    variant=ButtonVariant::Secondary
-                    size=ButtonSize::Sm
-                    on_click=filter_paused
-                >
-                    "Paused"
-                </Button>
-                <Button
-                    variant=ButtonVariant::Secondary
-                    size=ButtonSize::Sm
-                    on_click=Callback::from({
-                        let task_store = task_store.clone();
-                        move |_| {
-                            let current = task_store.state.get().filters.show_favorites_only.unwrap_or(false);
-                            task_store.set_show_favorites_only(!current);
-                        }
-                    })
-                >
-                    "Favorites"
-                </Button>
-                <div class="filter-bar-spacer"></div>
-                <Button
-                    variant=ButtonVariant::Secondary
-                    size=ButtonSize::Sm
-                    on_click=toggle_view_mode
-                >
-                    {move || if view_mode.get() == "card" { "List" } else { "Card" }}
-                </Button>
-            </div>
+            {move || {
+                if view_mode.get() != "kanban" {
+                    let filter_fav = {
+                        let store = store_for_filter.clone();
+                        Callback::from(move |_| {
+                            let current = store.state.get().filters.show_favorites_only.unwrap_or(false);
+                            store.set_show_favorites_only(!current);
+                        })
+                    };
+                    view! {
+                        <div class="filter-bar">
+                            <Button
+                                variant=ButtonVariant::Secondary
+                                size=ButtonSize::Sm
+                                on_click=filter_all
+                            >
+                                "All"
+                            </Button>
+                            <Button
+                                variant=ButtonVariant::Secondary
+                                size=ButtonSize::Sm
+                                on_click=filter_active
+                            >
+                                "Active"
+                            </Button>
+                            <Button
+                                variant=ButtonVariant::Secondary
+                                size=ButtonSize::Sm
+                                on_click=filter_completed
+                            >
+                                "Completed"
+                            </Button>
+                            <Button
+                                variant=ButtonVariant::Secondary
+                                size=ButtonSize::Sm
+                                on_click=filter_paused
+                            >
+                                "Paused"
+                            </Button>
+                            <Button
+                                variant=ButtonVariant::Secondary
+                                size=ButtonSize::Sm
+                                on_click=filter_fav
+                            >
+                                "Favorites"
+                            </Button>
+                            <div class="filter-bar-spacer"></div>
+                            <Button
+                                variant=ButtonVariant::Secondary
+                                size=ButtonSize::Sm
+                                on_click=toggle_view_mode
+                            >
+                                {move || match view_mode.get() {
+                                    "card" => "Kanban",
+                                    "list" => "Kanban",
+                                    "kanban" => "Card",
+                                    _ => "Card",
+                                }}
+                            </Button>
+                        </div>
+                    }.into_any()
+                } else {
+                    let filter_fav = {
+                        let store = task_store.clone();
+                        Callback::from(move |_| {
+                            let current = store.state.get().filters.show_favorites_only.unwrap_or(false);
+                            store.set_show_favorites_only(!current);
+                        })
+                    };
+                    view! {
+                        <div class="filter-bar">
+                            <Button
+                                variant=ButtonVariant::Secondary
+                                size=ButtonSize::Sm
+                                on_click=filter_fav
+                            >
+                                "Favorites"
+                            </Button>
+                            <div class="filter-bar-spacer"></div>
+                            <Button
+                                variant=ButtonVariant::Secondary
+                                size=ButtonSize::Sm
+                                on_click=toggle_view_mode
+                            >
+                                "Card"
+                            </Button>
+                        </div>
+                    }.into_any()
+                }
+            }}
 
             // {move || {
             //     offline_store
@@ -461,9 +504,10 @@ pub fn TasksPage() -> impl IntoView {
 
             <div class="tasks-content">
                 {{
-                    let task_store_for_render = task_store.clone();
+                    let task_store_for_render = store_for_render.clone();
                     move || {
-                        let state = task_store_for_render.state.get();
+                        let task_store_for_inner = task_store_for_render.clone();
+                        let state = task_store_for_inner.state.get();
                         if state.is_loading {
                             view! {
                                 <div class="task-list">
@@ -472,6 +516,34 @@ pub fn TasksPage() -> impl IntoView {
                                     <TaskCardSkeleton />
                                 </div>
                             }.into_any()
+                        } else if view_mode.get() == "kanban" {
+                            let all_tasks = task_store_for_inner.filtered_tasks();
+                            if all_tasks.is_empty() {
+                                view! {
+                                    <div class="empty-state-container">
+                                        <div class="empty-state-icon"></div>
+                                        <Card
+                                            title="No Tasks".to_string()
+                                            subtitle="No tasks found matching your filters.".to_string()
+                                        >
+                                            <p class="empty-text">
+                                                "Create a new task to get started."
+                                            </p>
+                                        </Card>
+                                    </div>
+                                }.into_any()
+                            } else {
+                                let navigate = navigate.clone();
+                                view! {
+                                    <KanbanBoard
+                                        tasks=all_tasks
+                                        on_task_click=Callback::from(move |task_id| {
+                                            navigate(&format!("/tasks/{}", task_id), Default::default());
+                                        })
+                                        on_task_toggle_favorite=handle_toggle_favorite.clone()
+                                    />
+                                }.into_any()
+                            }
                         } else {
                             let tasks = visible_tasks();
                             if tasks.is_empty() {
@@ -518,7 +590,7 @@ pub fn TasksPage() -> impl IntoView {
             </div>
 
             {move || {
-                if total_pages() > 0 {
+                if total_pages() > 0 && view_mode.get() != "kanban" {
                     view! {
                         <Pagination
                             current_page=current_page()

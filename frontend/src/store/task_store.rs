@@ -193,6 +193,19 @@ impl TaskStore {
         }
     }
 
+    pub fn update_task_status(&self, task_id: u64, status: TaskStatus) {
+        let mut state = self.state.get();
+        if let Some(task) = state.tasks.iter_mut().find(|t| t.task_id == task_id) {
+            task.task_status = status.clone();
+            if status == TaskStatus::Completed {
+                task.task_complete_time = Some(chrono_offset());
+            } else {
+                task.task_complete_time = None;
+            }
+            self.set_state.set(state);
+        }
+    }
+
     pub fn set_show_favorites_only(&self, show: bool) {
         let mut state = self.state.get();
         state.filters.show_favorites_only = Some(show);
