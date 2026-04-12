@@ -1,5 +1,7 @@
 use crate::db::db_team::DbTeam;
+use crate::db::db_team_log::DbTeamLog;
 use crate::models::team::*;
+use crate::models::team_log::LogAction;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -90,6 +92,7 @@ impl TeamService {
     pub async fn update_team(
         pool: &PgPool,
         team_id: u64,
+        user_id: u64,
         request: UpdateTeamRequest,
     ) -> Result<Option<Team>> {
         let visibility = request.team_visibility.as_deref().map(|v| match v {
@@ -102,7 +105,7 @@ impl TeamService {
             _ => TeamStatus::Active,
         });
 
-        DbTeam::update_team(
+        let updated = DbTeam::update_team(
             pool,
             team_id,
             request.team_name.as_deref(),
@@ -112,7 +115,27 @@ impl TeamService {
             None,
             request.team_member_limit,
         )
-        .await
+        .await?;
+
+        let details = serde_json::json!({
+            "team_name": request.team_name,
+            "team_description": request.team_description,
+            "team_visibility": request.team_visibility,
+            "team_status": request.team_status,
+            "team_member_limit": request.team_member_limit
+        });
+        let _ = DbTeamLog::create_team_log(
+            pool,
+            team_id,
+            user_id,
+            LogAction::TeamUpdated,
+            "team",
+            Some(team_id),
+            Some(&details.to_string()),
+            None,
+        ).await;
+
+        Ok(updated)
     }
 
     pub async fn delete_team(pool: &PgPool, team_id: u64) -> Result<bool> {
@@ -214,7 +237,8 @@ impl TeamService {
             .await
     }
 
-    pub async fn get_team_logs(_pool: &PgPool, _team_id: u64) -> Result<Vec<serde_json::Value>> {
-        Ok(vec![])
+    pub async fn get_team_logs(pool: &PgPool, team_id: u64) -> Result<Vec<serde_json::Value>> {
+        let logs = DbTeamLog::get_team_logs(pool, team_id, None, None).await?;
+        Ok(logs.into_iter().map(|log| serde_json::to_value(log).unwrap()).collect())
     }
 }

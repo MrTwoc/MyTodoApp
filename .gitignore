@@ -6,3 +6,4 @@ transformed_doc
 *.wasm
 /论文
 /logs
+/thesis_files

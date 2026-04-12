@@ -1,4 +1,4 @@
-use salvo::oapi::extract::PathParam;
+﻿use salvo::oapi::extract::PathParam;
 use salvo::prelude::*;
 
 use crate::db::pool::DbPool;
@@ -145,8 +145,20 @@ pub async fn list_teams(depot: &mut Depot, req: &mut Request, res: &mut Response
 }
 
 #[endpoint]
-pub async fn update_team(team_id: PathParam<u64>, req: &mut Request, res: &mut Response) {
+pub async fn update_team(team_id: PathParam<u64>, depot: &mut Depot, req: &mut Request, res: &mut Response) {
     let team_id: u64 = team_id.into_inner();
+
+    let user_id = match depot.get::<i64>("user_id").ok() {
+        Some(id) => *id as u64,
+        None => {
+            res.status_code(StatusCode::UNAUTHORIZED);
+            res.render(Json(serde_json::json!({
+                "error": "Unauthorized",
+                "message": "User not authenticated"
+            })));
+            return;
+        }
+    };
 
     let request: UpdateTeamRequest = match req.parse_json().await {
         Ok(r) => r,
@@ -161,20 +173,9 @@ pub async fn update_team(team_id: PathParam<u64>, req: &mut Request, res: &mut R
         }
     };
 
-    let pool = match crate::db::pool::create_pool().await {
-        Ok(p) => p,
-        Err(e) => {
-            let msg = e.to_string();
-            res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
-            res.render(Json(serde_json::json!({
-                "error": "Database connection failed",
-                "message": msg
-            })));
-            return;
-        }
-    };
+    let pool = depot.get::<DbPool>("db_pool").expect("DbPool not found in depot");
 
-    match TeamService::update_team(&pool, team_id, request).await {
+    match TeamService::update_team(&pool, team_id, user_id, request).await {
         Ok(Some(team)) => {
             res.status_code(StatusCode::OK);
             res.render(Json(serde_json::json!({
