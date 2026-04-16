@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowBoard Pro · 智能工作台</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <style>
+        /* ========== 变量 & 重置 ========== */
+        :root {
+            --bg: #0D0D0D;
+            --surface: #151515;
+            --card: #1A1A1A;
+            --card-hover: #242424;
+            --border: #2A2A2A;
+            --border-light: #3F3F3F;
+            --accent: #FF6B35;
+            --accent-light: #FF8F5E;
+            --accent-dim: rgba(255,107,53,0.12);
+            --priority-high: #EF4444;
+            --priority-medium: #F59E0B;
+            --priority-low: #10B981;
+            --diff-easy: #34D399;
+            --diff-medium: #FBBF24;
+            --diff-hard: #F87171;
+            --text: #EEEEEE;
+            --text-secondary: #B0B0B0;
+            --text-muted: #6B6B6B;
+            --nav-width: 72px;
+            --panel-width: 260px;
+            --transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { font-size: 14px; }
+        body {
+            font-family: 'Noto Sans SC', system-ui, sans-serif;
+            background: var(--bg); color: var(--text);
+            overflow: hidden; height: 100vh;
+        }
+        h1, h2, h3, h4, .brand, .stat-num, .metric-val, .progress-pct {
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        input, textarea, button, select { font-family: inherit; }
+
+        /* ========== 背景光晕 ========== */
+        .bg-glow { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+        .glow-orb { position: absolute; border-radius: 50%; filter: blur(140px); opacity: 0.3; }
+        .glow-orb:nth-child(1) {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(255,107,53,0.25), transparent 70%);
+            top: -150px; right: 10%;
+            animation: floatA 28s ease-in-out infinite;
+        }
+        .glow-orb:nth-child(2) {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(125,211,252,0.12), transparent 70%);
+            bottom: 0; left: 20%;
+            animation: floatB 25s ease-in-out infinite;
+        }
+        .glow-orb:nth-child(3) {
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(52,211,153,0.1), transparent 70%);
+            top: 40%; right: 5%;
+            animation: floatC 30s ease-in-out infinite;
+        }
+        @keyframes floatA { 0%,100%{transform:translate(0,0)}33%{transform:translate(-50px,80px)}66%{transform:translate(40px,-50px)} }
+        @keyframes floatB { 0%,100%{transform:translate(0,0)}33%{transform:translate(60px,-40px)}66%{transform:translate(-40px,60px)} }
+        @keyframes floatC { 0%,100%{transform:translate(0,0)}50%{transform:translate(-80px,40px)} }
+
+        /* ========== 三层布局 ========== */
+        .app-layout { display: flex; height: 100vh; position: relative; z-index: 1; }
+
+        /* ====== 导航轨道 ====== */
+        .nav-rail {
+            width: var(--nav-width); min-width: var(--nav-width);
+            background: var(--surface); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center;
+            padding: 20px 0; gap: 6px; z-index: 10;
+        }
+        .nav-logo {
+            width: 40px; height: 40px; background: var(--accent); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 24px; font-size: 18px; color: #fff; font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
+            box-shadow: 0 4px 12px rgba(255,107,53,0.3);
+            transition: var(--transition);
+        }
+        .nav-logo:hover { transform: scale(1.02); }
+        .nav-item {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-muted); font-size: 18px;
+            cursor: pointer; transition: var(--transition); position: relative;
+            border: none; background: transparent;
+        }
+        .nav-item:hover { color: var(--text-secondary); background: var(--card); }
+        .nav-item.active { color: var(--accent); background: var(--accent-dim); }
+        .nav-item.active::before {
+            content: ''; position: absolute; left: -16px;
+            width: 4px; height: 24px; border-radius: 0 4px 4px 0; background: var(--accent);
+        }
+        .nav-spacer { flex: 1; }
+        .nav-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            object-fit: cover; border: 2px solid var(--border-light);
+            margin-top: 8px; cursor: pointer; transition: border-color var(--transition);
+        }
+        .nav-avatar:hover { border-color: var(--accent); }
+
+        /* ====== 筛选面板 ====== */
+        .filter-panel {
+            width: var(--panel-width); min-width: var(--panel-width);
+            background: var(--surface); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            padding: 20px 16px; gap: 22px;
+            overflow-y: auto; transition: var(--transition);
+            position: relative; z-index: 5;
+        }
+        .filter-panel.collapsed { width: 0; min-width: 0; padding: 0; overflow: hidden; border: none; }
+        .panel-toggle {
+            position: absolute; right: -16px; top: 28px; z-index: 6;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--card); border: 1px solid var(--border);
+            color: var(--text-muted); font-size: 12px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: var(--transition);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .panel-toggle:hover { background: var(--card-hover); color: var(--text-secondary); border-color: var(--border-light); }
+        .filter-panel.collapsed .panel-toggle { right: -48px; }
+        .filter-section-title {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 12px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .filter-nav { display: flex; flex-direction: column; gap: 4px; }
+        .filter-nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; border-radius: 10px;
+            font-size: 13px; color: var(--text-secondary);
+            cursor: pointer; border: none; background: transparent;
+            transition: var(--transition); width: 100%; text-align: left;
+        }
+        .filter-nav-item:hover { background: var(--card); color: var(--text); }
+        .filter-nav-item.active { background: var(--accent-dim); color: var(--accent); }
+        .filter-nav-item .count {
+            margin-left: auto; font-size: 11px; font-weight: 600;
+            color: var(--text-muted); font-family: 'Space Grotesk', sans-serif;
+        }
+        .filter-nav-item.active .count { color: var(--accent); }
+        .quick-projects { display: flex; flex-direction: column; gap: 6px; }
+        .qp-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; border-radius: 10px;
+            font-size: 13px; color: var(--text-secondary);
+            cursor: pointer; transition: var(--transition);
+        }
+        .qp-item:hover { background: var(--card); color: var(--text); }
+        .qp-dot { width: 10px; height: 10px; border-radius: 4px; flex-shrink: 0; }
+        .qp-progress { margin-left: auto; font-size: 11px; color: var(--text-muted); font-family: 'Space Grotesk', sans-serif; font-weight: 600; }
+        
+        /* 面板中的专注计时器 */
+        .focus-timer {
+            background: linear-gradient(145deg, #1E1E1E, #181818);
+            border-radius: 16px; padding: 16px;
+            border: 1px solid var(--border);
+        }
+        .timer-display {
+            font-size: 32px; font-weight: 700; font-family: 'Space Grotesk', monospace;
+            color: var(--accent); text-align: center; margin: 8px 0;
+        }
+        .timer-controls {
+            display: flex; gap: 8px; justify-content: center;
+        }
+        .timer-btn {
+            background: var(--card); border: 1px solid var(--border);
+            color: var(--text-secondary); border-radius: 8px;
+            padding: 6px 12px; font-size: 11px; cursor: pointer;
+            transition: var(--transition);
+        }
+        .timer-btn:hover { background: var(--card-hover); color: var(--text); }
+
+        /* 快速笔记 */
+        .quick-note textarea {
+            width: 100%; background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 10px; color: var(--text);
+            font-size: 12px; resize: vertical; min-height: 60px;
+        }
+        .quick-note textarea:focus { outline: none; border-color: var(--accent); }
+
+        /* ====== 主内容区 ====== */
+        .main-content {
+            flex: 1; overflow-y: auto; padding: 28px 32px;
+            position: relative;
+        }
+
+        /* ====== 问候区 ====== */
+        .greeting-area {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 28px; gap: 16px; flex-wrap: wrap;
+        }
+        .greeting-left { flex: 1; min-width: 280px; }
+        .greeting-title { font-size: 30px; font-weight: 700; line-height: 1.2; margin-bottom: 6px; letter-spacing: -0.02em; }
+        .greeting-sub { font-size: 14px; color: var(--text-secondary); font-weight: 400; }
+        .greeting-sub .accent-text { color: var(--accent); font-weight: 600; }
+        .greeting-right { display: flex; gap: 12px; align-items: center; }
+        .search-box {
+            position: relative; width: 260px;
+        }
+        .search-box input {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 10px 16px 10px 40px;
+            color: var(--text); font-size: 13px; width: 100%; outline: none;
+            transition: var(--transition);
+        }
+        .search-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+        .search-box input::placeholder { color: var(--text-muted); }
+        .search-box i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px; }
+        .quick-create-wrapper { position: relative; }
+        .btn {
+            border: none; border-radius: 12px; padding: 10px 18px;
+            font-size: 13px; font-weight: 500; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 8px;
+            transition: var(--transition); font-family: inherit;
+        }
+        .btn-primary {
+            background: var(--accent); color: #fff;
+            box-shadow: 0 4px 12px rgba(255,107,53,0.25);
+        }
+        .btn-primary:hover { background: var(--accent-light); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255,107,53,0.4); }
+        .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-ghost:hover { background: var(--card); color: var(--text); border-color: var(--border-light); }
+        .quick-create-menu {
+            position: absolute; top: calc(100% + 8px); right: 0;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 6px; min-width: 180px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+            z-index: 50; opacity: 0; pointer-events: none;
+            transform: translateY(-8px); transition: var(--transition);
+        }
+        .quick-create-menu.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .qc-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; border-radius: 10px;
+            font-size: 13px; color: var(--text-secondary);
+            cursor: pointer; transition: var(--transition);
+        }
+        .qc-item:hover { background: var(--card); color: var(--text); }
+        .qc-item i { width: 18px; text-align: center; font-size: 13px; }
+
+        /* ====== 统计条 KPI 增强 ====== */
+        .stats-bar {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+            margin-bottom: 28px;
+        }
+        .stat-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 18px; padding: 18px 20px;
+            display: flex; align-items: center; gap: 16px;
+            transition: var(--transition); cursor: default;
+            position: relative; overflow: hidden;
+        }
+        .stat-card:hover { border-color: var(--border-light); background: var(--card-hover); }
+        .stat-icon {
+            width: 48px; height: 48px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+        }
+        .stat-icon.todo { background: var(--accent-dim); color: var(--accent); }
+        .stat-icon.doing { background: rgba(125,211,252,0.12); color: #7DD3FC; }
+        .stat-icon.done { background: rgba(16,185,129,0.12); color: #10B981; }
+        .stat-icon.review { background: rgba(196,181,253,0.12); color: #C4B5FD; }
+        .stat-info { display: flex; flex-direction: column; }
+        .stat-num {
+            font-size: 28px; font-weight: 700; line-height: 1.2;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+        .stat-trend {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 11px; font-weight: 600;
+        }
+        .trend-up { color: #10B981; }
+        .trend-down { color: #EF4444; }
+        .stat-ring {
+            width: 40px; height: 40px; margin-left: auto;
+        }
+
+        /* ====== 主内容双栏 ====== */
+        .main-grid {
+            display: grid; grid-template-columns: 1.2fr 0.9fr; gap: 18px;
+            margin-bottom: 20px;
+        }
+        .section-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 20px; overflow: hidden;
+        }
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 20px 12px;
+        }
+        .section-title {
+            font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+        }
+        .section-title i { font-size: 14px; color: var(--accent); }
+        .section-badge {
+            font-size: 11px; font-weight: 600; padding: 4px 10px;
+            border-radius: 20px; font-family: 'Space Grotesk', sans-serif;
+        }
+        .section-badge.red { background: rgba(239,68,68,0.12); color: #EF4444; }
+        .section-badge.orange { background: var(--accent-dim); color: var(--accent); }
+        .section-badge.green { background: rgba(16,185,129,0.12); color: #10B981; }
+        .section-body { padding: 0 14px 14px; }
+
+        /* ====== 待办任务列表（增强） ====== */
+        .task-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; border-radius: 14px;
+            cursor: pointer; transition: var(--transition);
+            position: relative; margin-bottom: 4px;
+        }
+        .task-item:hover { background: var(--card-hover); }
+        .task-item::before {
+            content: ''; position: absolute; left: 0; top: 10px; bottom: 10px;
+            width: 4px; border-radius: 4px;
+        }
+        .task-item.high::before { background: var(--priority-high); }
+        .task-item.medium::before { background: var(--priority-medium); }
+        .task-item.low::before { background: var(--priority-low); }
+        .task-check {
+            width: 22px; height: 22px; border-radius: 8px;
+            border: 2px solid var(--border-light); background: transparent;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: var(--transition); flex-shrink: 0;
+            color: transparent; font-size: 11px;
+        }
+        .task-check:hover { border-color: var(--accent); background: var(--accent-dim); }
+        .task-check.checked {
+            background: var(--priority-low); border-color: var(--priority-low); color: #fff;
+        }
+        .task-item.completed .task-title { text-decoration: line-through; color: var(--text-muted); }
+        .task-info { flex: 1; min-width: 0; }
+        .task-title { font-size: 14px; font-weight: 500; line-height: 1.4; margin-bottom: 4px; }
+        .task-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .task-tag {
+            display: inline-flex; align-items: center;
+            padding: 2px 8px; border-radius: 6px;
+            font-size: 10px; font-weight: 600;
+        }
+        .task-due { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+        .task-due.overdue { color: var(--priority-high); }
+        .task-due.today { color: var(--priority-medium); }
+        .task-team-dot { width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; }
+        .task-subtask-bar {
+            width: 60px; height: 6px; border-radius: 4px; background: var(--border);
+            overflow: hidden; margin-left: auto; flex-shrink: 0;
+        }
+        .task-subtask-fill { height: 100%; border-radius: 4px; transition: width 400ms ease; }
+        .task-subtask-text { font-size: 11px; color: var(--text-muted); font-family: 'Space Grotesk', sans-serif; margin-left: 6px; flex-shrink: 0; }
+        .task-estimate {
+            font-size: 10px; background: var(--surface); padding: 2px 6px; border-radius: 12px;
+            color: var(--text-muted); margin-left: 6px;
+        }
+
+        /* ====== 活跃项目（增加里程碑） ====== */
+        .project-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; border-radius: 14px;
+            cursor: pointer; transition: var(--transition); margin-bottom: 4px;
+        }
+        .project-item:hover { background: var(--card-hover); }
+        .project-dot { width: 12px; height: 12px; border-radius: 6px; flex-shrink: 0; }
+        .project-info { flex: 1; min-width: 0; }
+        .project-name { font-size: 14px; font-weight: 500; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .project-bar-track { width: 100%; height: 6px; border-radius: 4px; background: var(--border); overflow: hidden; margin-bottom: 6px; }
+        .project-bar-fill { height: 100%; border-radius: 4px; transition: width 400ms ease; }
+        .project-pct {
+            font-size: 14px; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+            min-width: 42px; text-align: right; flex-shrink: 0;
+        }
+        .project-status {
+            font-size: 10px; font-weight: 600; padding: 4px 8px;
+            border-radius: 20px; flex-shrink: 0;
+        }
+        .project-status.risk { background: rgba(239,68,68,0.12); color: #EF4444; }
+        .project-status.normal { background: rgba(16,185,129,0.12); color: #10B981; }
+        .project-status.slow { background: rgba(245,158,11,0.12); color: #F59E0B; }
+        .milestone-badge {
+            font-size: 10px; background: var(--accent-dim); color: var(--accent);
+            padding: 2px 6px; border-radius: 12px; margin-left: 4px;
+        }
+
+        /* ====== 团队动态（增加标签切换） ====== */
+        .activity-tabs {
+            display: flex; gap: 4px; padding: 0 16px 8px;
+        }
+        .activity-tab {
+            padding: 6px 14px; border-radius: 20px; font-size: 12px;
+            background: transparent; border: none; color: var(--text-muted);
+            cursor: pointer; transition: var(--transition);
+        }
+        .activity-tab.active {
+            background: var(--accent-dim); color: var(--accent);
+        }
+        .activity-item {
+            display: flex; gap: 12px; padding: 10px 16px;
+            border-radius: 12px; transition: background var(--transition);
+            margin-bottom: 2px; position: relative;
+        }
+        .activity-item:hover { background: var(--card-hover); }
+        .activity-avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            object-fit: cover; flex-shrink: 0; margin-top: 2px;
+        }
+        .activity-content { flex: 1; min-width: 0; }
+        .activity-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+        .activity-text strong { color: var(--text); font-weight: 600; }
+        .activity-text .highlight { color: var(--accent); cursor: pointer; }
+        .activity-text .highlight:hover { text-decoration: underline; }
+        .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        /* ====== 底部多栏布局（趋势+热力图+效能） ========== */
+        .bottom-grid {
+            display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 18px;
+        }
+        .chart-area { padding: 18px 20px; }
+        .chart-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 18px;
+        }
+        .chart-title { font-size: 15px; font-weight: 600; }
+        .chart-tabs { display: flex; gap: 4px; }
+        .chart-tab {
+            padding: 4px 12px; border-radius: 20px; font-size: 12px;
+            color: var(--text-muted); cursor: pointer; background: transparent;
+            border: none; transition: var(--transition);
+        }
+        .chart-tab:hover { color: var(--text-secondary); }
+        .chart-tab.active { background: var(--accent-dim); color: var(--accent); }
+        .chart-svg { width: 100%; }
+
+        /* 热力图 */
+        .heatmap-grid {
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+            padding: 8px 0;
+        }
+        .heatmap-cell {
+            aspect-ratio: 1; border-radius: 6px;
+            background: var(--border); transition: var(--transition);
+            cursor: pointer;
+        }
+        .heatmap-cell.level-1 { background: rgba(255,107,53,0.2); }
+        .heatmap-cell.level-2 { background: rgba(255,107,53,0.4); }
+        .heatmap-cell.level-3 { background: rgba(255,107,53,0.6); }
+        .heatmap-cell.level-4 { background: rgba(255,107,53,0.8); }
+        .heatmap-cell.level-5 { background: var(--accent); }
+
+        .heatmap-range-select {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            outline: none;
+            transition: var(--transition);
+        }
+        .heatmap-range-select:hover { border-color: var(--border-light); }
+        .heatmap-range-select:focus { border-color: var(--accent); }
+
+        .heatmap-tooltip {
+            position: absolute;
+            background: var(--surface);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 11px;
+            color: var(--text);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
+        }
+
+        /* 效能卡片 */
+        .efficiency-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0; border-bottom: 1px solid var(--border);
+        }
+        .efficiency-item:last-child { border: none; }
+        .eff-label { font-size: 13px; color: var(--text-secondary); }
+        .eff-value { font-size: 18px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
+        .eff-unit { font-size: 11px; color: var(--text-muted); margin-left: 4px; }
+        .eff-trend { font-size: 12px; margin-left: 8px; }
+
+        /* 负荷分布 */
+        .workload-area { padding: 18px 20px; }
+        .workload-list { display: flex; flex-direction: column; gap: 14px; }
+        .wl-item { display: flex; align-items: center; gap: 12px; }
+        .wl-tag {
+            display: inline-flex; align-items: center;
+            padding: 4px 10px; border-radius: 8px;
+            font-size: 11px; font-weight: 600; min-width: 52px; justify-content: center;
+        }
+        .wl-bar-track { flex: 1; height: 8px; border-radius: 6px; background: var(--border); overflow: hidden; }
+        .wl-bar-fill { height: 100%; border-radius: 6px; transition: width 600ms ease; }
+        .wl-pct { font-size: 13px; font-weight: 600; font-family: 'Space Grotesk', sans-serif; color: var(--text-secondary); min-width: 38px; text-align: right; }
+
+        /* ========== 模态框 ========== */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 200ms ease;
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+        .modal {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 24px; width: 90%; max-width: 500px;
+            max-height: 85vh; overflow-y: auto;
+            transform: translateY(20px) scale(0.96);
+            transition: transform 250ms ease;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+        }
+        .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 24px 28px 0; margin-bottom: 20px;
+        }
+        .modal-title { font-size: 20px; font-weight: 700; }
+        .modal-close {
+            width: 36px; height: 36px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            background: transparent; border: none; color: var(--text-muted);
+            font-size: 16px; cursor: pointer; transition: var(--transition);
+        }
+        .modal-close:hover { background: var(--card); color: var(--text); }
+        .modal-body { padding: 0 28px 28px; }
+        .form-group { margin-bottom: 18px; }
+        .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .form-input {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 12px 16px;
+            color: var(--text); font-size: 14px; width: 100%;
+            outline: none; transition: var(--transition);
+        }
+        .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+        .form-input.error { border-color: #EF4444; }
+        .form-error { font-size: 12px; color: #EF4444; margin-top: 6px; display: none; }
+        .form-error.show { display: block; }
+        .form-row { display: flex; gap: 14px; }
+        .form-row .form-group { flex: 1; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid var(--border); margin-top: 8px; }
+        select.form-input { cursor: pointer; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%236B6B6B'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 14px center;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed; bottom: 28px; right: 28px;
+            z-index: 200; display: flex; flex-direction: column-reverse; gap: 10px;
+        }
+        .toast {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 14px 20px;
+            display: flex; align-items: center; gap: 12px;
+            font-size: 14px; color: var(--text);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.4);
+            animation: toastIn 300ms ease forwards; min-width: 280px;
+        }
+        .toast.out { animation: toastOut 300ms ease forwards; }
+        .toast-icon {
+            width: 28px; height: 28px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; flex-shrink: 0;
+        }
+        .toast-icon.success { background: rgba(16,185,129,0.12); color: #10B981; }
+        .toast-icon.info { background: rgba(125,211,252,0.12); color: #7DD3FC; }
+        @keyframes toastIn { from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)} }
+        @keyframes toastOut { from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(40px)} }
+
+        /* 响应式 */
+        @media (max-width: 1300px) {
+            .bottom-grid { grid-template-columns: 1fr 1fr; }
+            .main-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 1000px) {
+            .filter-panel { width: 0; min-width: 0; padding: 0; overflow: hidden; border: none; }
+            .filter-panel .panel-toggle { right: -48px; }
+            .stats-bar { grid-template-columns: repeat(2, 1fr); }
+            .main-content { padding: 20px 20px; }
+            .greeting-title { font-size: 26px; }
+            .search-box { width: 200px; }
+        }
+        @media (max-width: 600px) {
+            .stats-bar { grid-template-columns: 1fr; gap: 12px; }
+            .greeting-area { flex-direction: column; align-items: flex-start; }
+            .greeting-right { width: 100%; }
+            .search-box { flex: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"><div class="glow-orb"></div><div class="glow-orb"></div><div class="glow-orb"></div></div>
+
+    <div class="app-layout">
+        <!-- 导航轨道 -->
+        <nav class="nav-rail" aria-label="主导航">
+            <div class="nav-logo" aria-label="FlowBoard">F</div>
+            <button class="nav-item active" title="仪表盘"><i class="fas fa-th-large"></i></button>
+            <button class="nav-item" title="任务"><i class="fas fa-check-square"></i></button>
+            <button class="nav-item" title="团队"><i class="fas fa-users"></i></button>
+            <button class="nav-item" title="日历"><i class="fas fa-calendar-alt"></i></button>
+            <button class="nav-item" title="文件"><i class="fas fa-folder-open"></i></button>
+            <div class="nav-spacer"></div>
+            <button class="nav-item" title="设置"><i class="fas fa-cog"></i></button>
+            <img class="nav-avatar" src="https://picsum.photos/seed/myavatar/100/100.jpg" alt="用户头像">
+        </nav>
+
+        <!-- 筛选面板（增强） -->
+        <aside class="filter-panel" id="filterPanel">
+            <button class="panel-toggle" id="panelToggle"><i class="fas fa-chevron-left"></i></button>
+
+            <div>
+                <div class="filter-section-title">视图</div>
+                <div class="filter-nav" id="viewNav">
+                    <button class="filter-nav-item active" data-view="overview"><i class="fas fa-th-large"></i> 总览</button>
+                    <button class="filter-nav-item" data-view="mytasks"><i class="fas fa-user"></i> 我的任务 <span class="count" id="myTaskCount"></span></button>
+                    <button class="filter-nav-item" data-view="teamview"><i class="fas fa-users"></i> 团队视角</button>
+                </div>
+            </div>
+
+            <div>
+                <div class="filter-section-title">活跃项目</div>
+                <div class="quick-projects" id="quickProjects"></div>
+            </div>
+
+            <!-- 专注计时器 -->
+            <div class="focus-timer">
+                <div class="filter-section-title" style="margin-bottom: 6px;">🍅 专注计时</div>
+                <div class="timer-display" id="timerDisplay">25:00</div>
+                <div class="timer-controls">
+                    <button class="timer-btn" onclick="startTimer()"><i class="fas fa-play"></i> 开始</button>
+                    <button class="timer-btn" onclick="pauseTimer()"><i class="fas fa-pause"></i> 暂停</button>
+                    <button class="timer-btn" onclick="resetTimer()"><i class="fas fa-redo-alt"></i> 重置</button>
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 12px; text-align: center;">今日已专注 2.5h · 目标 6h</div>
+            </div>
+
+            <!-- 快速笔记 -->
+            <div class="quick-note">
+                <div class="filter-section-title">📝 快速笔记</div>
+                <textarea placeholder="记录一闪而过的想法...">下午3点评审支付流程</textarea>
+            </div>
+
+            <div>
+                <div class="filter-section-title">本周节奏</div>
+                <div class="panel-mini-chart" style="background: var(--card); border-radius: 16px; padding: 16px;">
+                    <div class="panel-chart-title" style="display: flex; justify-content: space-between;">
+                        <span>完成趋势</span>
+                        <span class="panel-chart-val" id="weekTotal">0</span>
+                    </div>
+                    <svg id="miniChart" viewBox="0 0 200 50" style="width:100%;height:55px;"></svg>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容 -->
+        <main class="main-content">
+            <header class="greeting-area">
+                <div class="greeting-left">
+                    <h1 class="greeting-title" id="greetingTitle">下午好，林小明</h1>
+                    <p class="greeting-sub" id="greetingSub">今天有 <span class="accent-text">3</span> 件要事待办，<span class="accent-text">2</span> 项任务已延期</p>
+                </div>
+                <div class="greeting-right">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="搜索任务、项目或成员...">
+                    </div>
+                    <div class="quick-create-wrapper">
+                        <button class="btn btn-primary" id="quickCreateBtn"><i class="fas fa-plus"></i> 新建</button>
+                        <div class="quick-create-menu" id="quickCreateMenu">
+                            <div class="qc-item" onclick="openModal('createTaskModal')"><i class="fas fa-check-square"></i> 新建任务</div>
+                            <div class="qc-item" onclick="showToast('info','项目创建功能即将上线')"><i class="fas fa-folder-plus"></i> 新建项目</div>
+                            <div class="qc-item" onclick="showToast('info','团队创建功能即将上线')"><i class="fas fa-user-plus"></i> 新建团队</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- KPI 卡片增强 -->
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-icon todo"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">今日待办</span>
+                        <span class="stat-num" id="statTodo">0</span>
+                        <span class="stat-trend trend-down" id="statOverdue"></span>
+                    </div>
+                    <svg class="stat-ring" viewBox="0 0 40 40">
+                        <circle cx="20" cy="20" r="16" fill="none" stroke="var(--border)" stroke-width="3"/>
+                        <circle cx="20" cy="20" r="16" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="100.5" stroke-dashoffset="40" stroke-linecap="round" transform="rotate(-90 20 20)"/>
+                    </svg>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon doing"><i class="fas fa-spinner"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">进行中</span>
+                        <span class="stat-num" id="statDoing">0</span>
+                        <span class="stat-trend trend-up"><i class="fas fa-arrow-up"></i> +2</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon done"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">本周完成</span>
+                        <span class="stat-num" id="statDone">0</span>
+                        <span class="stat-trend trend-up" id="statDoneSub"></span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon review"><i class="fas fa-eye"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">待审阅</span>
+                        <span class="stat-num" id="statReview">0</span>
+                        <span class="stat-trend">较昨日持平</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 双栏：待办 + 项目/动态 -->
+            <div class="main-grid">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title"><i class="fas fa-fire"></i> 紧急与待办</div>
+                        <span class="section-badge red" id="urgentCount"></span>
+                    </div>
+                    <div class="section-body" id="urgentList"></div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:18px;">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title"><i class="fas fa-rocket"></i> 活跃项目</div>
+                        </div>
+                        <div class="section-body" id="projectList"></div>
+                    </div>
+
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title"><i class="fas fa-stream"></i> 团队动态</div>
+                        </div>
+                        <div class="activity-tabs">
+                            <button class="activity-tab active" data-tab="activity">活动</button>
+                            <button class="activity-tab" data-tab="comments">评论</button>
+                        </div>
+                        <div class="section-body" id="activityList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部三栏：趋势 + 热力图 + 效能 -->
+            <div class="bottom-grid">
+                <div class="section-card">
+                    <div class="chart-area">
+                        <div class="chart-header">
+                            <div class="chart-title">📈 完成趋势</div>
+                            <div class="chart-tabs">
+                                <button class="chart-tab active" data-range="week">周</button>
+                                <button class="chart-tab" data-range="month">月</button>
+                            </div>
+                        </div>
+                        <svg id="trendChart" class="chart-svg" viewBox="0 0 600 160"></svg>
+                    </div>
+                </div>
+                <div class="section-card">
+                    <div class="workload-area">
+                        <div class="chart-header">
+                            <div class="chart-title">🔥 任务热力图</div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span style="font-size:11px; color: var(--text-muted);" id="heatmapRangeLabel">近4周</span>
+                                <select class="heatmap-range-select" id="heatmapRangeSelect">
+                                    <option value="4weeks" selected>4周</option>
+                                    <option value="month">月度</option>
+                                    <option value="quarter">季度</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="heatmap-grid" id="heatmapContainer"></div>
+                        <div style="display:flex; justify-content: space-between; margin-top: 12px;">
+                            <span style="font-size:11px; color: var(--text-muted);">较少</span>
+                            <div style="display:flex; gap:4px;">
+                                <span style="width:12px;height:12px;background:var(--border);border-radius:3px;"></span>
+                                <span style="width:12px;height:12px;background:rgba(255,107,53,0.2);border-radius:3px;"></span>
+                                <span style="width:12px;height:12px;background:rgba(255,107,53,0.4);border-radius:3px;"></span>
+                                <span style="width:12px;height:12px;background:rgba(255,107,53,0.6);border-radius:3px;"></span>
+                                <span style="width:12px;height:12px;background:var(--accent);border-radius:3px;"></span>
+                            </div>
+                            <span style="font-size:11px; color: var(--text-muted);">较多</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="section-card">
+                    <div class="workload-area">
+                        <div class="chart-header">
+                            <div class="chart-title">⚡ 团队效能</div>
+                        </div>
+                        <div style="padding: 0 6px;">
+                            <div class="efficiency-item">
+                                <span class="eff-label">平均任务完成时间</span>
+                                <span><span class="eff-value">2.4</span><span class="eff-unit">天</span><span class="eff-trend trend-down"><i class="fas fa-arrow-down"></i> 0.3</span></span>
+                            </div>
+                            <div class="efficiency-item">
+                                <span class="eff-label">代码审查通过率</span>
+                                <span><span class="eff-value">94</span><span class="eff-unit">%</span><span class="eff-trend trend-up"><i class="fas fa-arrow-up"></i> 2%</span></span>
+                            </div>
+                            <div class="efficiency-item">
+                                <span class="eff-label">Bug 修复速率</span>
+                                <span><span class="eff-value">8.2</span><span class="eff-unit">/周</span><span class="eff-trend trend-up"><i class="fas fa-arrow-up"></i> 1.1</span></span>
+                            </div>
+                            <div class="efficiency-item">
+                                <span class="eff-label">迭代速率</span>
+                                <span><span class="eff-value">32</span><span class="eff-unit">pts</span><span class="eff-trend">持平</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 新建任务模态框 -->
+    <div class="modal-overlay" id="createTaskModal" role="dialog" aria-modal="true" aria-label="新建任务">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">快速新建任务</h2>
+                <button class="modal-close" onclick="closeModal('createTaskModal')" aria-label="关闭"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="taskTitle">任务标题</label>
+                    <input class="form-input" id="taskTitle" type="text" placeholder="描述你要完成的事情..." maxlength="60">
+                    <div class="form-error" id="taskTitleError">请输入任务标题</div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="taskPriority">优先级</label>
+                        <select class="form-input" id="taskPriority">
+                            <option value="high">高优先级</option>
+                            <option value="medium" selected>中优先级</option>
+                            <option value="low">低优先级</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="taskTag">标签</label>
+                        <select class="form-input" id="taskTag">
+                            <option value="开发">开发</option>
+                            <option value="设计">设计</option>
+                            <option value="调研">调研</option>
+                            <option value="文档">文档</option>
+                            <option value="缺陷">缺陷</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="taskDue">截止日期</label>
+                        <input class="form-input" id="taskDue" type="date">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="taskDiff">难度</label>
+                        <select class="form-input" id="taskDiff">
+                            <option value="easy">简单</option>
+                            <option value="medium" selected>中等</option>
+                            <option value="hard">困难</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-ghost" onclick="closeModal('createTaskModal')">取消</button>
+                    <button class="btn btn-primary" onclick="createTask()"><i class="fas fa-plus"></i> 创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        (function(){
+            /* ========== 预览数据定义 ========== */
+            const today = new Date();
+            const fmt = d => d.toISOString().slice(0,10);
+            const daysAgo = n => { const d = new Date(today); d.setDate(d.getDate() - n); return fmt(d); };
+            const daysLater = n => { const d = new Date(today); d.setDate(d.getDate() + n); return fmt(d); };
+
+            const tagColors = {
+                '设计': { bg: 'rgba(167,139,250,0.13)', text: '#C4B5FD' },
+                '开发': { bg: 'rgba(56,189,248,0.13)', text: '#7DD3FC' },
+                '调研': { bg: 'rgba(251,146,60,0.13)', text: '#FDBA74' },
+                '缺陷': { bg: 'rgba(248,113,113,0.13)', text: '#FCA5A5' },
+                '文档': { bg: 'rgba(52,211,153,0.13)', text: '#6EE7B7' },
+            };
+            const teamColors = { '前端开发组': '#FF6B35', '产品设计团队': '#C4B5FD', '后端架构组': '#7DD3FC', '运营增长组': '#FDBA74', '质量保障团队': '#6EE7B7' };
+
+            const tasks = [
+                { id:1, title:'修复首页白屏崩溃问题', priority:'high', tag:'缺陷', team:'前端开发组', due: daysAgo(2), subtasks:2, subtasksDone:1, done:false, estimate:'4h' },
+                { id:2, title:'完成支付流程安全审计', priority:'high', tag:'开发', team:'后端架构组', due: daysAgo(1), subtasks:4, subtasksDone:2, done:false, estimate:'8h' },
+                { id:3, title:'设计 V3.0 改版原型图', priority:'high', tag:'设计', team:'产品设计团队', due: fmt(today), subtasks:5, subtasksDone:3, done:false, estimate:'6h' },
+                { id:4, title:'编写 API 网关迁移文档', priority:'medium', tag:'文档', team:'后端架构组', due: fmt(today), subtasks:3, subtasksDone:1, done:false, estimate:'3h' },
+                { id:5, title:'优化列表页加载性能', priority:'medium', tag:'开发', team:'前端开发组', due: daysLater(1), subtasks:2, subtasksDone:0, done:false, estimate:'5h' },
+                { id:6, title:'调研竞品会员体系方案', priority:'medium', tag:'调研', team:'运营增长组', due: daysLater(2), subtasks:3, subtasksDone:1, done:false, estimate:'4h' },
+                { id:7, title:'组件库 DatePicker 重构', priority:'medium', tag:'开发', team:'前端开发组', due: daysLater(3), subtasks:6, subtasksDone:2, done:false, estimate:'12h' },
+                { id:8, title:'自动化测试覆盖率提升', priority:'low', tag:'开发', team:'质量保障团队', due: daysLater(4), subtasks:4, subtasksDone:1, done:false, estimate:'6h' },
+                { id:9, title:'整理设计系统色板规范', priority:'low', tag:'设计', team:'产品设计团队', due: daysLater(5), subtasks:3, subtasksDone:3, done:false, estimate:'2h' },
+                { id:10, title:'用户反馈数据周报', priority:'low', tag:'文档', team:'运营增长组', due: daysLater(3), subtasks:1, subtasksDone:0, done:false, estimate:'2h' },
+            ];
+
+            const projects = [
+                { name:'官网 V3.0 改版', color:'#FF6B35', progress:72, status:'normal', tasks:24, done:17, milestone:'设计定稿' },
+                { name:'支付系统升级', color:'#7DD3FC', progress:45, status:'risk', tasks:18, done:8, milestone:'联调测试' },
+                { name:'移动端组件库', color:'#C4B5FD', progress:88, status:'normal', tasks:32, done:28, milestone:'文档发布' },
+                { name:'数据中台建设', color:'#6EE7B7', progress:31, status:'slow', tasks:15, done:5, milestone:'数据接入' },
+                { name:'用户增长运营', color:'#FDBA74', progress:60, status:'normal', tasks:12, done:7, milestone:'活动上线' },
+            ];
+
+            const activities = [
+                { user:'王芳', avatar:'https://picsum.photos/seed/m2/80/80.jpg', action:'完成了任务', target:'UI 组件库更新', team:'前端开发组', time:'10 分钟前' },
+                { user:'杨帆', avatar:'https://picsum.photos/seed/m13/80/80.jpg', action:'创建了缺陷', target:'支付回调超时', team:'后端架构组', time:'30 分钟前' },
+                { user:'刘洋', avatar:'https://picsum.photos/seed/m9/80/80.jpg', action:'提交了设计稿', target:'首页改版 V3', team:'产品设计团队', time:'1 小时前' },
+                { user:'许静', avatar:'https://picsum.photos/seed/m18/80/80.jpg', action:'关闭了任务', target:'登录页回归测试', team:'质量保障团队', time:'2 小时前' },
+                { user:'宋雨', avatar:'https://picsum.photos/seed/m20/80/80.jpg', action:'添加了评论', target:'增长方案评审', team:'运营增长组', time:'3 小时前' },
+                { user:'张伟', avatar:'https://picsum.photos/seed/m3/80/80.jpg', action:'开始了任务', target:'表单校验重构', team:'前端开发组', time:'4 小时前' },
+            ];
+
+            const weekData = [
+                { day:'周一', done:5, created:7 },
+                { day:'周二', done:8, created:6 },
+                { day:'周三', done:6, created:9 },
+                { day:'周四', done:10, created:8 },
+                { day:'周五', done:7, created:5 },
+                { day:'周六', done:3, created:2 },
+                { day:'周日', done:4, created:3 },
+            ];
+
+            const monthData = Array.from({length:30}, (_, i) => ({
+                day: `${i+1}日`,
+                done: Math.floor(Math.random()*8) + 2,
+                created: Math.floor(Math.random()*7) + 2,
+            }));
+
+            /* ========== 工具函数 ========== */
+            function getGreeting() {
+                const h = new Date().getHours();
+                if (h < 6) return '夜深了';
+                if (h < 12) return '早上好';
+                if (h < 14) return '中午好';
+                if (h < 18) return '下午好';
+                return '晚上好';
+            }
+
+            function formatDue(dateStr) {
+                const todayStr = fmt(today);
+                const tomorrowStr = daysLater(1);
+                if (dateStr === todayStr) return { text:'今天', cls:'today' };
+                if (dateStr === tomorrowStr) return { text:'明天', cls:'' };
+                if (dateStr < todayStr) {
+                    const diff = Math.ceil((today - new Date(dateStr)) / 86400000);
+                    return { text:`逾期${diff}天`, cls:'overdue' };
+                }
+                return { text: dateStr.slice(5), cls:'' };
+            }
+
+            function getSubtaskColor(pct) {
+                if (pct <= 50) return '#FF6B35';
+                if (pct < 100) return '#F59E0B';
+                return '#10B981';
+            }
+
+            /* ========== 渲染函数 ========== */
+            function renderGreeting() {
+                document.getElementById('greetingTitle').textContent = `${getGreeting()}，林小明`;
+                const overdue = tasks.filter(t => !t.done && t.due < fmt(today)).length;
+                const todayTasks = tasks.filter(t => !t.done && t.due === fmt(today)).length;
+                let sub = '';
+                if (todayTasks > 0) sub += `今天有 <span class="accent-text">${todayTasks}</span> 件要事待办`;
+                if (overdue > 0) sub += `${todayTasks > 0 ? '，' : ''}<span class="accent-text">${overdue}</span> 项任务已延期`;
+                if (!sub) sub = '一切井然有序，继续保持';
+                document.getElementById('greetingSub').innerHTML = sub;
+            }
+
+            function renderStats() {
+                const todayStr = fmt(today);
+                const overdue = tasks.filter(t => !t.done && t.due < todayStr).length;
+                const todoToday = tasks.filter(t => !t.done && t.due <= todayStr).length;
+                const doing = tasks.filter(t => !t.done).length;
+                const doneWeek = 12;
+
+                animateNum('statTodo', todoToday);
+                animateNum('statDoing', doing);
+                animateNum('statDone', doneWeek);
+                animateNum('statReview', 3);
+
+                const overdueEl = document.getElementById('statOverdue');
+                if (overdue > 0) {
+                    overdueEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${overdue} 件已逾期`;
+                    overdueEl.className = 'stat-trend trend-down';
+                }
+                document.getElementById('statDoneSub').innerHTML = '<i class="fas fa-arrow-up"></i> 较上周 +18%';
+            }
+
+            function animateNum(id, target) {
+                const el = document.getElementById(id);
+                let current = 0;
+                const step = Math.max(1, Math.ceil(target / 20));
+                const timer = setInterval(() => {
+                    current = Math.min(current + step, target);
+                    el.textContent = current;
+                    if (current >= target) clearInterval(timer);
+                }, 40);
+            }
+
+            function renderUrgentList() {
+                const list = document.getElementById('urgentList');
+                const sorted = [...tasks].filter(t => !t.done).sort((a, b) => {
+                    const aOver = a.due < fmt(today) ? 0 : 1;
+                    const bOver = b.due < fmt(today) ? 0 : 1;
+                    if (aOver !== bOver) return aOver - bOver;
+                    const pOrder = { high: 0, medium: 1, low: 2 };
+                    return pOrder[a.priority] - pOrder[b.priority];
+                });
+
+                document.getElementById('urgentCount').textContent = sorted.length;
+
+                list.innerHTML = sorted.map(t => {
+                    const due = formatDue(t.due);
+                    const tc = tagColors[t.tag] || { bg:'rgba(160,160,160,0.1)', text:'#A0A0A0' };
+                    const teamColor = teamColors[t.team] || '#5A5A5A';
+                    const pct = t.subtasks > 0 ? Math.round(t.subtasksDone / t.subtasks * 100) : 0;
+                    const barColor = getSubtaskColor(pct);
+
+                    return `
+                        <div class="task-item ${t.priority}" data-id="${t.id}">
+                            <div class="task-check" onclick="event.stopPropagation(); toggleTask(${t.id})" tabindex="0" role="checkbox" aria-checked="false">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="task-info">
+                                <div class="task-title">${t.title}</div>
+                                <div class="task-meta">
+                                    <span class="task-tag" style="background:${tc.bg};color:${tc.text}">${t.tag}</span>
+                                    <span class="task-team-dot" style="background:${teamColor}"></span>
+                                    <span style="font-size:10px;color:var(--text-muted)">${t.team}</span>
+                                    <span class="task-due ${due.cls}"><i class="fas fa-clock"></i> ${due.text}</span>
+                                    <span class="task-estimate"><i class="far fa-hourglass"></i> ${t.estimate || '?'}</span>
+                                </div>
+                            </div>
+                            ${t.subtasks > 0 ? `
+                                <div class="task-subtask-bar"><div class="task-subtask-fill" style="width:${pct}%;background:${barColor}"></div></div>
+                                <span class="task-subtask-text">${t.subtasksDone}/${t.subtasks}</span>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            function renderProjectList() {
+                const list = document.getElementById('projectList');
+                const statusLabels = { normal:'正常', risk:'风险', slow:'缓慢' };
+                list.innerHTML = projects.map(p => `
+                    <div class="project-item">
+                        <div class="project-dot" style="background:${p.color}"></div>
+                        <div class="project-info">
+                            <div class="project-name">
+                                ${p.name}
+                                <span class="milestone-badge">📌 ${p.milestone}</span>
+                            </div>
+                            <div class="project-bar-track"><div class="project-bar-fill" style="width:${p.progress}%;background:${p.color}"></div></div>
+                        </div>
+                        <span class="project-pct" style="color:${p.color}">${p.progress}%</span>
+                        <span class="project-status ${p.status}">${statusLabels[p.status]}</span>
+                    </div>
+                `).join('');
+            }
+
+            function renderActivityList() {
+                const list = document.getElementById('activityList');
+                list.innerHTML = activities.map(a => `
+                    <div class="activity-item">
+                        <img class="activity-avatar" src="${a.avatar}" alt="${a.user}">
+                        <div class="activity-content">
+                            <div class="activity-text"><strong>${a.user}</strong> ${a.action} <span class="highlight">${a.target}</span></div>
+                            <div class="activity-time"><span class="task-team-dot" style="background:${teamColors[a.team]||'#5A5A5A'};display:inline-block;width:5px;height:5px;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>${a.team} · ${a.time}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            function renderQuickProjects() {
+                const el = document.getElementById('quickProjects');
+                el.innerHTML = projects.map(p => `
+                    <div class="qp-item">
+                        <div class="qp-dot" style="background:${p.color}"></div>
+                        <span>${p.name}</span>
+                        <span class="qp-progress" style="color:${p.color}">${p.progress}%</span>
+                    </div>
+                `).join('');
+            }
+
+            function renderMiniChart() {
+                const svg = document.getElementById('miniChart');
+                const data = weekData.map(d => d.done);
+                const max = Math.max(...data, 1);
+                const w = 200, h = 50, pad = 4;
+                const step = (w - pad * 2) / (data.length - 1);
+
+                const points = data.map((v, i) => `${pad + i * step},${h - pad - (v / max) * (h - pad * 2)}`).join(' ');
+                const areaPoints = points + ` ${pad + (data.length - 1) * step},${h - pad} ${pad},${h - pad}`;
+
+                svg.innerHTML = `
+                    <defs>
+                        <linearGradient id="miniGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#FF6B35" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="#FF6B35" stop-opacity="0.02"/>
+                        </linearGradient>
+                    </defs>
+                    <polygon points="${areaPoints}" fill="url(#miniGrad)"/>
+                    <polyline points="${points}" fill="none" stroke="#FF6B35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    ${data.map((v, i) => `<circle cx="${pad + i * step}" cy="${h - pad - (v / max) * (h - pad * 2)}" r="2.5" fill="#FF6B35"/>`).join('')}
+                `;
+
+                const total = data.reduce((s, v) => s + v, 0);
+                document.getElementById('weekTotal').textContent = total;
+            }
+
+            function renderTrendChart(range) {
+                const svg = document.getElementById('trendChart');
+                const data = range === 'month' ? monthData : weekData;
+                const maxVal = Math.max(...data.map(d => Math.max(d.done, d.created)), 1);
+                const w = 600, h = 160, padL = 30, padR = 10, padT = 10, padB = 28;
+                const chartW = w - padL - padR, chartH = h - padT - padB;
+                const step = chartW / (data.length - 1);
+
+                function toPoints(key) {
+                    return data.map((d, i) => `${padL + i * step},${padT + chartH - (d[key] / maxVal) * chartH}`).join(' ');
+                }
+                function toArea(key) {
+                    return toPoints(key) + ` ${padL + (data.length - 1) * step},${padT + chartH} ${padL},${padT + chartH}`;
+                }
+
+                const gridLines = [0, 0.25, 0.5, 0.75, 1].map(pct => {
+                    const y = padT + chartH * (1 - pct);
+                    return `<line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/>`;
+                }).join('');
+
+                const labels = data.length <= 7 ? data.map((d, i) => {
+                    const x = padL + i * step;
+                    return `<text x="${x}" y="${h - 6}" fill="var(--text-muted)" font-size="9" text-anchor="middle" font-family="Space Grotesk, sans-serif">${d.day}</text>`;
+                }).join('') : data.filter((_, i) => i % 5 === 0 || i === data.length - 1).map((d, _, arr) => {
+                    const idx = data.indexOf(d);
+                    const x = padL + idx * step;
+                    return `<text x="${x}" y="${h - 6}" fill="var(--text-muted)" font-size="8" text-anchor="middle" font-family="Space Grotesk, sans-serif">${d.day}</text>`;
+                }).join('');
+
+                const yLabels = [0, 0.5, 1].map(pct => {
+                    const y = padT + chartH * (1 - pct);
+                    const val = Math.round(maxVal * pct);
+                    return `<text x="${padL - 6}" y="${y + 3}" fill="var(--text-muted)" font-size="8" text-anchor="end" font-family="Space Grotesk, sans-serif">${val}</text>`;
+                }).join('');
+
+                svg.innerHTML = `
+                    <defs>
+                        <linearGradient id="doneGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#FF6B35" stop-opacity="0.25"/>
+                            <stop offset="100%" stop-color="#FF6B35" stop-opacity="0.02"/>
+                        </linearGradient>
+                        <linearGradient id="creatGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#7DD3FC" stop-opacity="0.15"/>
+                            <stop offset="100%" stop-color="#7DD3FC" stop-opacity="0.02"/>
+                        </linearGradient>
+                    </defs>
+                    ${gridLines}${yLabels}
+                    <polygon points="${toArea('created')}" fill="url(#creatGrad)"/>
+                    <polyline points="${toPoints('created')}" fill="none" stroke="#7DD3FC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+                    <polygon points="${toArea('done')}" fill="url(#doneGrad)"/>
+                    <polyline points="${toPoints('done')}" fill="none" stroke="#FF6B35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    ${data.map((d, i) => `<circle cx="${padL + i * step}" cy="${padT + chartH - (d.done / maxVal) * chartH}" r="3" fill="#FF6B35" stroke="var(--card)" stroke-width="1.5"/>`).join('')}
+                    ${labels}
+                    <line x1="${padL}" y1="${padT + chartH}" x2="${w - padR}" y2="${padT + chartH}" stroke="var(--border-light)" stroke-width="0.5"/>
+                    <circle cx="${padL + 8}" cy="${padT + 6}" r="3" fill="#FF6B35"/>
+                    <text x="${padL + 16}" y="${padT + 9}" fill="var(--text-secondary)" font-size="9" font-family="Noto Sans SC, sans-serif">完成</text>
+                    <circle cx="${padL + 58}" cy="${padT + 6}" r="3" fill="#7DD3FC" opacity="0.6"/>
+                    <text x="${padL + 66}" y="${padT + 9}" fill="var(--text-muted)" font-size="9" font-family="Noto Sans SC, sans-serif">新建</text>
+                `;
+            }
+
+            /* ========== 热力图增强（范围切换 + Tooltip） ========== */
+            const heatmapState = { currentRange: '4weeks', tooltipEl: null };
+
+            function generateHeatmapData(range) {
+                const today = new Date();
+                const data = [];
+                if (range === '4weeks') {
+                    for (let i = 27; i >= 0; i--) {
+                        const d = new Date(today);
+                        d.setDate(d.getDate() - i);
+                        data.push({
+                            date: d,
+                            label: `${d.getMonth()+1}/${d.getDate()}`,
+                            value: Math.floor(Math.random() * 5)
+                        });
+                    }
+                } else if (range === 'month') {
+                    const year = today.getFullYear();
+                    const month = today.getMonth();
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const d = new Date(year, month, day);
+                        data.push({
+                            date: d,
+                            label: `${month+1}/${day}`,
+                            value: Math.floor(Math.random() * 5)
+                        });
+                    }
+                } else {
+                    for (let i = 12; i >= 0; i--) {
+                        const d = new Date(today);
+                        d.setDate(d.getDate() - i * 7);
+                        const dayOfWeek = d.getDay() || 7;
+                        const monday = new Date(d);
+                        monday.setDate(d.getDate() - dayOfWeek + 1);
+                        const sunday = new Date(monday);
+                        sunday.setDate(monday.getDate() + 6);
+                        data.push({
+                            start: monday,
+                            end: sunday,
+                            label: `${monday.getMonth()+1}/${monday.getDate()}`,
+                            value: Math.floor(Math.random() * 12) + 2,
+                            isWeek: true
+                        });
+                    }
+                }
+                return data;
+            }
+
+            function createTooltip() {
+                if (heatmapState.tooltipEl) return;
+                const tooltip = document.createElement('div');
+                tooltip.className = 'heatmap-tooltip';
+                tooltip.style.display = 'none';
+                document.body.appendChild(tooltip);
+                heatmapState.tooltipEl = tooltip;
+            }
+
+            window.showTooltip = function(e, content) {
+                if (!heatmapState.tooltipEl) createTooltip();
+                const tooltip = heatmapState.tooltipEl;
+                tooltip.innerHTML = content;
+                tooltip.style.display = 'block';
+                moveTooltip(e);
+            };
+
+            window.moveTooltip = function(e) {
+                if (!heatmapState.tooltipEl) return;
+                const tooltip = heatmapState.tooltipEl;
+                tooltip.style.left = e.clientX + 10 + 'px';
+                tooltip.style.top = e.clientY - 30 + 'px';
+            };
+
+            window.hideTooltip = function() {
+                if (heatmapState.tooltipEl) heatmapState.tooltipEl.style.display = 'none';
+            };
+
+            function renderHeatmap(range = heatmapState.currentRange) {
+                const container = document.getElementById('heatmapContainer');
+                const data = generateHeatmapData(range);
+                heatmapState.currentRange = range;
+                
+                const labelMap = { '4weeks': '近4周', 'month': '本月', 'quarter': '本季度' };
+                document.getElementById('heatmapRangeLabel').textContent = labelMap[range];
+                
+                const maxVal = Math.max(...data.map(d => d.value), 1);
+                let html = '';
+                data.forEach((item) => {
+                    let level = 0;
+                    if (range === 'quarter') {
+                        const pct = item.value / maxVal;
+                        if (pct > 0.8) level = 4;
+                        else if (pct > 0.6) level = 3;
+                        else if (pct > 0.4) level = 2;
+                        else if (pct > 0.2) level = 1;
+                    } else {
+                        level = item.value;
+                    }
+                    
+                    let tooltipContent = '';
+                    if (item.isWeek) {
+                        const startStr = `${item.start.getMonth()+1}/${item.start.getDate()}`;
+                        const endStr = `${item.end.getMonth()+1}/${item.end.getDate()}`;
+                        tooltipContent = `<strong>${startStr} - ${endStr}</strong><br>完成任务: ${item.value} 个`;
+                    } else {
+                        const dateStr = `${item.date.getFullYear()}-${(item.date.getMonth()+1).toString().padStart(2,'0')}-${item.date.getDate().toString().padStart(2,'0')}`;
+                        tooltipContent = `<strong>${dateStr}</strong><br>完成任务: ${item.value} 个`;
+                    }
+                    
+                    html += `<div class="heatmap-cell level-${level}" 
+                                  data-tooltip="${tooltipContent.replace(/"/g, '&quot;')}"
+                                  onmouseenter="showTooltip(event, this.dataset.tooltip)"
+                                  onmousemove="moveTooltip(event)"
+                                  onmouseleave="hideTooltip()"></div>`;
+                });
+                container.innerHTML = html;
+                container.style.gridTemplateColumns = 'repeat(7, 1fr)';
+            }
+
+            /* ========== 交互 ========== */
+            window.toggleTask = function(id) {
+                const task = tasks.find(t => t.id === id);
+                if (!task) return;
+                task.done = !task.done;
+                const item = document.querySelector(`.task-item[data-id="${id}"]`);
+                const check = item.querySelector('.task-check');
+                if (task.done) {
+                    item.classList.add('completed');
+                    check.classList.add('checked');
+                    showToast('success', `已完成：${task.title}`);
+                } else {
+                    item.classList.remove('completed');
+                    check.classList.remove('checked');
+                }
+                setTimeout(() => { renderStats(); renderGreeting(); renderUrgentList(); }, 300);
+            };
+
+            window.createTask = function() {
+                const titleInput = document.getElementById('taskTitle');
+                const title = titleInput.value.trim();
+                if (!title) {
+                    titleInput.classList.add('error');
+                    document.getElementById('taskTitleError').classList.add('show');
+                    setTimeout(() => { titleInput.classList.remove('error'); document.getElementById('taskTitleError').classList.remove('show'); }, 1500);
+                    return;
+                }
+                const priority = document.getElementById('taskPriority').value;
+                const tag = document.getElementById('taskTag').value;
+                const due = document.getElementById('taskDue').value || daysLater(3);
+                const diff = document.getElementById('taskDiff').value;
+                const estimateMap = { easy:'2h', medium:'4h', hard:'8h' };
+
+                tasks.unshift({
+                    id: Date.now(),
+                    title,
+                    priority,
+                    tag,
+                    team: '前端开发组',
+                    due,
+                    subtasks: 0,
+                    subtasksDone: 0,
+                    done: false,
+                    estimate: estimateMap[diff],
+                });
+
+                closeModal('createTaskModal');
+                renderUrgentList();
+                renderStats();
+                renderGreeting();
+                document.getElementById('myTaskCount').textContent = tasks.filter(t => !t.done).length;
+                showToast('success', `任务「${title}」已创建`);
+            };
+
+            window.openModal = function(id) {
+                document.getElementById(id).classList.add('open');
+                document.body.style.overflow = 'hidden';
+                closeQuickCreateMenu();
+                if (id === 'createTaskModal') {
+                    document.getElementById('taskTitle').value = '';
+                    document.getElementById('taskDue').value = daysLater(3);
+                    setTimeout(() => document.getElementById('taskTitle').focus(), 260);
+                }
+            };
+
+            window.closeModal = function(id) {
+                document.getElementById(id).classList.remove('open');
+                document.body.style.overflow = '';
+            };
+
+            window.showToast = function(type, message) {
+                const container = document.getElementById('toastContainer');
+                const icons = { success:'fa-check', info:'fa-info' };
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.innerHTML = `<div class="toast-icon ${type}"><i class="fas ${icons[type]||'fa-info'}"></i></div><span>${message}</span>`;
+                container.appendChild(toast);
+                setTimeout(() => { toast.classList.add('out'); setTimeout(() => toast.remove(), 300); }, 3000);
+            };
+
+            /* 计时器 */
+            let timerInterval, timerSeconds = 1500, timerRunning = false;
+            function updateTimerDisplay() {
+                const m = Math.floor(timerSeconds / 60).toString().padStart(2,'0');
+                const s = (timerSeconds % 60).toString().padStart(2,'0');
+                document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+            }
+            window.startTimer = function() {
+                if (timerRunning) return;
+                timerRunning = true;
+                timerInterval = setInterval(() => {
+                    if (timerSeconds > 0) { timerSeconds--; updateTimerDisplay(); }
+                    else { clearInterval(timerInterval); timerRunning = false; showToast('info','专注时间结束！'); }
+                }, 1000);
+            };
+            window.pauseTimer = function() { clearInterval(timerInterval); timerRunning = false; };
+            window.resetTimer = function() { timerSeconds = 1500; updateTimerDisplay(); if(timerRunning) { clearInterval(timerInterval); timerRunning = false; } };
+
+            function closeQuickCreateMenu() {
+                document.getElementById('quickCreateMenu').classList.remove('show');
+            }
+
+            /* ========== 事件绑定与初始化 ========== */
+            document.getElementById('quickCreateBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('quickCreateMenu').classList.toggle('show');
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.quick-create-wrapper')) closeQuickCreateMenu();
+            });
+
+            document.getElementById('panelToggle').addEventListener('click', function() {
+                const panel = document.getElementById('filterPanel');
+                panel.classList.toggle('collapsed');
+                this.querySelector('i').className = panel.classList.contains('collapsed') ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+            });
+
+            document.getElementById('viewNav').addEventListener('click', (e) => {
+                const btn = e.target.closest('.filter-nav-item');
+                if (!btn) return;
+                document.querySelectorAll('.filter-nav-item').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                showToast('info', `已切换至「${btn.textContent.trim()}」视图`);
+            });
+
+            document.querySelector('.chart-tabs').addEventListener('click', (e) => {
+                const tab = e.target.closest('.chart-tab');
+                if (!tab) return;
+                document.querySelectorAll('.chart-tabs .chart-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                renderTrendChart(tab.dataset.range);
+            });
+
+            document.querySelector('.activity-tabs').addEventListener('click', (e) => {
+                const tab = e.target.closest('.activity-tab');
+                if (!tab) return;
+                document.querySelectorAll('.activity-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                showToast('info', `切换至${tab.textContent}视图`);
+            });
+
+            document.getElementById('heatmapRangeSelect').addEventListener('change', (e) => {
+                renderHeatmap(e.target.value);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    ['createTaskModal'].forEach(id => {
+                        if (document.getElementById(id).classList.contains('open')) closeModal(id);
+                    });
+                }
+            });
+
+            ['createTaskModal'].forEach(id => {
+                document.getElementById(id).addEventListener('click', function(e) {
+                    if (e.target === this) closeModal(id);
+                });
+            });
+
+            // 初始化渲染
+            renderGreeting();
+            renderStats();
+            renderUrgentList();
+            renderProjectList();
+            renderActivityList();
+            renderQuickProjects();
+            renderMiniChart();
+            renderTrendChart('week');
+            renderHeatmap('4weeks');
+            document.getElementById('myTaskCount').textContent = tasks.filter(t => !t.done).length;
+            updateTimerDisplay();
+        })();
+    </script>
+</body>
+</html>

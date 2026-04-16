@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowBoard - 任务看板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root{--bg:#111111;--surface:#1A1A1A;--card:#1F1F1F;--card-hover:#272727;--border:#2A2A2A;--border-light:#3A3A3A;--text:#E8E8E8;--text-secondary:#A0A0A0;--text-muted:#5A5A5A;--accent:#FF6B35;--accent-light:#FF8F5E;--accent-dim:rgba(255,107,53,0.12);--nav-rail-width:64px;--filter-panel-width:250px;--priority-high:#EF4444;--priority-medium:#F59E0B;--priority-low:#10B981;--diff-easy:#34D399;--diff-medium:#FBBF24;--diff-hard:#F87171;}
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Noto Sans SC','Space Grotesk',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh}
+        h1,h2,h3,h4,.font-display{font-family:'Space Grotesk','Noto Sans SC',sans-serif}
+        .bg-glow{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(120px);opacity:0.35}
+        .bg-glow-1{width:500px;height:500px;background:radial-gradient(circle,rgba(255,107,53,0.15),transparent 70%);top:-120px;left:200px;animation:gf1 25s ease-in-out infinite}
+        .bg-glow-2{width:400px;height:400px;background:radial-gradient(circle,rgba(255,143,94,0.1),transparent 70%);bottom:-50px;right:-50px;animation:gf2 30s ease-in-out infinite}
+        .bg-glow-3{width:350px;height:350px;background:radial-gradient(circle,rgba(167,139,250,0.07),transparent 70%);top:40%;left:55%;animation:gf3 20s ease-in-out infinite}
+        @keyframes gf1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,80px)}}
+        @keyframes gf2{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,-60px)}}
+        @keyframes gf3{0%,100%{transform:translate(0,0)}50%{transform:translate(-70px,50px)}}
+        ::-webkit-scrollbar{width:5px;height:5px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px}
+
+        /* 导航轨道 */
+        .nav-rail{position:fixed;left:0;top:0;bottom:0;width:var(--nav-rail-width);background:#090909;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:12px 0;z-index:50}
+        .nav-rail-logo{width:38px;height:38px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:8px;flex-shrink:0}
+        .nav-rail-divider{width:28px;height:1px;background:var(--border);margin:6px 0;flex-shrink:0}
+        .nav-rail-item{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;transition:all 0.15s;position:relative;margin-bottom:2px;flex-shrink:0;border:none;background:none;font-size:16px}
+        .nav-rail-item:hover{background:rgba(255,255,255,0.05);color:var(--text-secondary)}
+        .nav-rail-item.active{background:var(--accent-dim);color:var(--accent)}
+        .nav-rail-item.active::after{content:'';position:absolute;left:-11px;top:50%;transform:translateY(-50%);width:3px;height:18px;border-radius:0 3px 3px 0;background:var(--accent)}
+        .nav-rail-item .rail-tooltip{position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.15s;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:60}
+        .nav-rail-item:hover .rail-tooltip{opacity:1}
+        .nav-rail-spacer{flex:1}
+        .theme-toggle-btn{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;transition:all 0.15s;border:none;background:none;font-size:15px}
+        .theme-toggle-btn:hover{background:rgba(255,255,255,0.05);color:var(--text-secondary)}
+
+        /* 筛选面板 */
+        .filter-panel{position:fixed;left:var(--nav-rail-width);top:0;bottom:0;width:var(--filter-panel-width);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:40;transition:width 0.3s cubic-bezier(0.4,0,0.2,1),opacity 0.3s;overflow:hidden}
+        .filter-panel.collapsed{width:0;opacity:0;pointer-events:none}
+        .filter-panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;min-height:56px;flex-shrink:0}
+        .filter-panel-toggle{width:26px;height:26px;border-radius:7px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
+        .filter-panel-toggle:hover{background:var(--card);color:var(--text)}
+        .filter-nav{padding:8px 10px}
+        .filter-nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;color:var(--text-secondary);font-size:13px;font-weight:500;transition:all 0.15s;margin-bottom:1px}
+        .filter-nav-item:hover{background:rgba(255,255,255,0.04);color:var(--text)}
+        .filter-nav-item.active{background:var(--accent-dim);color:var(--accent)}
+        .filter-nav-item i{width:16px;text-align:center;font-size:13px;flex-shrink:0}
+        .filter-count{margin-left:auto;background:var(--card);color:var(--text-muted);font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;font-family:'Space Grotesk',sans-serif}
+        .filter-divider{height:1px;background:var(--border);margin:4px 14px}
+        .filter-sections{padding:8px 10px;flex:1;overflow-y:auto}
+        .filter-section{margin-bottom:14px}
+        .filter-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:6px;padding-left:2px}
+        .filter-group{display:flex;gap:3px;flex-wrap:wrap}
+        .filter-btn{padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:11px;cursor:pointer;transition:all 0.12s;font-family:inherit}
+        .filter-btn:hover{border-color:var(--border-light);color:var(--text)}
+        .filter-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+        .filter-tag-btn{padding:3px 8px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:10px;cursor:pointer;transition:all 0.12s;font-family:inherit}
+        .filter-tag-btn:hover{border-color:var(--border-light)}
+        .filter-tag-btn.active{background:rgba(255,255,255,0.06);border-color:var(--text-muted);color:var(--text)}
+        .filter-expand-btn{position:fixed;left:var(--nav-rail-width);top:50%;transform:translateY(-50%);width:22px;height:48px;background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;cursor:pointer;z-index:41;display:none;align-items:center;justify-content:center;color:var(--text-muted);transition:all 0.15s;font-size:10px}
+        .filter-expand-btn:hover{background:var(--card);color:var(--text);width:26px}
+        .filter-panel.collapsed~.filter-expand-btn{display:flex}
+
+        /* 主内容 */
+        .main-content{margin-left:calc(var(--nav-rail-width) + var(--filter-panel-width));height:100vh;display:flex;flex-direction:column;transition:margin-left 0.3s cubic-bezier(0.4,0,0.2,1);position:relative;z-index:1}
+        .main-content.filter-collapsed{margin-left:var(--nav-rail-width)}
+        .top-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:rgba(17,17,17,0.85);backdrop-filter:blur(12px);flex-shrink:0}
+        .search-wrapper{position:relative}
+        .search-wrapper i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px}
+        .search-wrapper input{padding-left:38px}
+        .input-field{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 14px;color:var(--text);font-size:13px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;font-family:inherit}
+        .input-field:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+        .input-field::placeholder{color:var(--text-muted)}
+        .stats-bar{display:flex;gap:10px;padding:10px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
+        .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:10px;flex:1;transition:border-color 0.2s}
+        .stat-card:hover{border-color:var(--border-light)}
+        .stat-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+        .stat-value{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;line-height:1}
+        .stat-label{font-size:10px;color:var(--text-muted);margin-top:1px}
+        .board-area{flex:1;overflow-x:auto;overflow-y:hidden;padding:16px 24px}
+        .board-container{display:flex;gap:14px;height:100%}
+        .kanban-column{min-width:300px;max-width:300px;background:var(--surface);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;max-height:calc(100vh - 170px);transition:border-color 0.3s,box-shadow 0.3s;animation:col-in 0.35s ease}
+        @keyframes col-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        .kanban-column.drag-over{border-color:var(--accent);box-shadow:0 0 24px var(--accent-dim),inset 0 0 24px var(--accent-dim)}
+        .column-header{padding:12px 12px 8px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2;border-radius:14px 14px 0 0}
+        .column-body{padding:6px;overflow-y:auto;flex:1;min-height:40px}
+        .col-menu-btn{width:22px;height:22px;border-radius:5px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;font-size:11px}
+        .col-menu-btn:hover{background:var(--card);color:var(--text)}
+        .col-dropdown{position:absolute;top:100%;right:0;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;min-width:150px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:60;animation:dd-in 0.15s ease}
+        @keyframes dd-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+        .col-dropdown-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all 0.12s;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+        .col-dropdown-item:hover{background:var(--card);color:var(--text)}
+        .col-dropdown-item.danger{color:#EF4444}
+        .col-dropdown-item.danger:hover{background:rgba(239,68,68,0.1);color:#F87171}
+        .col-dropdown-item i{width:14px;text-align:center;font-size:11px}
+
+        /* 卡片 */
+        .task-card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:12px 12px 12px 15px;margin-bottom:6px;cursor:pointer;transition:all 0.18s ease;position:relative;overflow:hidden}
+        .task-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:11px 0 0 11px}
+        .task-card.p-high::before{background:var(--priority-high)}
+        .task-card.p-medium::before{background:var(--priority-medium)}
+        .task-card.p-low::before{background:var(--priority-low)}
+        .task-card:hover{background:var(--card-hover);border-color:var(--border-light);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+        .task-card.dragging{opacity:0.4;transform:rotate(2deg) scale(1.02)}
+        .task-card.drop-above{border-top:2px solid var(--accent);margin-top:-1px}
+        .task-card.completed .card-title{text-decoration:line-through;color:var(--text-muted)}
+        .star-btn{background:none;border:none;cursor:pointer;padding:2px;color:var(--text-muted);transition:color 0.15s,transform 0.15s;font-size:12px}
+        .star-btn:hover{transform:scale(1.2)}
+        .star-btn.starred{color:#FBBF24}
+        .card-title{font-size:13px;font-weight:500;line-height:1.4;color:var(--text)}
+        .tag{display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:500}
+        .tag-design{background:rgba(167,139,250,0.13);color:#C4B5FD}
+        .tag-dev{background:rgba(56,189,248,0.13);color:#7DD3FC}
+        .tag-research{background:rgba(251,146,60,0.13);color:#FDBA74}
+        .tag-bug{background:rgba(248,113,113,0.13);color:#FCA5A5}
+        .tag-docs{background:rgba(52,211,153,0.13);color:#6EE7B7}
+        .diff-dot{display:inline-block;width:5px;height:5px;border-radius:2px;transform:rotate(45deg);margin-right:1px}
+        .subtask-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+        .subtask-bar-fill{height:100%;border-radius:2px;transition:width 0.4s ease}
+        .team-label{display:inline-flex;align-items:center;gap:2px;font-size:9px;color:var(--accent-light);font-weight:500;background:var(--accent-dim);padding:1px 5px;border-radius:3px}
+        .add-card-form{overflow:hidden;max-height:0;opacity:0;transition:max-height 0.3s ease,opacity 0.3s ease,padding 0.3s ease;padding:0 6px}
+        .add-card-form.active{max-height:200px;opacity:1;padding:6px}
+
+        /* 列表视图 */
+        .list-view{flex:1;overflow-y:auto;padding:0}
+        .list-group{margin-bottom:6px}
+        .list-group-header{display:flex;align-items:center;gap:6px;padding:6px 4px;font-size:11px;font-weight:600;color:var(--text-secondary)}
+        .list-row{display:grid;grid-template-columns:28px 1fr 64px 64px 80px 110px 90px 28px;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
+        .list-row:hover{background:var(--surface);border-color:var(--border)}
+        .list-header{display:grid;grid-template-columns:28px 1fr 64px 64px 80px 110px 90px 28px;align-items:center;gap:6px;padding:6px 10px;font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:2}
+
+        /* 模态框 */
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s ease}
+        .modal-overlay.active{opacity:1;pointer-events:all}
+        .modal-content{background:var(--surface);border:1px solid var(--border);border-radius:20px;max-width:92vw;max-height:88vh;overflow:hidden;transform:translateY(16px) scale(0.97);transition:transform 0.25s ease,width 0.35s cubic-bezier(0.4,0,0.2,1);box-shadow:0 24px 80px rgba(0,0,0,0.5);display:flex}
+        .modal-overlay.active .modal-content{transform:translateY(0) scale(1)}
+        .modal-main{flex:1;min-width:0;overflow-y:auto;max-height:88vh}
+        .modal-mode{transition:opacity 0.18s ease,transform 0.18s ease}
+        .modal-mode.fading-out{opacity:0;transform:translateY(-6px)}
+        .modal-mode.fading-in{opacity:0;transform:translateY(6px)}
+
+        .history-panel{width:310px;flex-shrink:0;border-left:1px solid var(--border);background:rgba(13,13,13,0.5);overflow-y:auto;max-height:88vh;animation:hist-in 0.3s ease}
+        @keyframes hist-in{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+        .history-panel-header{padding:18px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(13,13,13,0.95);backdrop-filter:blur(8px);z-index:2}
+        .history-timeline{padding:14px 16px}
+        .history-item{position:relative;padding-left:26px;padding-bottom:18px}
+        .history-item:last-child{padding-bottom:0}
+        .history-item::before{content:'';position:absolute;left:6px;top:20px;bottom:0;width:1px;background:var(--border)}
+        .history-item:last-child::before{display:none}
+        .history-dot{position:absolute;left:0;top:5px;width:13px;height:13px;border-radius:50%;border:2px solid var(--border-light);background:var(--surface);z-index:1}
+        .history-dot.action-create{border-color:#10B981;background:rgba(16,185,129,0.15)}
+        .history-dot.action-edit{border-color:var(--accent);background:var(--accent-dim)}
+        .history-dot.action-move{border-color:#38BDF8;background:rgba(56,189,248,0.12)}
+        .history-user{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+        .history-avatar{width:22px;height:22px;border-radius:50%}
+        .history-username{font-size:11px;font-weight:600;color:var(--text)}
+        .history-time{font-size:10px;color:var(--text-muted);margin-left:auto}
+        .history-changes{display:flex;flex-direction:column;gap:3px}
+        .history-change-row{font-size:11px;color:var(--text-secondary);display:flex;align-items:baseline;gap:3px;flex-wrap:wrap;line-height:1.4}
+        .history-field{font-weight:600;color:var(--text);font-size:10px;background:var(--card);padding:1px 4px;border-radius:3px}
+        .history-from{color:var(--text-muted);text-decoration:line-through;font-size:10px}
+        .history-to{color:var(--accent-light);font-size:10px;font-weight:500}
+        .history-arrow{color:var(--text-muted);font-size:9px}
+
+        .detail-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:7px;font-size:11px;font-weight:500}
+        .detail-label{font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px}
+        .detail-text{font-size:13px;line-height:1.7;color:var(--text-secondary)}
+        .detail-row{display:flex;gap:10px;flex-wrap:wrap}
+        .detail-field{flex:1;min-width:130px}
+        .detail-field-box{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:8px 10px}
+        .detail-field-label{font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px}
+        .detail-field-value{font-size:12px;color:var(--text)}
+        .subtask-progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:6px}
+        .subtask-progress-fill{height:100%;border-radius:3px;transition:width 0.4s ease}
+
+        /* 子任务列表 */
+        .subtask-list{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+        .subtask-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;transition:background 0.12s}
+        .subtask-row:hover{background:var(--card)}
+        .subtask-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--border-light);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;color:transparent;font-size:10px}
+        .subtask-check:hover{border-color:var(--accent)}
+        .subtask-check.checked{background:var(--accent);border-color:var(--accent);color:#fff}
+        .subtask-title{font-size:12px;color:var(--text-secondary);flex:1;transition:all 0.15s}
+        .subtask-title.done{text-decoration:line-through;color:var(--text-muted)}
+        .subtask-delete{width:20px;height:20px;border-radius:5px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s;font-size:10px;opacity:0}
+        .subtask-row:hover .subtask-delete{opacity:1}
+        .subtask-delete:hover{background:rgba(239,68,68,0.1);color:#EF4444}
+        .subtask-add-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+        .subtask-add-input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:12px;padding:6px 2px;outline:none;font-family:inherit;transition:border-color 0.15s}
+        .subtask-add-input:focus{border-color:var(--accent)}
+        .subtask-add-input::placeholder{color:var(--text-muted)}
+        .subtask-add-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s;font-size:11px;flex-shrink:0}
+        .subtask-add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
+        .btn-primary{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit}
+        .btn-primary:hover{background:var(--accent-light);transform:translateY(-1px)}
+        .btn-ghost{background:transparent;color:var(--text-secondary);border:none;border-radius:9px;padding:8px 12px;font-size:12px;cursor:pointer;transition:all 0.2s;font-family:inherit}
+        .btn-ghost:hover{background:var(--card);color:var(--text)}
+        .btn-danger{background:transparent;color:#EF4444;border:none;border-radius:9px;padding:8px 12px;font-size:12px;cursor:pointer;transition:all 0.2s;font-family:inherit}
+        .btn-danger:hover{background:rgba(239,68,68,0.1)}
+        .toast-container{position:fixed;top:14px;right:14px;z-index:200;display:flex;flex-direction:column;gap:6px}
+        .toast{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 16px;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;animation:toast-in 0.3s ease,toast-out 0.3s ease 2.7s forwards;min-width:200px}
+        @keyframes toast-in{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+        @keyframes toast-out{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
+        .add-col-placeholder{min-width:300px;max-width:300px;background:transparent;border:2px dashed var(--border);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:160px;transition:all 0.2s;color:var(--text-muted)}
+        .add-col-placeholder:hover{border-color:var(--accent);color:var(--accent)}
+        @media(max-width:900px){.filter-panel{width:0;opacity:0;pointer-events:none}.main-content{margin-left:var(--nav-rail-width)}.stats-bar{display:none}.filter-expand-btn{display:flex!important}}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
+    </style>
+</head>
+<body>
+    <div class="bg-glow bg-glow-1"></div><div class="bg-glow bg-glow-2"></div><div class="bg-glow bg-glow-3"></div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true"><div class="modal-content" id="modalContent"></div></div>
+
+    <!-- 导航轨道 -->
+    <nav class="nav-rail" id="navRail">
+        <div class="nav-rail-logo"><i class="fa-solid fa-layer-group text-white text-sm"></i></div>
+        <div class="nav-rail-divider"></div>
+        <button class="nav-rail-item active" data-nav="dashboard" onclick="switchNav('dashboard')"><i class="fa-solid fa-gauge-high"></i><span class="rail-tooltip">Dashboard</span></button>
+        <button class="nav-rail-item" data-nav="tasks" onclick="switchNav('tasks')"><i class="fa-solid fa-list-check"></i><span class="rail-tooltip">Tasks</span></button>
+        <button class="nav-rail-item" data-nav="teams" onclick="switchNav('teams')"><i class="fa-solid fa-people-group"></i><span class="rail-tooltip">Teams</span></button>
+        <button class="nav-rail-item" data-nav="recycle" onclick="switchNav('recycle')"><i class="fa-solid fa-trash-can"></i><span class="rail-tooltip">Recycle Bin</span></button>
+        <button class="nav-rail-item" data-nav="settings" onclick="switchNav('settings')"><i class="fa-solid fa-gear"></i><span class="rail-tooltip">Settings</span></button>
+        <div class="nav-rail-spacer"></div>
+        <button class="theme-toggle-btn" onclick="toggleTheme()" title="切换主题"><i class="fa-solid fa-moon" id="themeIcon"></i></button>
+        <div class="nav-rail-divider"></div>
+        <button class="nav-rail-item" data-nav="profile" onclick="switchNav('profile')"><img src="https://picsum.photos/seed/user42/40/40.jpg" style="width:26px;height:26px;border-radius:7px;object-fit:cover;" alt="Profile"><span class="rail-tooltip">Profile</span></button>
+    </nav>
+
+    <!-- 筛选面板 -->
+    <aside class="filter-panel" id="filterPanel">
+        <div class="filter-panel-header"><span class="font-display font-semibold text-sm" style="color:var(--text)">筛选与视图</span><button class="filter-panel-toggle" onclick="toggleFilterPanel()"><i class="fa-solid fa-angles-left text-xs"></i></button></div>
+        <div class="filter-nav">
+            <div class="filter-nav-item active" data-view="board" onclick="switchView('board')"><i class="fa-solid fa-table-columns"></i>看板视图</div>
+            <div class="filter-nav-item" data-view="list" onclick="switchView('list')"><i class="fa-solid fa-list"></i>列表视图</div>
+            <div class="filter-nav-item" data-view="starred" onclick="switchView('starred')"><i class="fa-solid fa-star"></i>收藏任务<span class="filter-count" id="starredCount">0</span></div>
+        </div>
+        <div class="filter-divider"></div>
+        <div class="filter-sections">
+            <div class="filter-section"><div class="filter-title">优先级</div><div class="filter-group" id="priorityFilter"><button class="filter-btn active" data-value="all" onclick="setFilter('priority','all')">全部</button><button class="filter-btn" data-value="high" onclick="setFilter('priority','high')">高</button><button class="filter-btn" data-value="medium" onclick="setFilter('priority','medium')">中</button><button class="filter-btn" data-value="low" onclick="setFilter('priority','low')">低</button></div></div>
+            <div class="filter-section"><div class="filter-title">难度</div><div class="filter-group" id="difficultyFilter"><button class="filter-btn active" data-value="all" onclick="setFilter('difficulty','all')">全部</button><button class="filter-btn" data-value="easy" onclick="setFilter('difficulty','easy')">简单</button><button class="filter-btn" data-value="medium" onclick="setFilter('difficulty','medium')">中等</button><button class="filter-btn" data-value="hard" onclick="setFilter('difficulty','hard')">困难</button></div></div>
+            <div class="filter-section"><div class="filter-title">类型</div><div class="filter-group" id="typeFilter"><button class="filter-btn active" data-value="all" onclick="setFilter('type','all')">全部</button><button class="filter-btn" data-value="team" onclick="setFilter('type','team')">团队</button><button class="filter-btn" data-value="personal" onclick="setFilter('type','personal')">个人</button></div></div>
+            <div class="filter-section"><div class="filter-title">标签</div><div class="filter-group" id="tagFilter" style="gap:4px;"><button class="filter-tag-btn active" data-value="all" onclick="setFilter('tag','all')">全部</button><button class="filter-tag-btn" data-value="设计" onclick="setFilter('tag','设计')">设计</button><button class="filter-tag-btn" data-value="开发" onclick="setFilter('tag','开发')">开发</button><button class="filter-tag-btn" data-value="调研" onclick="setFilter('tag','调研')">调研</button><button class="filter-tag-btn" data-value="缺陷" onclick="setFilter('tag','缺陷')">缺陷</button><button class="filter-tag-btn" data-value="文档" onclick="setFilter('tag','文档')">文档</button></div></div>
+        </div>
+    </aside>
+    <button class="filter-expand-btn" id="filterExpandBtn" onclick="toggleFilterPanel()"><i class="fa-solid fa-angles-right"></i></button>
+
+    <!-- 主内容 -->
+    <div class="main-content" id="mainContent">
+        <header class="top-bar">
+            <div class="flex items-center gap-3"><h2 class="font-display font-semibold text-base" id="viewTitle" style="color:var(--text)">Dashboard</h2><span class="text-xs px-2 py-0.5 rounded-md font-display font-medium" style="background:var(--accent-dim);color:var(--accent);" id="viewBadge">任务管理</span></div>
+            <div class="flex items-center gap-3"><div class="search-wrapper"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="searchInput" class="input-field" placeholder="搜索任务..." style="width:200px;padding:7px 12px 7px 34px;font-size:12px;"></div><div class="w-7 h-7 rounded-full overflow-hidden border-2" style="border-color:var(--border);"><img src="https://picsum.photos/seed/user42/80/80.jpg" alt="" class="w-full h-full object-cover"></div></div>
+        </header>
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card"><div class="stat-icon" style="background:rgba(255,107,53,0.1);color:var(--accent);"><i class="fa-solid fa-list-check"></i></div><div><div class="stat-value" id="statTotal">0</div><div class="stat-label">全部</div></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:rgba(239,68,68,0.1);color:#EF4444;"><i class="fa-solid fa-fire"></i></div><div><div class="stat-value" id="statHigh">0</div><div class="stat-label">高优</div></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:rgba(56,189,248,0.1);color:#38BDF8;"><i class="fa-solid fa-spinner"></i></div><div><div class="stat-value" id="statProgress">0</div><div class="stat-label">进行中</div></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:rgba(16,185,129,0.1);color:#10B981;"><i class="fa-solid fa-circle-check"></i></div><div><div class="stat-value" id="statDone">0</div><div class="stat-label">已完成</div></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:rgba(251,191,36,0.1);color:#FBBF24;"><i class="fa-solid fa-star"></i></div><div><div class="stat-value" id="statStarred">0</div><div class="stat-label">收藏</div></div></div>
+        </div>
+        <div class="board-area" id="contentArea"></div>
+    </div>
+
+<script>
+let nextCardId=100,nextColId=100,nextSubtaskId=1000,nextHistoryId=200;
+const tagClassMap={'设计':'tag-design','开发':'tag-dev','调研':'tag-research','缺陷':'tag-bug','文档':'tag-docs'};
+
+// 子任务数据现在是数组，每项有 id/title/done
+const boardData={columns:[
+    {id:'todo',title:'待办',icon:'fa-clipboard-list',color:'#FF6B35',cards:[
+        {id:1,title:'设计系统规范文档',description:'整理色彩、字体、间距等设计规范，输出 Figma 组件库。',priority:'high',difficulty:'hard',startDate:'2025-02-01',dueDate:'2025-02-15',tags:['设计'],type:'team',teamName:'设计组',starred:true,subtasks:[
+            {id:101,title:'定义主色板与语义色',done:true},{id:102,title:'整理字体层级方案',done:false},{id:103,title:'间距与网格系统',done:false},{id:104,title:'输出 Figma 组件库',done:false}
+        ],editHistory:[{id:1,user:'张明',avatar:'https://picsum.photos/seed/zm1/40/40.jpg',time:'2/1 09:00',action:'create',changes:[{field:'状态',from:'',to:'创建任务'}]},{id:2,user:'李薇',avatar:'https://picsum.photos/seed/lw2/40/40.jpg',time:'2/3 14:30',action:'edit',changes:[{field:'优先级',from:'中',to:'高'}]}]},
+        {id:2,title:'用户调研报告',description:'完成 20 位目标用户的深度访谈，输出洞察报告。',priority:'medium',difficulty:'medium',startDate:'2025-02-10',dueDate:'2025-02-20',tags:['调研'],type:'team',teamName:'产品组',starred:false,subtasks:[
+            {id:201,title:'制定调研问卷',done:true},{id:202,title:'预约访谈对象',done:true},{id:203,title:'执行 20 场深度访谈',done:true},{id:204,title:'整理访谈笔记',done:false},{id:205,title:'输出洞察报告',done:false},{id:206,title:'团队评审报告',done:false}
+        ],editHistory:[]},
+        {id:3,title:'竞品分析',description:'分析 Notion、Linear、Asana 的核心功能与差异化。',priority:'low',difficulty:'easy',startDate:'2025-02-12',dueDate:'2025-02-18',tags:['调研'],type:'personal',teamName:'',starred:false,subtasks:[
+            {id:301,title:'Notion 功能拆解',done:false},{id:302,title:'Linear 功能拆解',done:false},{id:303,title:'对比分析矩阵',done:false}
+        ],editHistory:[]},
+        {id:13,title:'整理会议纪要',description:'上周产品评审会的纪要整理与行动项分发。',priority:'low',difficulty:'easy',startDate:'2025-02-13',dueDate:'2025-02-14',tags:['文档'],type:'personal',teamName:'',starred:false,subtasks:[
+            {id:1301,title:'回顾录音并整理要点',done:false},{id:1302,title:'提取行动项并分配',done:false}
+        ],editHistory:[]},
+    ]},
+    {id:'inprogress',title:'进行中',icon:'fa-code',color:'#38BDF8',cards:[
+        {id:4,title:'看板拖拽功能',description:'实现 HTML5 原生拖拽 API，支持列间移动与列内排序。',priority:'high',difficulty:'hard',startDate:'2025-02-05',dueDate:'2025-02-10',tags:['开发'],type:'team',teamName:'前端组',starred:true,subtasks:[
+            {id:401,title:'实现基础拖拽事件',done:true},{id:402,title:'列间移动逻辑',done:true},{id:403,title:'列内排序占位符',done:true},{id:404,title:'移动端 Touch 兼容',done:false},{id:405,title:'拖拽动画优化',done:false}
+        ],editHistory:[{id:7,user:'陈辉',avatar:'https://picsum.photos/seed/ch4/40/40.jpg',time:'2/5 09:00',action:'create',changes:[{field:'状态',from:'',to:'创建任务'}]},{id:8,user:'陈辉',avatar:'https://picsum.photos/seed/ch4/40/40.jpg',time:'2/7 11:30',action:'move',changes:[{field:'列',from:'待办',to:'进行中'}]}]},
+        {id:5,title:'响应式布局适配',description:'确保移动端和平板端核心交互可用。',priority:'medium',difficulty:'medium',startDate:'2025-02-08',dueDate:'2025-02-12',tags:['开发'],type:'personal',teamName:'',starred:false,subtasks:[
+            {id:501,title:'768px 断点适配',done:true},{id:502,title:'1024px 断点适配',done:false},{id:503,title:'触控交互优化',done:false}
+        ],editHistory:[]},
+        {id:6,title:'登录页视觉稿',description:'深色主题登录页设计，支持第三方登录入口。',priority:'medium',difficulty:'easy',startDate:'2025-02-06',dueDate:'2025-02-08',tags:['设计'],type:'personal',teamName:'',starred:true,subtasks:[
+            {id:601,title:'主视觉设计',done:true},{id:602,title:'第三方登录入口',done:true}
+        ],editHistory:[]},
+    ]},
+    {id:'review',title:'审核中',icon:'fa-eye',color:'#A78BFA',cards:[
+        {id:7,title:'API 接口文档',description:'RESTful API 文档，包含请求示例和错误码说明。',priority:'low',difficulty:'easy',startDate:'2025-02-01',dueDate:'2025-02-05',tags:['文档'],type:'team',teamName:'后端组',starred:false,subtasks:[
+            {id:701,title:'用户模块 API',done:true},{id:702,title:'任务模块 API',done:true},{id:703,title:'标签模块 API',done:true},{id:704,title:'错误码汇总',done:true}
+        ],editHistory:[]},
+        {id:8,title:'修复搜索延迟问题',description:'搜索输入 300ms 后仍无响应，需优化防抖逻辑。',priority:'high',difficulty:'medium',startDate:'2025-02-02',dueDate:'2025-02-03',tags:['缺陷'],type:'team',teamName:'前端组',starred:true,subtasks:[
+            {id:801,title:'定位延迟根因',done:true},{id:802,title:'实现防抖优化',done:false}
+        ],editHistory:[]},
+    ]},
+    {id:'done',title:'已完成',icon:'fa-circle-check',color:'#10B981',cards:[
+        {id:9,title:'项目初始化',description:'Vite + React 项目脚手架搭建。',priority:'low',difficulty:'easy',startDate:'2025-01-25',dueDate:'2025-01-28',tags:['开发'],type:'team',teamName:'前端组',starred:false,subtasks:[
+            {id:901,title:'Vite 脚手架搭建',done:true},{id:902,title:'ESLint + Prettier 配置',done:true},{id:903,title:'目录结构规划',done:true}
+        ],editHistory:[]},
+        {id:10,title:'数据库表设计',description:'用户、项目、任务、标签四张核心表结构定义。',priority:'medium',difficulty:'hard',startDate:'2025-01-26',dueDate:'2025-01-30',tags:['开发'],type:'team',teamName:'后端组',starred:false,subtasks:[
+            {id:1001,title:'用户表设计',done:true},{id:1002,title:'任务表设计',done:true}
+        ],editHistory:[]},
+        {id:11,title:'品牌 Logo 定稿',description:'FlowBoard 品牌 Logo 及 Favicon 输出。',priority:'low',difficulty:'medium',startDate:'2025-01-22',dueDate:'2025-01-25',tags:['设计'],type:'personal',teamName:'',starred:true,subtasks:[
+            {id:1101,title:'Logo 设计',done:true}
+        ],editHistory:[]},
+    ]}
+]};
+
+const filterState={priority:'all',difficulty:'all',type:'all',tag:'all'};
+let currentView='board',filterCollapsed=false,dragState={cardId:null,sourceColumnId:null},currentModalCardId=null,historyPanelOpen=false,activeDropdownId=null,isDark=true;
+
+// 子任务统计工具
+function stStats(card){const t=card.subtasks?card.subtasks.length:0;const d=card.subtasks?card.subtasks.filter(s=>s.done).length:0;return{total:t,done:d,pct:t>0?Math.round(d/t*100):0};}
+function stColor(pct){return pct===100?'#10B981':pct>50?'#F59E0B':'#FF6B35';}
+
+function showToast(m,i='fa-circle-check',c='#10B981'){const t=document.createElement('div');t.className='toast';t.innerHTML=`<i class="fa-solid ${i}" style="color:${c}"></i><span>${m}</span>`;document.getElementById('toastContainer').appendChild(t);setTimeout(()=>t.remove(),3000);}
+function getCardById(id){for(const col of boardData.columns){const card=col.cards.find(c=>c.id===id);if(card)return{card,column:col};}return null;}
+function escapeHtml(t){const d=document.createElement('div');d.textContent=t||'';return d.innerHTML;}
+function formatDate(ds){if(!ds)return'—';const d=new Date(ds);return`${d.getMonth()+1}月${d.getDate()}日`;}
+function cardMatchesFilter(card){if(filterState.priority!=='all'&&card.priority!==filterState.priority)return false;if(filterState.difficulty!=='all'&&card.difficulty!==filterState.difficulty)return false;if(filterState.type!=='all'&&card.type!==filterState.type)return false;if(filterState.tag!=='all'&&!card.tags.includes(filterState.tag))return false;const q=(document.getElementById('searchInput')?.value||'').toLowerCase();if(q&&!card.title.toLowerCase().includes(q)&&!card.tags.some(t=>t.toLowerCase().includes(q))&&!(card.description||'').toLowerCase().includes(q))return false;return true;}
+function updateStats(){let t=0,h=0,p=0,d=0,s=0;boardData.columns.forEach(col=>{col.cards.forEach(card=>{t++;if(card.priority==='high')h++;if(col.id==='inprogress')p++;if(col.id==='done')d++;if(card.starred)s++;});});document.getElementById('statTotal').textContent=t;document.getElementById('statHigh').textContent=h;document.getElementById('statProgress').textContent=p;document.getElementById('statDone').textContent=d;document.getElementById('statStarred').textContent=s;document.getElementById('starredCount').textContent=s;}
+
+function switchNav(nav){document.querySelectorAll('.nav-rail-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===nav));const titles={dashboard:'Dashboard',tasks:'Tasks',teams:'Teams',recycle:'Recycle Bin',settings:'Settings',profile:'Profile'};document.getElementById('viewTitle').textContent=titles[nav]||nav;if(nav==='tasks'){document.getElementById('viewBadge').textContent='任务管理';document.getElementById('viewBadge').style.display='';}else document.getElementById('viewBadge').style.display='none';showToast(`切换到 ${titles[nav]||nav}`,'fa-arrow-right','var(--accent)');}
+function toggleTheme(){isDark=!isDark;document.getElementById('themeIcon').className=isDark?'fa-solid fa-moon':'fa-solid fa-sun';showToast(isDark?'暗色主题':'亮色主题',isDark?'fa-moon':'fa-sun','#FBBF24');}
+function toggleFilterPanel(){filterCollapsed=!filterCollapsed;document.getElementById('filterPanel').classList.toggle('collapsed',filterCollapsed);document.getElementById('mainContent').classList.toggle('filter-collapsed',filterCollapsed);}
+function setFilter(type,value){filterState[type]=value;const cid=type==='priority'?'priorityFilter':type==='difficulty'?'difficultyFilter':type==='type'?'typeFilter':'tagFilter';document.getElementById(cid).querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.value===value));renderCurrentView();}
+function switchView(view){currentView=view;document.querySelectorAll('.filter-nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===view));document.getElementById('viewTitle').textContent={board:'看板视图',list:'列表视图',starred:'收藏任务'}[view];document.getElementById('viewBadge').textContent={board:'任务管理',list:'全部一览',starred:'重要关注'}[view];document.getElementById('viewBadge').style.display='';renderCurrentView();}
+function renderCurrentView(){const area=document.getElementById('contentArea');if(currentView==='board')renderBoard(area);else if(currentView==='list')renderList(area);else renderStarred(area);updateStats();}
+
+function renderBoard(area){area.innerHTML='<div class="board-container" id="boardContainer"></div>';const c=document.getElementById('boardContainer');boardData.columns.forEach(col=>{c.appendChild(createColumnElement(col));});const a=document.createElement('div');a.className='add-col-placeholder';a.innerHTML='<div class="text-center"><i class="fa-solid fa-plus text-lg mb-1"></i><div class="text-xs font-medium">新增列</div></div>';a.onclick=showAddColumnForm;c.appendChild(a);}
+function createColumnElement(column){const col=document.createElement('div');col.className='kanban-column';col.dataset.columnId=column.id;const fc=column.cards.filter(cardMatchesFilter);col.innerHTML=`<div class="column-header"><div class="flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-5 h-5 rounded flex items-center justify-center" style="background:${column.color}1A;color:${column.color};"><i class="fa-solid ${column.icon}" style="font-size:10px;"></i></div><h3 class="font-display font-semibold text-sm" style="color:var(--text)">${column.title}</h3><span class="text-xs font-display font-semibold px-1 py-0.5 rounded" style="background:var(--card);color:var(--text-muted);">${fc.length}</span></div><div class="flex items-center gap-0.5"><button class="col-menu-btn" onclick="toggleAddCard('${column.id}')" title="添加"><i class="fa-solid fa-plus"></i></button><div style="position:relative;"><button class="col-menu-btn" onclick="toggleColMenu('${column.id}',event)" title="更多"><i class="fa-solid fa-ellipsis"></i></button><div class="col-dropdown" id="colMenu-${column.id}" style="display:none;"><button class="col-dropdown-item" onclick="clearColumnCards('${column.id}')"><i class="fa-solid fa-broom"></i>清空任务</button><button class="col-dropdown-item danger" onclick="deleteColumn('${column.id}')"><i class="fa-solid fa-trash-can"></i>删除列</button></div></div></div></div></div>`;const af=document.createElement('div');af.className='add-card-form';af.id=`addForm-${column.id}`;af.innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;"><input type="text" class="input-field" id="newCardTitle-${column.id}" placeholder="任务标题..." style="font-size:11px;padding:6px 8px;margin-bottom:4px;" onkeydown="if(event.key==='Enter')addCard('${column.id}')"><div class="flex gap-1 mb-1"><select class="input-field" id="newCardPriority-${column.id}" style="font-size:10px;padding:4px 6px;flex:1;"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option></select><select class="input-field" id="newCardDiff-${column.id}" style="font-size:10px;padding:4px 6px;flex:1;"><option value="easy">简单</option><option value="medium" selected>中等</option><option value="hard">困难</option></select></div><div class="flex gap-1"><select class="input-field" id="newCardType-${column.id}" style="font-size:10px;padding:4px 6px;flex:1;"><option value="personal">个人</option><option value="team">团队</option></select><button class="btn-primary" style="padding:4px 8px;font-size:10px;" onclick="addCard('${column.id}')">添加</button><button class="btn-ghost" style="padding:4px 6px;font-size:10px;" onclick="toggleAddCard('${column.id}')">取消</button></div></div>`;col.appendChild(af);const body=document.createElement('div');body.className='column-body';body.dataset.columnId=column.id;body.addEventListener('dragover',handleDragOver);body.addEventListener('dragleave',handleDragLeave);body.addEventListener('drop',handleDrop);fc.forEach(card=>{body.appendChild(createCardElement(card,column.id));});col.appendChild(body);return col;}
+
+function createCardElement(card,columnId){const el=document.createElement('div');el.className=`task-card p-${card.priority}${columnId==='done'?' completed':''}`;el.draggable=true;el.dataset.cardId=card.id;el.dataset.columnId=columnId;const dc={easy:'var(--diff-easy)',medium:'var(--diff-medium)',hard:'var(--diff-hard)'},dn={easy:1,medium:2,hard:3};let dd='';for(let i=0;i<dn[card.difficulty];i++)dd+=`<span class="diff-dot" style="background:${dc[card.difficulty]}"></span>`;const s=stStats(card),sc=stColor(s.pct);const stH=s.total>0?`<div class="flex items-center justify-between mb-0.5"><span style="font-size:9px;color:var(--text-muted)">子任务</span><span class="font-display" style="font-size:9px;font-weight:600;color:${sc}">${s.done}/${s.total}</span></div><div class="subtask-bar"><div class="subtask-bar-fill" style="width:${s.pct}%;background:${sc}"></div></div>`:'';const tH=(card.startDate||card.dueDate)?`<span style="font-size:9px;color:var(--text-muted);display:inline-flex;align-items:center;gap:2px;"><i class="fa-regular fa-calendar" style="font-size:8px;"></i>${card.startDate?formatDate(card.startDate):'?'}→${card.dueDate?formatDate(card.dueDate):'?'}</span>`:'';const tg=card.tags.map(t=>`<span class="tag ${tagClassMap[t]||'tag-dev'}">${t}</span>`).join('');const tm=card.type==='team'&&card.teamName?`<span class="team-label"><i class="fa-solid fa-users" style="font-size:7px;"></i>${escapeHtml(card.teamName)}</span>`:`<span style="font-size:9px;color:var(--text-muted);"><i class="fa-solid fa-user" style="font-size:8px;"></i></span>`;el.innerHTML=`<div class="flex items-start justify-between gap-2 mb-1"><h4 class="card-title" style="padding-left:5px;">${escapeHtml(card.title)}</h4><button class="star-btn ${card.starred?'starred':''}" onclick="event.stopPropagation();toggleStar(${card.id})"><i class="fa-${card.starred?'solid':'regular'} fa-star"></i></button></div>${tg?`<div class="flex flex-wrap gap-1 mb-1.5" style="padding-left:5px;">${tg}</div>`:''}<div class="flex items-center gap-2 flex-wrap" style="padding-left:5px;margin-bottom:${s.total>0?'6px':'0'};">${dd}${tm}${tH}</div>${stH}`;el.addEventListener('click',(e)=>{if(!e.target.closest('button'))openDetailModal(card.id);});el.addEventListener('dragstart',(e)=>{dragState.cardId=card.id;dragState.sourceColumnId=columnId;el.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',card.id.toString());});el.addEventListener('dragend',()=>{el.classList.remove('dragging');document.querySelectorAll('.kanban-column.drag-over').forEach(c=>c.classList.remove('drag-over'));document.querySelectorAll('.task-card.drop-above').forEach(c=>c.classList.remove('drop-above'));});return el;}
+
+function renderList(area){const pl={high:'高',medium:'中',low:'低'},pc={high:'var(--priority-high)',medium:'var(--priority-medium)',low:'var(--priority-low)'},dl={easy:'简单',medium:'中等',hard:'困难'},dcc={easy:'var(--diff-easy)',medium:'var(--diff-medium)',hard:'var(--diff-hard)'};let h='<div class="list-view" style="padding:0 4px;"><div class="list-header"><span></span><span>名称</span><span>优先级</span><span>难度</span><span>类型</span><span>时间</span><span>子任务</span><span></span></div>';boardData.columns.forEach(col=>{const f=col.cards.filter(cardMatchesFilter);if(!f.length)return;h+=`<div class="list-group"><div class="list-group-header"><div class="w-4 h-4 rounded flex items-center justify-center" style="background:${col.color}1A;color:${col.color};"><i class="fa-solid ${col.icon}" style="font-size:8px;"></i></div><span>${col.title}</span></div>`;f.forEach(card=>{const s=stStats(card),sc=stColor(s.pct);const ts=card.type==='team'?`👥${escapeHtml(card.teamName||'团队')}`:'👤个人';h+=`<div class="list-row" onclick="openDetailModal(${card.id})"><button class="star-btn ${card.starred?'starred':''}" onclick="event.stopPropagation();toggleStar(${card.id})" style="border:none;background:none;cursor:pointer;padding:0;font-size:12px;color:${card.starred?'#FBBF24':'var(--text-muted)'}"><i class="fa-${card.starred?'solid':'regular'} fa-star"></i></button><span style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(card.title)}</span><span style="font-size:10px;font-weight:600;color:${pc[card.priority]}">${pl[card.priority]}</span><span style="font-size:10px;color:${dcc[card.difficulty]}">${dl[card.difficulty]}</span><span style="font-size:10px;color:var(--text-secondary)">${ts}</span><span style="font-size:10px;color:var(--text-muted)">${card.startDate?formatDate(card.startDate):''}→${card.dueDate?formatDate(card.dueDate):''}</span><span style="font-size:10px;">${s.total>0?`<span style="color:${sc};font-weight:600;" class="font-display">${s.done}/${s.total}</span>`:'—'}</span><span style="font-size:9px;color:var(--text-muted)">›</span></div>`;});h+='</div>';});h+='</div>';area.innerHTML=h;}
+function renderStarred(area){area.innerHTML='<div class="board-container" id="boardContainer"></div>';const c=document.getElementById('boardContainer');boardData.columns.forEach(col=>{const s=col.cards.filter(c2=>c2.starred&&cardMatchesFilter(c2));if(s.length)c.appendChild(createColumnElement({...col,cards:s}));});if(!c.children.length)area.innerHTML=`<div class="flex flex-col items-center justify-center h-full" style="color:var(--text-muted);"><i class="fa-regular fa-star text-3xl mb-2" style="opacity:0.3;"></i><div class="text-sm font-medium">暂无收藏</div></div>`;}
+
+function handleDragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';const c=e.currentTarget.closest('.kanban-column');if(c)c.classList.add('drag-over');document.querySelectorAll('.task-card.drop-above').forEach(x=>x.classList.remove('drop-above'));const a=getClosestCard(e.currentTarget,e.clientY);if(a)a.classList.add('drop-above');}
+function getClosestCard(c,y){const cards=[...c.querySelectorAll('.task-card:not(.dragging)')];let cl=null,o=Infinity;cards.forEach(card=>{const b=card.getBoundingClientRect();const d=y-b.top-b.height/2;if(d<0&&-d<o){o=-d;cl=card;}});return cl;}
+function handleDragLeave(e){const c=e.currentTarget.closest('.kanban-column');if(c&&!c.contains(e.relatedTarget))c.classList.remove('drag-over');document.querySelectorAll('.task-card.drop-above').forEach(x=>x.classList.remove('drop-above'));}
+function handleDrop(e){e.preventDefault();document.querySelectorAll('.kanban-column.drag-over').forEach(c=>c.classList.remove('drag-over'));document.querySelectorAll('.task-card.drop-above').forEach(c=>c.classList.remove('drop-above'));if(!dragState.cardId)return;const tb=e.currentTarget,tci=tb.dataset.columnId;const sc=boardData.columns.find(c=>c.id===dragState.sourceColumnId),tc=boardData.columns.find(c=>c.id===tci);if(!sc||!tc)return;const i=sc.cards.findIndex(c=>c.id===dragState.cardId);if(i===-1)return;const[card]=sc.cards.splice(i,1);const ac=getClosestCard(tb,e.clientY);let ii=tc.cards.length;if(ac){const ai=tc.cards.findIndex(c=>c.id===parseInt(ac.dataset.cardId));if(ai!==-1)ii=ai;}tc.cards.splice(ii,0,card);renderCurrentView();if(dragState.sourceColumnId!==tci)showToast(`已移动到「${tc.title}」`,'fa-arrows-turn-right',tc.color);dragState={cardId:null,sourceColumnId:null};}
+
+function toggleColMenu(ci,e){e.stopPropagation();const m=document.getElementById(`colMenu-${ci}`);if(!m)return;if(activeDropdownId===ci){closeAllColMenus();return;}closeAllColMenus();m.style.display='block';activeDropdownId=ci;}
+function closeAllColMenus(){document.querySelectorAll('.col-dropdown').forEach(d=>d.style.display='none');activeDropdownId=null;}
+document.addEventListener('click',(e)=>{if(!e.target.closest('.col-dropdown')&&!e.target.closest('.col-menu-btn'))closeAllColMenus();});
+function clearColumnCards(ci){closeAllColMenus();const c=boardData.columns.find(x=>x.id===ci);if(!c)return;if(!c.cards.length){showToast('该列已经是空的','fa-info-circle','var(--text-muted)');return;}const n=c.cards.length;c.cards=[];renderCurrentView();showToast(`已清空「${c.title}」中 ${n} 个任务`,'fa-broom','#F59E0B');}
+function deleteColumn(ci){closeAllColMenus();const c=boardData.columns.find(x=>x.id===ci);if(!c)return;if(c.cards.length>0){showToast(`请先清空「${c.title}」中 ${c.cards.length} 个任务`,'fa-triangle-exclamation','#F59E0B');return;}boardData.columns=boardData.columns.filter(x=>x.id!==ci);renderCurrentView();showToast(`「${c.title}」列已删除`,'fa-trash','#EF4444');}
+
+function toggleStar(ci){const r=getCardById(ci);if(!r)return;r.card.starred=!r.card.starred;renderCurrentView();showToast(r.card.starred?'已收藏':'已取消收藏','fa-star',r.card.starred?'#FBBF24':'var(--text-muted)');}
+function toggleAddCard(ci){const f=document.getElementById(`addForm-${ci}`);if(!f)return;f.classList.toggle('active');if(f.classList.contains('active'))setTimeout(()=>document.getElementById(`newCardTitle-${ci}`)?.focus(),100);}
+function addCard(ci){const ti=document.getElementById(`newCardTitle-${ci}`),pi=document.getElementById(`newCardPriority-${ci}`),di=document.getElementById(`newCardDiff-${ci}`),ty=document.getElementById(`newCardType-${ci}`);const t=ti.value.trim();if(!t){ti.style.borderColor='#EF4444';setTimeout(()=>ti.style.borderColor='',1500);return;}const c=boardData.columns.find(x=>x.id===ci);if(!c)return;c.cards.unshift({id:nextCardId++,title:t,description:'',priority:pi.value,difficulty:di.value,startDate:'',dueDate:'',tags:[],type:ty.value,teamName:'',starred:false,subtasks:[],editHistory:[]});renderCurrentView();showToast('任务已创建','fa-plus','#10B981');}
+function deleteCard(ci){for(const col of boardData.columns){const i=col.cards.findIndex(c=>c.id===ci);if(i!==-1){col.cards.splice(i,1);renderCurrentView();showToast('任务已删除','fa-trash','#EF4444');return;}}}
+
+// ===== 子任务交互 =====
+function toggleSubtask(cardId,subtaskId){
+    const r=getCardById(cardId);if(!r)return;
+    const sub=r.card.subtasks.find(s=>s.id===subtaskId);
+    if(sub){sub.done=!sub.done;refreshModal();renderCurrentView();}
+}
+function addSubtask(cardId){
+    const r=getCardById(cardId);if(!r)return;
+    const input=document.getElementById('newSubtaskInput');
+    if(!input)return;const t=input.value.trim();
+    if(!t){input.style.borderColor='#EF4444';setTimeout(()=>input.style.borderColor='',1500);return;}
+    r.card.subtasks.push({id:nextSubtaskId++,title:t,done:false});
+    input.value='';refreshModal();renderCurrentView();
+    showToast('子任务已添加','fa-plus','#10B981');
+}
+function deleteSubtask(cardId,subtaskId){
+    const r=getCardById(cardId);if(!r)return;
+    r.card.subtasks=r.card.subtasks.filter(s=>s.id!==subtaskId);
+    refreshModal();renderCurrentView();showToast('子任务已删除','fa-trash','#EF4444');
+}
+
+// ===== 模态框 =====
+function updateModalWidth(){document.getElementById('modalContent').style.width=(historyPanelOpen?840:500)+'px';}
+function openDetailModal(ci){currentModalCardId=ci;historyPanelOpen=false;const r=getCardById(ci);if(!r)return;renderModalReadMode(r.card,r.column);updateModalWidth();document.getElementById('modalOverlay').classList.add('active');}
+
+function renderModalReadMode(card,column){
+    const pl={high:'高优先级',medium:'中优先级',low:'低优先级'},pcl={high:'#EF4444',medium:'#F59E0B',low:'#10B981'},pbg={high:'rgba(239,68,68,0.12)',medium:'rgba(245,158,11,0.12)',low:'rgba(16,185,129,0.12)'},pi={high:'fa-arrow-up',medium:'fa-minus',low:'fa-arrow-down'};
+    const dl={easy:'简单',medium:'中等',hard:'困难'},dcl={easy:'var(--diff-easy)',medium:'var(--diff-medium)',hard:'var(--diff-hard)'},dbg={easy:'rgba(52,211,153,0.12)',medium:'rgba(251,191,36,0.12)',hard:'rgba(248,113,113,0.12)'},dc={easy:1,medium:2,hard:3};
+    const s=stStats(card),sc=stColor(s.pct);
+    const deH=card.description?`<div class="detail-label">描述</div><div class="detail-text">${escapeHtml(card.description)}</div>`:'';
+    const tgH=card.tags.length>0?card.tags.map(t=>`<span class="tag ${tagClassMap[t]||'tag-dev'}" style="font-size:11px;padding:2px 8px;">${t}</span>`).join(''):'<span style="color:var(--text-muted);font-size:12px;">未设置</span>';
+    let ddr='';for(let i=0;i<dc[card.difficulty];i++)ddr+=`<span class="diff-dot" style="background:${dcl[card.difficulty]};width:6px;height:6px;"></span>`;
+    const tb=card.type==='team'&&card.teamName?`<span class="detail-badge" style="background:var(--accent-dim);color:var(--accent-light);"><i class="fa-solid fa-users" style="font-size:9px;"></i>${escapeHtml(card.teamName)}</span>`:`<span class="detail-badge" style="background:rgba(255,255,255,0.05);color:var(--text-secondary);"><i class="fa-solid fa-user" style="font-size:9px;"></i>个人</span>`;
+
+    // 子任务列表
+    const stListH=card.subtasks.length>0?card.subtasks.map(sub=>`
+        <div class="subtask-row">
+            <button class="subtask-check ${sub.done?'checked':''}" onclick="toggleSubtask(${card.id},${sub.id})" aria-label="${sub.done?'标记未完成':'标记完成'}"><i class="fa-solid fa-check"></i></button>
+            <span class="subtask-title ${sub.done?'done':''}">${escapeHtml(sub.title)}</span>
+            <button class="subtask-delete" onclick="deleteSubtask(${card.id},${sub.id})" title="删除"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+    `).join(''):'<div style="padding:8px;text-align:center;color:var(--text-muted);font-size:12px;">暂无子任务</div>';
+
+    const stSection=s.total>0?`
+        <div style="padding:14px 22px 0;">
+            <div class="detail-label">子任务</div>
+            <div class="flex items-center justify-between" style="margin-bottom:6px;">
+                <span style="font-size:12px;color:var(--text-secondary);">已完成 ${s.done}/${s.total}</span>
+                <span class="font-display font-semibold" style="font-size:14px;color:${sc};">${s.pct}%</span>
+            </div>
+            <div class="subtask-progress-bar"><div class="subtask-progress-fill" style="width:${s.pct}%;background:${sc};"></div></div>
+            <div class="subtask-list">${stListH}</div>
+            <div class="subtask-add-row">
+                <input type="text" class="subtask-add-input" id="newSubtaskInput" placeholder="添加子任务..." onkeydown="if(event.key==='Enter')addSubtask(${card.id})">
+                <button class="subtask-add-btn" onclick="addSubtask(${card.id})" title="添加"><i class="fa-solid fa-plus"></i></button>
+            </div>
+        </div>
+    `:`
+        <div style="padding:14px 22px 0;">
+            <div class="detail-label">子任务</div>
+            <div class="subtask-list">${stListH}</div>
+            <div class="subtask-add-row">
+                <input type="text" class="subtask-add-input" id="newSubtaskInput" placeholder="添加子任务..." onkeydown="if(event.key==='Enter')addSubtask(${card.id})">
+                <button class="subtask-add-btn" onclick="addSubtask(${card.id})" title="添加"><i class="fa-solid fa-plus"></i></button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('modalContent').innerHTML=`<div class="modal-main" id="modalMain"><div class="modal-mode" id="modalModeContent">
+        <div style="padding:18px 22px 0;display:flex;align-items:center;justify-content:space-between;"><div class="flex items-center gap-2"><div class="w-5 h-5 rounded flex items-center justify-center" style="background:${column.color}1A;color:${column.color};"><i class="fa-solid ${column.icon}" style="font-size:9px;"></i></div><span style="font-size:11px;color:var(--text-muted);">${column.title}</span></div><div class="flex items-center gap-1"><button class="btn-ghost" style="padding:5px 8px;font-size:11px;display:flex;align-items:center;gap:4px;" onclick="switchToEditMode(${card.id})"><i class="fa-solid fa-pen" style="font-size:9px;"></i>编辑</button><button class="btn-danger" style="padding:5px 8px;font-size:11px;display:flex;align-items:center;gap:4px;" onclick="deleteCard(${card.id});closeModal();"><i class="fa-solid fa-trash-can" style="font-size:9px;"></i>删除</button><button class="btn-ghost" style="padding:5px 6px;" onclick="closeModal()"><i class="fa-solid fa-xmark" style="font-size:12px;"></i></button></div></div>
+        <div style="padding:14px 22px 0;display:flex;align-items:flex-start;gap:8px;"><h2 class="font-display font-bold" style="font-size:18px;line-height:1.3;flex:1;color:var(--text);">${escapeHtml(card.title)}</h2><button class="star-btn ${card.starred?'starred':''}" style="font-size:16px;margin-top:2px;" onclick="toggleStar(${card.id});refreshModal();"><i class="fa-${card.starred?'solid':'regular'} fa-star"></i></button></div>
+        <div style="padding:10px 22px 0;display:flex;flex-wrap:wrap;gap:6px;"><span class="detail-badge" style="background:${pbg[card.priority]};color:${pcl[card.priority]};"><i class="fa-solid ${pi[card.priority]}" style="font-size:9px;"></i>${pl[card.priority]}</span><span class="detail-badge" style="background:${dbg[card.difficulty]};color:${dcl[card.difficulty]};">${ddr} ${dl[card.difficulty]}</span>${tb}</div>
+        <div style="padding:14px 22px 0;"><div class="detail-row"><div class="detail-field"><div class="detail-field-box"><div class="detail-field-label">开始时间</div><div class="detail-field-value">${card.startDate?formatDate(card.startDate):'—'}</div></div></div><div class="detail-field"><div class="detail-field-box"><div class="detail-field-label">截止时间</div><div class="detail-field-value">${card.dueDate?formatDate(card.dueDate):'—'}</div></div></div></div></div>
+        <div style="padding:14px 22px 0;"><div class="detail-label">标签</div><div class="flex flex-wrap gap-1.5">${tgH}</div></div>
+        ${deH?`<div style="padding:14px 22px 0;">${deH}</div>`:''}
+        ${stSection}
+        <div style="height:28px;"></div></div></div>`;
+}
+
+function switchToEditMode(ci){const r=getCardById(ci);if(!r)return;const{card}=r;const m=document.getElementById('modalModeContent');m.classList.add('fading-out');setTimeout(()=>{const tf=card.type==='team'?`<div class="mb-3"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">团队名称</label><input type="text" class="input-field" id="editTeamName" value="${escapeHtml(card.teamName||'')}" placeholder="团队名称..." style="font-size:12px;padding:7px 10px;"></div>`:'';m.innerHTML=`<div style="padding:18px 22px 0;display:flex;align-items:center;justify-content:space-between;"><div class="flex items-center gap-2"><i class="fa-solid fa-pen-to-square" style="color:var(--accent);font-size:12px;"></i><span style="font-size:12px;font-weight:600;color:var(--text);">编辑任务</span></div><div class="flex items-center gap-1"><button class="btn-ghost" style="padding:5px 8px;font-size:11px;display:flex;align-items:center;gap:4px;${historyPanelOpen?'background:var(--accent-dim);color:var(--accent);':''}" onclick="toggleHistoryPanel(${card.id})"><i class="fa-solid fa-clock-rotate-left" style="font-size:10px;"></i>历史</button><button class="btn-ghost" style="padding:5px 6px;" onclick="switchToReadMode(${card.id})"><i class="fa-solid fa-arrow-left" style="font-size:11px;"></i></button><button class="btn-ghost" style="padding:5px 6px;" onclick="closeModal()"><i class="fa-solid fa-xmark" style="font-size:12px;"></i></button></div></div><div style="padding:14px 22px 22px;"><div class="mb-3"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">标题</label><input type="text" class="input-field" id="editTitle" value="${escapeHtml(card.title)}" style="font-size:14px;font-weight:600;"></div><div class="mb-3"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">描述</label><textarea class="input-field" id="editDesc" rows="2" style="resize:vertical;min-height:60px;font-size:12px;" placeholder="添加描述...">${escapeHtml(card.description)}</textarea></div><div class="flex gap-2 mb-3"><div class="flex-1"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">优先级</label><select class="input-field" id="editPriority" style="font-size:12px;"><option value="high" ${card.priority==='high'?'selected':''}>高</option><option value="medium" ${card.priority==='medium'?'selected':''}>中</option><option value="low" ${card.priority==='low'?'selected':''}>低</option></select></div><div class="flex-1"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">难度</label><select class="input-field" id="editDiff" style="font-size:12px;"><option value="easy" ${card.difficulty==='easy'?'selected':''}>简单</option><option value="medium" ${card.difficulty==='medium'?'selected':''}>中等</option><option value="hard" ${card.difficulty==='hard'?'selected':''}>困难</option></select></div><div class="flex-1"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">类型</label><select class="input-field" id="editType" style="font-size:12px;" onchange="onTypeChange()"><option value="team" ${card.type==='team'?'selected':''}>团队</option><option value="personal" ${card.type==='personal'?'selected':''}>个人</option></select></div></div><div id="teamNameFieldContainer">${tf}</div><div class="flex gap-2 mb-3"><div class="flex-1"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">开始时间</label><input type="date" class="input-field" id="editStartDate" value="${card.startDate||''}" style="color-scheme:dark;font-size:12px;"></div><div class="flex-1"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">截止时间</label><input type="date" class="input-field" id="editDueDate" value="${card.dueDate||''}" style="color-scheme:dark;font-size:12px;"></div></div><div class="mb-3"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">标签</label><input type="text" class="input-field" id="editTags" value="${card.tags.join(', ')}" placeholder="设计, 开发..." style="font-size:12px;"></div><div class="flex items-center justify-end gap-2 pt-3" style="border-top:1px solid var(--border);"><button class="btn-ghost" onclick="switchToReadMode(${card.id})">取消</button><button class="btn-primary" onclick="saveCard(${card.id})">保存</button></div></div>`;m.classList.remove('fading-out');m.classList.add('fading-in');requestAnimationFrame(()=>{requestAnimationFrame(()=>{m.classList.remove('fading-in');});});setTimeout(()=>document.getElementById('editTitle')?.focus(),50);syncHistoryPanel(card);},180);}
+function onTypeChange(){const t=document.getElementById('editType')?.value,c=document.getElementById('teamNameFieldContainer');if(!c)return;if(t==='team'&&!document.getElementById('editTeamName'))c.innerHTML='<div class="mb-3"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">团队名称</label><input type="text" class="input-field" id="editTeamName" placeholder="团队名称..." style="font-size:12px;padding:7px 10px;"></div>';else if(t!=='team')c.innerHTML='';}
+
+function toggleHistoryPanel(ci){historyPanelOpen=!historyPanelOpen;const r=getCardById(ci);if(r)syncHistoryPanel(r.card);updateModalWidth();const b=document.querySelector('[onclick^="toggleHistoryPanel"]');if(b){if(historyPanelOpen){b.style.background='var(--accent-dim)';b.style.color='var(--accent)';}else{b.style.background='';b.style.color='';}}}
+function syncHistoryPanel(card){const m=document.getElementById('modalContent'),e=m.querySelector('.history-panel');if(historyPanelOpen&&!e){const p=document.createElement('div');p.className='history-panel';p.innerHTML=buildHistoryHtml(card);m.appendChild(p);}else if(!historyPanelOpen&&e)e.remove();else if(historyPanelOpen&&e)e.innerHTML=buildHistoryHtml(card);}
+function buildHistoryHtml(card){const h=[...(card.editHistory||[])].reverse();if(!h.length)return`<div class="history-panel-header"><div class="flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent);font-size:12px;"></i><span style="font-size:12px;font-weight:600;color:var(--text);">编辑历史</span></div><button class="btn-ghost" style="padding:3px 5px;" onclick="toggleHistoryPanel(${card.id})"><i class="fa-solid fa-xmark" style="font-size:11px;"></i></button></div><div style="padding:30px 16px;text-align:center;color:var(--text-muted);font-size:12px;"><i class="fa-regular fa-clock text-xl mb-2" style="display:block;opacity:0.3;"></i>暂无记录</div>`;const items=h.map(x=>{const dc=x.action==='create'?'action-create':x.action==='move'?'action-move':'action-edit';const ch=x.changes.map(c=>{const f=c.from&&c.from.length>18?c.from.substring(0,18)+'…':c.from;const t=c.to&&c.to.length>18?c.to.substring(0,18)+'…':c.to;if(!f&&t)return`<div class="history-change-row"><span class="history-field">${escapeHtml(c.field)}</span><span class="history-to">${escapeHtml(t)}</span></div>`;return`<div class="history-change-row"><span class="history-field">${escapeHtml(c.field)}</span><span class="history-from">${escapeHtml(f)}</span><span class="history-arrow">→</span><span class="history-to">${escapeHtml(t)}</span></div>`;}).join('');return`<div class="history-item"><div class="history-dot ${dc}"></div><div class="history-user"><img class="history-avatar" src="${x.avatar}" alt=""><span class="history-username">${escapeHtml(x.user)}</span><span class="history-time">${escapeHtml(x.time)}</span></div><div class="history-changes">${ch}</div></div>`;}).join('');return`<div class="history-panel-header"><div class="flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent);font-size:12px;"></i><span style="font-size:12px;font-weight:600;color:var(--text);">编辑历史</span><span style="font-size:10px;color:var(--text-muted);margin-left:3px;">${h.length}条</span></div><button class="btn-ghost" style="padding:3px 5px;" onclick="toggleHistoryPanel(${card.id})"><i class="fa-solid fa-xmark" style="font-size:11px;"></i></button></div><div class="history-timeline">${items}</div>`;}
+
+function switchToReadMode(ci){const r=getCardById(ci);if(!r)return;historyPanelOpen=false;const m=document.getElementById('modalModeContent');m.classList.add('fading-out');setTimeout(()=>{renderModalReadMode(r.card,r.column);updateModalWidth();const h=document.querySelector('.history-panel');if(h)h.remove();const n=document.getElementById('modalModeContent');n.classList.add('fading-in');requestAnimationFrame(()=>{requestAnimationFrame(()=>{n.classList.remove('fading-in');});});},180);}
+function refreshModal(){if(currentModalCardId){const r=getCardById(currentModalCardId);if(r)renderModalReadMode(r.card,r.column);}}
+function saveCard(ci){const r=getCardById(ci);if(!r)return;const{card}=r;const t=document.getElementById('editTitle').value.trim();if(!t){document.getElementById('editTitle').style.borderColor='#EF4444';return;}const o={title:card.title,description:card.description,priority:card.priority,difficulty:card.difficulty,type:card.type,teamName:card.teamName||'',startDate:card.startDate||'',dueDate:card.dueDate||'',tags:[...card.tags],subtaskSummary:`${stStats(card).done}/${stStats(card).total}`};card.title=t;card.description=document.getElementById('editDesc').value.trim();card.priority=document.getElementById('editPriority').value;card.difficulty=document.getElementById('editDiff').value;card.type=document.getElementById('editType').value;const ti=document.getElementById('editTeamName');card.teamName=ti?ti.value.trim():'';card.startDate=document.getElementById('editStartDate').value;card.dueDate=document.getElementById('editDueDate').value;card.tags=document.getElementById('editTags').value.split(',').map(t=>t.trim()).filter(Boolean);const newSummary=`${stStats(card).done}/${stStats(card).total}`;const e=generateHistoryEntry(card,o);if(e){if(!card.editHistory)card.editHistory=[];card.editHistory.push(e);}switchToReadMode(ci);renderCurrentView();showToast(e?'已更新，已记录修改历史':'已更新',e?'fa-pen':'fa-check',e?'#38BDF8':'var(--text-muted)');}
+function generateHistoryEntry(card,o){const ch=[];const fm={title:'标题',description:'描述',priority:'优先级',difficulty:'难度',type:'类型',teamName:'团队',startDate:'开始时间',dueDate:'截止时间'};const vm={priority:{high:'高',medium:'中',low:'低'},difficulty:{easy:'简单',medium:'中等',hard:'困难'},type:{team:'团队',personal:'个人'}};for(const[k,l]of Object.entries(fm)){if(k==='tags')continue;const ov=o[k]??'',nv=card[k]??'';if(String(ov)!==String(nv)){let f=String(ov),t=String(nv);if(vm[k]){f=vm[k][ov]||f;t=vm[k][nv]||t;}if(!f&&t)f='—';if(f&&!t)t='—';ch.push({field:l,from:f,to:t});}}if(JSON.stringify(o.tags)!==JSON.stringify(card.tags))ch.push({field:'标签',from:o.tags.join(', ')||'—',to:card.tags.join(', ')||'—'});if(o.subtaskSummary!==`${stStats(card).done}/${stStats(card).total}`)ch.push({field:'子任务',from:o.subtaskSummary,to:`${stStats(card).done}/${stStats(card).total}`});if(!ch.length)return null;const n=new Date(),ts=`${n.getMonth()+1}/${n.getDate()} ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;return{id:nextHistoryId++,user:'当前用户',avatar:'https://picsum.photos/seed/user42/40/40.jpg',time:ts,action:'edit',changes:ch};}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('active');currentModalCardId=null;historyPanelOpen=false;const h=document.querySelector('.history-panel');if(h)h.remove();document.getElementById('modalContent').style.width='';}
+
+function showAddColumnForm(){const colors=['#FF6B35','#38BDF8','#A78BFA','#10B981','#F87171','#FBBF24','#EC4899'];const icons=['fa-clipboard-list','fa-code','fa-eye','fa-circle-check','fa-flag','fa-rocket','fa-star','fa-flask'];const m=document.getElementById('modalContent');m._selColor=colors[0];m._selIcon=icons[0];m.style.width='500px';m.innerHTML=`<div class="modal-main"><div style="padding:22px;"><div class="flex items-center justify-between mb-4"><h3 class="font-display font-semibold text-base">新增列</h3><button class="btn-ghost" style="padding:5px 6px;" onclick="closeModal()"><i class="fa-solid fa-xmark" style="font-size:12px;"></i></button></div><div class="mb-3"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">列名称</label><input type="text" class="input-field" id="newColTitle" placeholder="例如：测试中" style="font-size:12px;"></div><div class="mb-3"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">颜色</label><div class="flex gap-2" id="colColorPicker">${colors.map((c,i)=>`<button class="w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all hover:scale-110" style="background:${c}22;border-color:${i===0?c:'transparent'};color:${c};cursor:pointer;" onclick="pickColColor(this,'${c}')"><i class="fa-solid fa-check" style="font-size:9px;"></i></button>`).join('')}</div></div><div class="mb-4"><label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">图标</label><div class="flex gap-2 flex-wrap" id="colIconPicker">${icons.map((ic,i)=>`<button class="w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all hover:scale-110" style="background:var(--card);border-color:${i===0?'var(--accent)':'var(--border)'};color:${i===0?'var(--accent)':'var(--text-muted)'};cursor:pointer;" onclick="pickColIcon(this,'${ic}')"><i class="fa-solid ${ic}" style="font-size:10px;"></i></button>`).join('')}</div></div><div class="flex justify-end gap-2"><button class="btn-ghost" onclick="closeModal()">取消</button><button class="btn-primary" onclick="addColumn()">创建</button></div></div></div>`;document.getElementById('modalOverlay').classList.add('active');setTimeout(()=>document.getElementById('newColTitle')?.focus(),200);}
+function pickColColor(b,c){document.querySelectorAll('#colColorPicker button').forEach(x=>x.style.borderColor='transparent');b.style.borderColor=c;document.getElementById('modalContent')._selColor=c;}
+function pickColIcon(b,i){document.querySelectorAll('#colIconPicker button').forEach(x=>{x.style.borderColor='var(--border)';x.style.color='var(--text-muted)';});b.style.borderColor='var(--accent)';b.style.color='var(--accent)';document.getElementById('modalContent')._selIcon=i;}
+function addColumn(){const t=document.getElementById('newColTitle').value.trim();if(!t){document.getElementById('newColTitle').style.borderColor='#EF4444';return;}const m=document.getElementById('modalContent');boardData.columns.push({id:'col-'+nextColId++,title:t,icon:m._selIcon||'fa-clipboard-list',color:m._selColor||'#FF6B35',cards:[]});closeModal();renderCurrentView();showToast(`「${t}」列已创建`,'fa-plus','#10B981');}
+
+document.getElementById('searchInput').addEventListener('input',()=>renderCurrentView());
+document.getElementById('modalOverlay').addEventListener('click',(e)=>{if(e.target===e.currentTarget)closeModal();});
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape')closeModal();});
+
+renderCurrentView();
+</script>
+</body>
+</html>
