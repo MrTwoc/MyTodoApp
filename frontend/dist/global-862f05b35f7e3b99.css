@@ -4657,6 +4657,7 @@ input, textarea, select, button, .no-transition {
 
 .task-detail-field-value.priority-medium {
   color: var(--info);
+  border: none;
 }
 
 .task-detail-field-value.priority-high {
