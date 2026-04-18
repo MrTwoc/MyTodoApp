@@ -1,7 +1,6 @@
 use crate::api::task::{delete_task as api_delete_task, get_task as api_get_task, get_task_logs as api_get_task_logs, update_task as api_update_task};
 use crate::api::user::get_user as api_get_user;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
-use crate::components::card::Card;
 use crate::components::modal::Modal;
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::user_store::UserProfile;
@@ -401,40 +400,20 @@ pub fn TaskDetailPage() -> impl IntoView {
     });
 
     view! {
-        <div class="page">
-            <header class="page-header task-detail-header">
-                <div>
-                    <button class="back-btn" on:click=nav_back>"← Back"</button>
-                    {move || {
-                        if is_editing.get() {
-                            view! {
-                                <input
-                                    type="text"
-                                    class="input-field task-title-input"
-                                    prop:value=move || edit_data.get().task_name.clone()
-                                    on:input=move |ev| update_edit_field("task_name", event_target_value(&ev))
-                                />
-                            }.into_any()
-                        } else {
-                            view! {
-                                <h1 class="page-title task-detail-title">{move || current_task().task_name.clone()}</h1>
-                            }.into_any()
-                        }
-                    }}
-                </div>
-                <div class="task-detail-actions">
+        <div class="page task-detail-page">
+            // Top Bar
+            <header class="task-detail-topbar">
+                <button class="back-btn" on:click=nav_back>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    "Back"
+                </button>
+                <div class="task-detail-topbar-actions">
                     {move || {
                         if is_editing.get() {
                             let saving = is_saving.get();
                             view! {
-                                <Button
-                                    variant=ButtonVariant::Primary
-                                    size=ButtonSize::Sm
-                                    disabled=saving
-                                    on_click=save_edit
-                                >
-                                    {if saving { "Saving..." } else { "Save" }}
-                                </Button>
                                 <Button
                                     variant=ButtonVariant::Secondary
                                     size=ButtonSize::Sm
@@ -443,16 +422,17 @@ pub fn TaskDetailPage() -> impl IntoView {
                                 >
                                     "Cancel"
                                 </Button>
+                                <Button
+                                    variant=ButtonVariant::Primary
+                                    size=ButtonSize::Sm
+                                    disabled=saving
+                                    on_click=save_edit
+                                >
+                                    {if saving { "Saving..." } else { "Save Changes" }}
+                                </Button>
                             }
                         } else {
                             view! {
-                                <Button
-                                    variant=ButtonVariant::Secondary
-                                    size=ButtonSize::Sm
-                                    on_click=start_edit
-                                >
-                                    "Edit"
-                                </Button>
                                 <Button
                                     variant=ButtonVariant::Danger
                                     size=ButtonSize::Sm
@@ -460,50 +440,129 @@ pub fn TaskDetailPage() -> impl IntoView {
                                 >
                                     "Delete"
                                 </Button>
+                                <Button
+                                    variant=ButtonVariant::Primary
+                                    size=ButtonSize::Sm
+                                    on_click=start_edit
+                                >
+                                    "Edit Task"
+                                </Button>
                             }
                         }
                     }}
                 </div>
             </header>
 
+            // Error Toast
             {move || {
                 if let Some(err) = save_error.get() {
                     view! {
-                        <div class="error-toast">{err}</div>
+                        <div class="task-detail-error-toast">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="15" y1="9" x2="9" y2="15"/>
+                                <line x1="9" y1="9" x2="15" y2="15"/>
+                            </svg>
+                            {err}
+                        </div>
                     }.into_any()
                 } else {
                     ().into_any()
                 }
             }}
 
-            <div class="task-detail-badges">
-                {move || {
-                    let t = current_task();
-                    let sc = status_class(&t.task_status);
-                    let sl = status_label(&t.task_status);
-                    let pc = priority_class(t.task_priority);
-                    let pl = priority_label(t.task_priority);
-                    view! {
-                        <span class=format!("task-status-badge {}", sc)>{sl}</span>
-                        <span class=format!("task-priority-badge {}", pc)>{pl}</span>
-                    }
-                }}
+            // Hero Section
+            <div class="task-detail-hero">
+                <div class="task-detail-hero-left">
+                    {move || {
+                        if is_editing.get() {
+                            view! {
+                                <input
+                                    type="text"
+                                    class="task-detail-title-input"
+                                    prop:value=move || edit_data.get().task_name.clone()
+                                    on:input=move |ev| update_edit_field("task_name", event_target_value(&ev))
+                                    placeholder="Task name..."
+                                />
+                            }.into_any()
+                        } else {
+                            view! {
+                                <h1 class="task-detail-title">{move || current_task().task_name.clone()}</h1>
+                            }.into_any()
+                        }
+                    }}
+                    <div class="task-detail-badges">
+                        {move || {
+                            let t = current_task();
+                            let sc = status_class(&t.task_status);
+                            let sl = status_label(&t.task_status);
+                            let pc = priority_class(t.task_priority);
+                            let pl = priority_label(t.task_priority);
+                            view! {
+                                <span class=format!("task-detail-badge status-badge {}", sc)>
+                                    {match t.task_status {
+                                        TaskStatus::Active => view! {
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <polyline points="12 6 12 12 16 14"/>
+                                            </svg>
+                                        }.into_any(),
+                                        TaskStatus::Completed => view! {
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                                <polyline points="22 4 12 14.01 9 11.01"/>
+                                            </svg>
+                                        }.into_any(),
+                                        TaskStatus::Paused => view! {
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="6" y="4" width="4" height="16"/>
+                                                <rect x="14" y="4" width="4" height="16"/>
+                                            </svg>
+                                        }.into_any(),
+                                    }}
+                                    {sl}
+                                </span>
+                                <span class=format!("task-detail-badge priority-badge {}", pc)>{pl}</span>
+                                {if t.is_favorite {
+                                    view! {
+                                        <span class="task-detail-badge favorite-badge favorited">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1">
+                                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                            </svg>
+                                            "Favorite"
+                                        </span>
+                                    }.into_any()
+                                } else {
+                                    ().into_any()
+                                }}
+                            }
+                        }}
+                    </div>
+                </div>
+                <div class="task-detail-hero-right">
+                    <div class="task-detail-progress-ring" style=move || {
+                        let pct = status_progress(&current_task().task_status);
+                        format!("--progress: {}%", pct)
+                    }>
+                        <svg viewBox="0 0 48 48">
+                            <circle class="progress-ring-bg" cx="24" cy="24" r="20" fill="none" stroke-width="4"/>
+                            <circle class="progress-ring-fill" cx="24" cy="24" r="20" fill="none" stroke-width="4"
+                                style=move || format!("stroke-dashoffset: {};", 125.66 * (1.0 - status_progress(&current_task().task_status) as f64 / 100.0))
+                            />
+                        </svg>
+                        <span class="progress-ring-text">{move || format!("{}%", status_progress(&current_task().task_status))}</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="task-detail-progress">
-                <div class="task-detail-progress-label">
-                    <span>"Progress"</span>
-                    <span class="task-detail-progress-value">{move || {
-                        let pct = status_progress(&current_task().task_status);
-                        format!("{}%", pct)
-                    }}</span>
-                </div>
-                <div class="progress-bar">
+            // Progress Bar
+            <div class="task-detail-progress-bar">
+                <div class="progress-bar-track">
                     {move || {
                         let pct = status_progress(&current_task().task_status);
                         view! {
                             <div
-                                class="progress-fill"
+                                class="progress-bar-fill"
                                 style=format!("width: {}%;", pct)
                             />
                         }
@@ -511,224 +570,447 @@ pub fn TaskDetailPage() -> impl IntoView {
                 </div>
             </div>
 
-            <Card title="Status".to_string()>
-                <div class="task-detail-section">
-                    {move || {
-                        if is_editing.get() {
-                            view! {
-                                <select
-                                    class="input-field"
-                                    prop:value=move || status_label(&edit_data.get().task_status).to_string()
-                                    on:change=move |ev| {
-                                        let value = event_target_value(&ev);
-                                        edit_data.update(|data| {
-                                            data.task_status = match value.as_str() {
-                                                "Active" => TaskStatus::Active,
-                                                "Completed" => TaskStatus::Completed,
-                                                "Paused" => TaskStatus::Paused,
-                                                _ => data.task_status.clone(),
-                                            };
-                                        });
-                                    }
-                                >
-                                    <option value="Active">Active</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="Paused">Paused</option>
-                                </select>
-                            }.into_any()
-                        } else {
-                            view! {
-                                <p class="task-detail-value">{move || status_label(&current_task().task_status)}</p>
-                            }.into_any()
-                        }
-                    }}
-                </div>
-            </Card>
-
-            <Card title="Metadata".to_string()>
-                <div class="task-detail-meta">
-                    <div class="task-detail-meta-item">
-                        <span class="meta-label">"Created By"</span>
-                        <span class="meta-value">
-                            {move || creator.get().map(|u| u.username.clone()).unwrap_or_else(|| "Loading...".to_string())}
-                        </span>
-                    </div>
-                    <div class="task-detail-meta-item">
-                        <span class="meta-label">"Created At"</span>
-                        <span class="meta-value">{move || format_timestamp(current_task().task_create_time)}</span>
-                    </div>
-                    <div class="task-detail-meta-item">
-                        <span class="meta-label">"Updated At"</span>
-                        <span class="meta-value">
-                            {move || current_task().task_update_time.map(|ts| format_timestamp(ts)).unwrap_or_else(|| "N/A".to_string())}
-                        </span>
-                    </div>
-                    <div class="task-detail-meta-item">
-                        <span class="meta-label">"Completed At"</span>
-                        <span class="meta-value">
-                            {move || current_task().task_complete_time.map(|ts| format_timestamp(ts)).unwrap_or_else(|| "N/A".to_string())}
-                        </span>
-                    </div>
-                    <div class="task-detail-meta-item">
-                        <span class="meta-label">"Favorite"</span>
-                        <span class="meta-value">{move || if current_task().is_favorite { "★ Yes" } else { "☆ No" }}</span>
-                    </div>
-                </div>
-            </Card>
-
-            <Card title="Details".to_string()>
-                <div class="task-detail-section">
-                    <h4 class="task-detail-label">"Description"</h4>
-                    {move || {
-                        if is_editing.get() {
-                            view! {
-                                <textarea
-                                    class="input-field task-description-input"
-                                    prop:value=move || edit_data.get().task_description.clone().unwrap_or_default()
-                                    on:input=move |ev| update_edit_field("task_description", event_target_value(&ev))
-                                />
-                            }.into_any()
-                        } else {
-                            view! {
-                                <p class="task-detail-value">{move || current_task().task_description.clone().unwrap_or_default()}</p>
-                            }.into_any()
-                        }
-                    }}
-                </div>
-
-                <div class="task-detail-section">
-                    <h4 class="task-detail-label">"Deadline"</h4>
-                    {move || {
-                        if is_editing.get() {
-                            view! {
-                                <input
-                                    type="date"
-                                    class="input-field date-input"
-                                    prop:value=move || {
-                                        edit_data.get().task_deadline.map(|ts| {
-                                            let dt = chrono::DateTime::from_timestamp(ts, 0)
-                                                .unwrap_or_default()
-                                                .date_naive();
-                                            dt.format("%Y-%m-%d").to_string()
-                                        }).unwrap_or_default()
-                                    }
-                                    on:input=move |ev| update_edit_field("task_deadline", event_target_value(&ev))
-                                />
-                            }.into_any()
-                        } else {
-                            view! {
-                                <p class="task-detail-value">{move || {
-                                    current_task().task_deadline.map(|ts| format_timestamp(ts)).unwrap_or_default()
-                                }}</p>
-                            }.into_any()
-                        }
-                    }}
-                </div>
-
-                <div class="task-detail-section">
-                    <h4 class="task-detail-label">"Priority"</h4>
-                    {move || {
-                        if is_editing.get() {
-                            view! {
-                                <input
-                                    type="number"
-                                    class="input-field"
-                                    min="0"
-                                    max="10"
-                                    prop:value=move || edit_data.get().task_priority.to_string()
-                                    on:input=move |ev| update_edit_field("task_priority", event_target_value(&ev))
-                                />
-                            }.into_any()
-                        } else {
-                            view! {
-                                <p class="task-detail-value">{move || current_task().task_priority.to_string()}</p>
-                            }.into_any()
-                        }
-                    }}
-                </div>
-
-                <div class="task-detail-section">
-                    <h4 class="task-detail-label">"Difficulty"</h4>
-                    {move || {
-                        if is_editing.get() {
-                            view! {
-                                <input
-                                    type="number"
-                                    class="input-field"
-                                    min="0"
-                                    max="10"
-                                    prop:value=move || edit_data.get().task_difficulty.to_string()
-                                    on:input=move |ev| update_edit_field("task_difficulty", event_target_value(&ev))
-                                />
-                            }.into_any()
-                        } else {
-                            view! {
-                                <p class="task-detail-value">{move || current_task().task_difficulty.to_string()}</p>
-                            }.into_any()
-                        }
-                    }}
-                </div>
-
-                <div class="task-detail-section">
-                    <h4 class="task-detail-label">"Tags"</h4>
-                    {move || {
-                        let kws: Vec<String> = current_task().task_keywords.iter().cloned().collect();
-                        if kws.is_empty() {
-                            view! {
-                                <p class="task-detail-value">"No tags"</p>
-                            }.into_any()
-                        } else {
-                            view! {
-                                <div class="tag-chips">
-                                    {kws.into_iter().map(|k| view! {
-                                        <span class="tag-chip">{k}</span>
-                                    }).collect::<Vec<_>>()}
-                                </div>
-                            }.into_any()
-                        }
-                    }}
-                </div>
-            </Card>
-
-            <Card title="History".to_string()>
-                <div class="task-history-list">
-                    {move || {
-                        let logs = task_logs.get();
-                        if logs.is_empty() {
-                            view! {
-                                <p class="task-detail-empty">"No history available."</p>
-                            }.into_any()
-                        } else {
-                            view! {
-                                {logs.into_iter().map(|log| {
-                                    let timestamp = log.get("created_at").and_then(|v| v.as_i64()).unwrap_or(0);
-                                    let action = log.get("action").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
-                                    let details = log.get("details").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                    let operator_id = log.get("operator_id").and_then(|v| v.as_u64()).unwrap_or(0);
-                                    let operator_name = operator_names.get().get(&operator_id).cloned().unwrap_or_else(|| format!("User {}", operator_id));
-                                    
+            // Two-Column Layout
+            <div class="task-detail-layout">
+                // Left Column - Main Content
+                <div class="task-detail-main">
+                    // Description Card
+                    <div class="task-detail-card">
+                        <div class="task-detail-card-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="17" y1="10" x2="3" y2="10"/>
+                                <line x1="21" y1="6" x2="3" y2="6"/>
+                                <line x1="21" y1="14" x2="3" y2="14"/>
+                                <line x1="17" y1="18" x2="3" y2="18"/>
+                            </svg>
+                            <h3 class="task-detail-card-title">"Description"</h3>
+                        </div>
+                        <div class="task-detail-card-body">
+                            {move || {
+                                if is_editing.get() {
                                     view! {
-                                        <div class="task-history-item">
-                                            <div class="task-history-time">
-                                                {format_log_timestamp(timestamp)}
-                                            </div>
-                                            <div class="task-history-content">
-                                                <span class="task-history-action">
-                                                    {format_action_type(&action)}
-                                                    {" by "}{operator_name}
-                                                </span>
-                                                <span class="task-history-details">
-                                                    {details}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        <textarea
+                                            class="task-detail-textarea"
+                                            prop:value=move || edit_data.get().task_description.clone().unwrap_or_default()
+                                            on:input=move |ev| update_edit_field("task_description", event_target_value(&ev))
+                                            placeholder="Add a description..."
+                                            rows="4"
+                                        />
+                                    }.into_any()
+                                } else {
+                                    let desc = current_task().task_description.clone().unwrap_or_default();
+                                    if desc.is_empty() {
+                                        view! {
+                                            <p class="task-detail-empty-desc">"No description provided."</p>
+                                        }.into_any()
+                                    } else {
+                                        view! {
+                                            <p class="task-detail-desc">{desc}</p>
+                                        }.into_any()
                                     }
-                                }).collect::<Vec<_>>()}
-                            }.into_any()
-                        }
-                    }}
+                                }
+                            }}
+                        </div>
+                    </div>
+
+                    // Tags Card
+                    <div class="task-detail-card">
+                        <div class="task-detail-card-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                                <line x1="7" y1="7" x2="7.01" y2="7"/>
+                            </svg>
+                            <h3 class="task-detail-card-title">"Tags"</h3>
+                        </div>
+                        <div class="task-detail-card-body">
+                            {move || {
+                                let kws: Vec<String> = current_task().task_keywords.iter().cloned().collect();
+                                if kws.is_empty() {
+                                    view! {
+                                        <p class="task-detail-empty-desc">"No tags assigned."</p>
+                                    }.into_any()
+                                } else {
+                                    view! {
+                                        <div class="tag-chips">
+                                            {kws.into_iter().map(|k| view! {
+                                                <span class="tag-chip">{k}</span>
+                                            }).collect::<Vec<_>>()}
+                                        </div>
+                                    }.into_any()
+                                }
+                            }}
+                        </div>
+                    </div>
+
+                    // History Card
+                    <div class="task-detail-card">
+                        <div class="task-detail-card-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="1 4 1 10 7 10"/>
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                            </svg>
+                            <h3 class="task-detail-card-title">"Activity History"</h3>
+                            <span class="task-detail-card-count">
+                                {move || task_logs.get().len()}
+                            </span>
+                        </div>
+                        <div class="task-detail-card-body">
+                            <div class="task-history-list">
+                                {move || {
+                                    let logs = task_logs.get();
+                                    if logs.is_empty() {
+                                        view! {
+                                            <div class="task-detail-empty-state">
+                                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="1 4 1 10 7 10"/>
+                                                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                                                </svg>
+                                                <p>"No activity recorded yet."</p>
+                                            </div>
+                                        }.into_any()
+                                    } else {
+                                        view! {
+                                            {logs.into_iter().map(|log| {
+                                                let timestamp = log.get("created_at").and_then(|v| v.as_i64()).unwrap_or(0);
+                                                let action = log.get("action").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
+                                                let details = log.get("details").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                                let operator_id = log.get("operator_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                                                let operator_name = operator_names.get().get(&operator_id).cloned().unwrap_or_else(|| format!("User {}", operator_id));
+                                                
+                                                view! {
+                                                    <div class="task-history-item">
+                                                        <div class="task-history-dot"></div>
+                                                        <div class="task-history-body">
+                                                            <div class="task-history-top">
+                                                                <span class="task-history-action">
+                                                                    {format_action_type(&action)}
+                                                                </span>
+                                                                <span class="task-history-time">
+                                                                    {format_log_timestamp(timestamp)}
+                                                                </span>
+                                                            </div>
+                                                            <span class="task-history-details">
+                                                                {"by "}{operator_name}
+                                                                {if details.is_empty() { "".to_string() } else { format!(" — {}", details) }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }).collect::<Vec<_>>()}
+                                        }.into_any()
+                                    }
+                                }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </Card>
+
+                // Right Column - Sidebar
+                <div class="task-detail-sidebar">
+                    // Status Card
+                    <div class="task-detail-card task-detail-sidebar-card">
+                        <div class="task-detail-card-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <h3 class="task-detail-card-title">"Status"</h3>
+                        </div>
+                        <div class="task-detail-card-body">
+                            {move || {
+                                if is_editing.get() {
+                                    view! {
+                                        <div class="task-detail-status-switch">
+                                            <button
+                                                class=format!("status-option {}", if edit_data.get().task_status == TaskStatus::Active { "active" } else { "" })
+                                                on:click=move |_| edit_data.update(|d| d.task_status = TaskStatus::Active)
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                "Active"
+                                            </button>
+                                            <button
+                                                class=format!("status-option {}", if edit_data.get().task_status == TaskStatus::Paused { "active" } else { "" })
+                                                on:click=move |_| edit_data.update(|d| d.task_status = TaskStatus::Paused)
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                                                "Paused"
+                                            </button>
+                                            <button
+                                                class=format!("status-option completed {}", if edit_data.get().task_status == TaskStatus::Completed { "active" } else { "" })
+                                                on:click=move |_| edit_data.update(|d| d.task_status = TaskStatus::Completed)
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                "Done"
+                                            </button>
+                                        </div>
+                                    }.into_any()
+                                } else {
+                                    let t = current_task();
+                                    let sc = status_class(&t.task_status);
+                                    let sl = status_label(&t.task_status);
+                                    view! {
+                                        <div class=format!("task-detail-status-display {}", sc)>
+                                            {match t.task_status {
+                                                TaskStatus::Active => view! {
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                }.into_any(),
+                                                TaskStatus::Completed => view! {
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                }.into_any(),
+                                                TaskStatus::Paused => view! {
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                                                }.into_any(),
+                                            }}
+                                            <span>{sl}</span>
+                                        </div>
+                                    }.into_any()
+                                }
+                            }}
+                        </div>
+                    </div>
+
+                    // Details Card
+                    <div class="task-detail-card task-detail-sidebar-card">
+                        <div class="task-detail-card-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10 9 9 9 8 9"/>
+                            </svg>
+                            <h3 class="task-detail-card-title">"Details"</h3>
+                        </div>
+                        <div class="task-detail-card-body">
+                            <div class="task-detail-fields">
+                                // Priority
+                                <div class="task-detail-field">
+                                    <div class="task-detail-field-icon priority-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                            <path d="M2 17l10 5 10-5"/>
+                                            <path d="M2 12l10 5 10-5"/>
+                                        </svg>
+                                    </div>
+                                    <div class="task-detail-field-content">
+                                        <span class="task-detail-field-label">"Priority"</span>
+                                        {move || {
+                                            if is_editing.get() {
+                                                view! {
+                                                    <div class="task-detail-priority-selector">
+                                                        {(0..=10_u8).step_by(1).map(|v| {
+                                                            let label = priority_label(v);
+                                                            let cls = priority_class(v);
+                                                            let is_selected = move || edit_data.get().task_priority == v;
+                                                            view! {
+                                                                <button
+                                                                    class=format!("priority-pip {} {}", cls, if is_selected() { "selected" } else { "" })
+                                                                    on:click=move |_| edit_data.update(|d| d.task_priority = v)
+                                                                    title=label
+                                                                >
+                                                                    {v}
+                                                                </button>
+                                                            }
+                                                        }).collect::<Vec<_>>()}
+                                                    </div>
+                                                }.into_any()
+                                            } else {
+                                                let t = current_task();
+                                                let pc = priority_class(t.task_priority);
+                                                let pl = priority_label(t.task_priority);
+                                                view! {
+                                                    <span class=format!("task-detail-field-value {}", pc)>{pl}</span>
+                                                }.into_any()
+                                            }
+                                        }}
+                                    </div>
+                                </div>
+
+                                // Difficulty
+                                <div class="task-detail-field">
+                                    <div class="task-detail-field-icon difficulty-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="12" y1="20" x2="12" y2="10"/>
+                                            <line x1="18" y1="20" x2="18" y2="4"/>
+                                            <line x1="6" y1="20" x2="6" y2="16"/>
+                                        </svg>
+                                    </div>
+                                    <div class="task-detail-field-content">
+                                        <span class="task-detail-field-label">"Difficulty"</span>
+                                        {move || {
+                                            if is_editing.get() {
+                                                view! {
+                                                    <input
+                                                        type="number"
+                                                        class="task-detail-inline-input"
+                                                        min="0"
+                                                        max="10"
+                                                        prop:value=move || edit_data.get().task_difficulty.to_string()
+                                                        on:input=move |ev| update_edit_field("task_difficulty", event_target_value(&ev))
+                                                    />
+                                                }.into_any()
+                                            } else {
+                                                view! {
+                                                    <span class="task-detail-field-value">
+                                                        {move || {
+                                                            let d = current_task().task_difficulty;
+                                                            format!("{}/10", d)
+                                                        }}
+                                                    </span>
+                                                }.into_any()
+                                            }
+                                        }}
+                                    </div>
+                                </div>
+
+                                // Deadline
+                                <div class="task-detail-field">
+                                    <div class="task-detail-field-icon deadline-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                            <line x1="16" y1="2" x2="16" y2="6"/>
+                                            <line x1="8" y1="2" x2="8" y2="6"/>
+                                            <line x1="3" y1="10" x2="21" y2="10"/>
+                                        </svg>
+                                    </div>
+                                    <div class="task-detail-field-content">
+                                        <span class="task-detail-field-label">"Deadline"</span>
+                                        {move || {
+                                            if is_editing.get() {
+                                                view! {
+                                                    <input
+                                                        type="date"
+                                                        class="task-detail-inline-input"
+                                                        prop:value=move || {
+                                                            edit_data.get().task_deadline.map(|ts| {
+                                                                let dt = chrono::DateTime::from_timestamp(ts, 0)
+                                                                    .unwrap_or_default()
+                                                                    .date_naive();
+                                                                dt.format("%Y-%m-%d").to_string()
+                                                            }).unwrap_or_default()
+                                                        }
+                                                        on:input=move |ev| update_edit_field("task_deadline", event_target_value(&ev))
+                                                    />
+                                                }.into_any()
+                                            } else {
+                                                view! {
+                                                    <span class="task-detail-field-value">
+                                                        {move || {
+                                                            current_task().task_deadline.map(|ts| format_timestamp(ts)).unwrap_or_else(|| "Not set".to_string())
+                                                        }}
+                                                    </span>
+                                                }.into_any()
+                                            }
+                                        }}
+                                    </div>
+                                </div>
+
+                                // Team
+                                {move || {
+                                    let t = current_task();
+                                    if let Some(_team_id) = t.task_team_id {
+                                        view! {
+                                            <div class="task-detail-field">
+                                                <div class="task-detail-field-icon team-icon">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                                        <circle cx="9" cy="7" r="4"/>
+                                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                                    </svg>
+                                                </div>
+                                                <div class="task-detail-field-content">
+                                                    <span class="task-detail-field-label">"Team"</span>
+                                                    <span class="task-detail-field-value">{format!("Team #{}", _team_id)}</span>
+                                                </div>
+                                            </div>
+                                        }.into_any()
+                                    } else {
+                                        view! {
+                                            <div class="task-detail-field">
+                                                <div class="task-detail-field-icon team-icon">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                                        <circle cx="12" cy="7" r="4"/>
+                                                    </svg>
+                                                </div>
+                                                <div class="task-detail-field-content">
+                                                    <span class="task-detail-field-label">"Team"</span>
+                                                    <span class="task-detail-field-value dim">"Personal task"</span>
+                                                </div>
+                                            </div>
+                                        }.into_any()
+                                    }
+                                }}
+                            </div>
+                        </div>
+                    </div>
+
+                    // Metadata Card
+                    <div class="task-detail-card task-detail-sidebar-card">
+                        <div class="task-detail-card-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="16" x2="12" y2="12"/>
+                                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                            <h3 class="task-detail-card-title">"Information"</h3>
+                        </div>
+                        <div class="task-detail-card-body">
+                            <div class="task-detail-info-list">
+                                <div class="task-detail-info-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="12" cy="7" r="4"/>
+                                    </svg>
+                                    <div class="task-detail-info-content">
+                                        <span class="task-detail-info-label">"Created By"</span>
+                                        <span class="task-detail-info-value">
+                                            {move || creator.get().map(|u| u.username.clone()).unwrap_or_else(|| "Loading...".to_string())}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="task-detail-info-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                        <line x1="16" y1="2" x2="16" y2="6"/>
+                                        <line x1="8" y1="2" x2="8" y2="6"/>
+                                        <line x1="3" y1="10" x2="21" y2="10"/>
+                                    </svg>
+                                    <div class="task-detail-info-content">
+                                        <span class="task-detail-info-label">"Created At"</span>
+                                        <span class="task-detail-info-value">{move || format_timestamp(current_task().task_create_time)}</span>
+                                    </div>
+                                </div>
+                                <div class="task-detail-info-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="1 4 1 10 7 10"/>
+                                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                                    </svg>
+                                    <div class="task-detail-info-content">
+                                        <span class="task-detail-info-label">"Updated At"</span>
+                                        <span class="task-detail-info-value">
+                                            {move || current_task().task_update_time.map(|ts| format_timestamp(ts)).unwrap_or_else(|| "N/A".to_string())}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="task-detail-info-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                        <polyline points="22 4 12 14.01 9 11.01"/>
+                                    </svg>
+                                    <div class="task-detail-info-content">
+                                        <span class="task-detail-info-label">"Completed At"</span>
+                                        <span class="task-detail-info-value">
+                                            {move || current_task().task_complete_time.map(|ts| format_timestamp(ts)).unwrap_or_else(|| "N/A".to_string())}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <Modal
                 title="Confirm Delete".to_string()

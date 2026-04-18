@@ -24,6 +24,13 @@ pub fn KanbanCard(
         _ => "Urgent",
     };
 
+    let priority_indicator_class = match task.task_priority {
+        0..=2 => "kanban-card-priority-indicator priority-indicator-low",
+        3..=5 => "kanban-card-priority-indicator priority-indicator-medium",
+        6..=8 => "kanban-card-priority-indicator priority-indicator-high",
+        _ => "kanban-card-priority-indicator priority-indicator-urgent",
+    };
+
     let handle_click = move |ev: ev::MouseEvent| {
         if let Some(cb) = on_click.as_ref() {
             cb.run((ev,));
@@ -63,12 +70,23 @@ pub fn KanbanCard(
         )
     });
 
+    let is_overdue = task.task_deadline.map(|ts| {
+        let now = js_sys::Date::now() as i64;
+        ts < now / 1000
+    }).unwrap_or(false);
+
     view! {
         <div
-            class=format!("kanban-card {}", if compact { "compact" } else { "" })
+            class=format!("kanban-card {} {}", if compact { "compact" } else { "" }, if is_overdue && has_deadline { "overdue" } else { "" })
             on:click=handle_click
         >
+            <div class=priority_indicator_class></div>
             <div class="kanban-card-header">
+                <div class="kanban-card-header-left">
+                    <span class=format!("priority-badge {}", priority_class)>
+                        {priority_label}
+                    </span>
+                </div>
                 <button
                     class=format!("favorite-btn {}", if task.is_favorite { "favorited" } else { "" })
                     title=if task.is_favorite { "Remove from favorites" } else { "Add to favorites" }
@@ -86,16 +104,28 @@ pub fn KanbanCard(
                 ().into_any()
             }}
             <div class="kanban-card-meta">
-                <span class=format!("priority-badge {}", priority_class)>
-                    {priority_label}
-                </span>
                 {if has_deadline {
-                    view! { <span class="deadline-badge">{deadline_text.unwrap_or_default()}</span> }.into_any()
+                    view! {
+                        <span class=format!("deadline-badge {}", if is_overdue { "overdue" } else { "" })>
+                            <svg class="deadline-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="8" cy="8" r="6.5"/>
+                                <path d="M8 4.5V8l2.5 1.5"/>
+                            </svg>
+                            {deadline_text.unwrap_or_default()}
+                        </span>
+                    }.into_any()
                 } else {
                     ().into_any()
                 }}
                 {if has_team {
-                    view! { <span class="team-badge">{team_name.unwrap_or_default()}</span> }.into_any()
+                    view! {
+                        <span class="team-badge">
+                            <svg class="team-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M5.5 7a2 2 0 100-4 2 2 0 000 4zM10.5 7a2 2 0 100-4 2 2 0 000 4zM2 13c0-2.5 2-4 3.5-4s1.5.5 2.5.5 1-.5 2.5-.5 3.5 1.5 3.5 4"/>
+                            </svg>
+                            {team_name.unwrap_or_default()}
+                        </span>
+                    }.into_any()
                 } else {
                     ().into_any()
                 }}
@@ -108,6 +138,7 @@ pub struct KanbanColumnConfig {
     pub status: TaskStatus,
     pub title: &'static str,
     pub color: &'static str,
+    pub icon: &'static str,
 }
 
 pub fn get_kanban_columns() -> Vec<KanbanColumnConfig> {
@@ -116,16 +147,19 @@ pub fn get_kanban_columns() -> Vec<KanbanColumnConfig> {
             status: TaskStatus::Active,
             title: "To Do",
             color: "#3b82f6",
+            icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4",
         },
         KanbanColumnConfig {
             status: TaskStatus::Paused,
             title: "In Progress",
             color: "#f59e0b",
+            icon: "M13 10V3L4 14h7v7l9-11h-7z",
         },
         KanbanColumnConfig {
             status: TaskStatus::Completed,
             title: "Done",
             color: "#10b981",
+            icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
         },
     ]
 }
@@ -138,14 +172,38 @@ pub fn KanbanColumn(
     on_task_toggle_favorite: Callback<(u64,)>,
 ) -> impl IntoView {
     let column_tasks = tasks;
+    let task_count = column_tasks.len();
+    let is_empty = task_count == 0;
 
     view! {
-        <div class="kanban-column">
-            <div class="kanban-column-header" style=format!("--column-color: {}", config.color)>
-                <h2 class="kanban-column-title">{config.title}</h2>
-                <span class="kanban-column-count">{column_tasks.len()}</span>
+        <div class="kanban-column" style=format!("--column-color: {}", config.color)>
+            <div class="kanban-column-header">
+                <div class="kanban-column-header-left">
+                    <span class="kanban-column-icon" style=format!("color: {}", config.color)>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d=config.icon/>
+                        </svg>
+                    </span>
+                    <h2 class="kanban-column-title">{config.title}</h2>
+                </div>
+                <span class="kanban-column-count" style=format!("--column-color: {}", config.color)>
+                    {task_count}
+                </span>
             </div>
             <div class="kanban-column-content">
+                {if is_empty {
+                    view! {
+                        <div class="kanban-column-empty">
+                            <svg class="kanban-empty-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                                <rect x="8" y="8" width="32" height="32" rx="4"/>
+                                <path d="M16 20h16M16 28h8"/>
+                            </svg>
+                            <p class="kanban-empty-text">"No tasks"</p>
+                        </div>
+                    }.into_any()
+                } else {
+                    ().into_any()
+                }}
                 {column_tasks.into_iter().map(|task| {
                     let task_id = task.task_id;
                     let on_click = on_task_click.clone();

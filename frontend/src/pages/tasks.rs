@@ -334,13 +334,12 @@ pub fn TasksPage() -> impl IntoView {
         }
     });
 
-    let toggle_view_mode = {
+    let toggle_view_mode: Callback<((),), ()> = {
         let vm = view_mode.clone();
         Callback::from(move |_| {
             let current = vm.get();
             match current {
-                "card" => vm.set("list"),
-                "list" => vm.set("kanban"),
+                "card" => vm.set("kanban"),
                 "kanban" => vm.set("card"),
                 _ => vm.set("card"),
             }
@@ -449,18 +448,15 @@ pub fn TasksPage() -> impl IntoView {
                                 "Favorites"
                             </Button>
                             <div class="filter-bar-spacer"></div>
-                            <Button
-                                variant=ButtonVariant::Secondary
-                                size=ButtonSize::Sm
-                                on_click=toggle_view_mode
-                            >
-                                {move || match view_mode.get() {
-                                    "card" => "Kanban",
-                                    "list" => "Kanban",
-                                    "kanban" => "Card",
-                                    _ => "Card",
-                                }}
-                            </Button>
+                            <div class="view-switcher">
+                                <button class="view-switcher-btn" on:click={let vm = toggle_view_mode.clone(); move |_| { vm.run(((),)); }} title="Switch to Kanban view">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                        <rect x="3" y="3" width="5" height="18" rx="1"/>
+                                        <rect x="10" y="3" width="5" height="12" rx="1"/>
+                                        <rect x="17" y="3" width="5" height="8" rx="1"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     }.into_any()
                 } else {
@@ -472,7 +468,7 @@ pub fn TasksPage() -> impl IntoView {
                         })
                     };
                     view! {
-                        <div class="filter-bar">
+                        <div class="filter-bar kanban-filter-bar">
                             <Button
                                 variant=ButtonVariant::Secondary
                                 size=ButtonSize::Sm
@@ -481,13 +477,16 @@ pub fn TasksPage() -> impl IntoView {
                                 "Favorites"
                             </Button>
                             <div class="filter-bar-spacer"></div>
-                            <Button
-                                variant=ButtonVariant::Secondary
-                                size=ButtonSize::Sm
-                                on_click=toggle_view_mode
-                            >
-                                "Card"
-                            </Button>
+                            <div class="view-switcher">
+                                <button class="view-switcher-btn active" on:click={let vm = toggle_view_mode.clone(); move |_| { vm.run(((),)); }} title="Switch to Card view">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                        <rect x="3" y="3" width="7" height="7" rx="1"/>
+                                        <rect x="14" y="3" width="7" height="7" rx="1"/>
+                                        <rect x="3" y="14" width="7" height="7" rx="1"/>
+                                        <rect x="14" y="14" width="7" height="7" rx="1"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     }.into_any()
                 }
@@ -581,8 +580,7 @@ pub fn TasksPage() -> impl IntoView {
                                         }
                                     })
                                     .collect();
-                                let class = if view_mode.get() == "list" { "task-list" } else { "task-grid" };
-                                view! { <div class={class}>{cards}</div> }.into_any()
+                                view! { <div class="task-grid">{cards}</div> }.into_any()
                             }
                         }
                     }
