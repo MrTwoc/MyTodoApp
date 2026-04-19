@@ -4,3 +4,4 @@ pub mod user_handler;
 pub mod dashboard_handler;
 pub mod sub_task_handler;
 pub mod sub_team_handler;
+pub mod task_comment_handler;

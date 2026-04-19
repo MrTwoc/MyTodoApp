@@ -66,6 +66,7 @@ async fn main() {
         .push(Router::with_path("hello").post(hello))
         .push(user_routes::user_router())
         .push(task_routes::task_router())
+        .push(task_routes::comment_router())
         .push(team_routes::team_router())
         .push(dashboard_routes::dashboard_router())
         .push(sub_team_routes::sub_team_router())

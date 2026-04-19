@@ -1,6 +1,7 @@
 use salvo::prelude::*;
 
 use crate::handlers::task_handler;
+use crate::handlers::task_comment_handler;
 use crate::middleware;
 
 pub fn task_router() -> Router {
@@ -20,7 +21,20 @@ pub fn task_router() -> Router {
                 .push(Router::with_path("priority").put(task_handler::update_task_priority))
                 .push(Router::with_path("favorite").post(task_handler::toggle_task_favorite))
                 .push(Router::with_path("logs").get(task_handler::get_task_logs))
+                .push(Router::with_path("comments").post(task_comment_handler::create_comment).get(task_comment_handler::get_comments))
                 .push(Router::with_path("restore").post(task_handler::restore_task))
                 .push(Router::with_path("permanent").delete(task_handler::permanent_delete_task)),
+        )
+}
+
+pub fn comment_router() -> Router {
+    let auth_middleware = middleware::auth::auth_check;
+
+    Router::with_path("api/comments")
+        .hoop(auth_middleware)
+        .push(
+            Router::with_path("{comment_id}")
+                .put(task_comment_handler::update_comment)
+                .delete(task_comment_handler::delete_comment),
         )
 }

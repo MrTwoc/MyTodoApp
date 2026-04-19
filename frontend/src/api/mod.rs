@@ -8,6 +8,7 @@ pub mod ws;
 pub mod task;
 pub mod team;
 pub mod user;
+pub mod task_comment;
 
 pub use client::ApiClient;
 pub use error::{ApiError, ApiResult};

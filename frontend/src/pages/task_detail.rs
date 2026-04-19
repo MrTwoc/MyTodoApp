@@ -2,6 +2,7 @@ use crate::api::task::{delete_task as api_delete_task, get_task as api_get_task,
 use crate::api::user::get_user as api_get_user;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::modal::Modal;
+use crate::components::task_comment::TaskComments;
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::user_store::UserProfile;
 use crate::store::{use_api_client, use_task_store};
@@ -703,6 +704,9 @@ pub fn TaskDetailPage() -> impl IntoView {
                             </div>
                         </div>
                     </div>
+
+                    // Comments Card
+                    <TaskComments task_id=task_id />
                 </div>
 
                 // Right Column - Sidebar
