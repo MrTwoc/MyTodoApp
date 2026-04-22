@@ -1,7 +1,9 @@
 use crate::api::error::{ApiError, ApiResult};
 use crate::store::get_local_storage_item;
+use crate::store::remove_local_storage_item;
 use gloo_net::http::Response;
 use serde::{Serialize, de::DeserializeOwned};
+use web_sys::window;
 
 const DEFAULT_BASE_URL: &str = "http://127.0.0.1:8698";
 const TOKEN_KEY: &str = "todo_token";
@@ -98,6 +100,13 @@ impl ApiClient {
             .map_err(|e| ApiError::network(e.to_string()))?;
 
         if status >= 400 {
+            // 如果是401未授权错误，清除令牌并重定向到登录页面
+            if status == 401 {
+                remove_local_storage_item(TOKEN_KEY);
+                if let Some(window) = window() {
+                    let _ = window.location().set_href("/login");
+                }
+            }
             let api_error: ApiError = serde_json::from_str(&text).unwrap_or_else(|_| {
                 ApiError::new(status, "Unknown Error".to_string(), text.clone())
             });
