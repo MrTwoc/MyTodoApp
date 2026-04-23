@@ -189,7 +189,9 @@ pub fn ProfilePage() -> impl IntoView {
         <div class="page">
             <header class="page-header">
                 <div>
+                    {/*
                     <a href="/settings" class="back-btn">"← Back"</a>
+                    */}
                     <h1 class="page-title">"Profile"</h1>
                 </div>
             </header>

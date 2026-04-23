@@ -11,7 +11,7 @@ use crate::components::input::Input;
 use crate::components::loading::{Loading, LoadingVariant};
 use crate::components::modal::Modal;
 use crate::components::search::SearchInput;
-use crate::components::task_form::{TaskFormData, TaskFormMode, TaskFormModal};
+use crate::components::task_form::{TaskFormData, TaskFormModal, TaskFormMode};
 use crate::components::team_module_nav::TeamModuleNav;
 use crate::store::task_store::{Task, TaskStatus};
 use crate::store::team_store::{TeamMember, TeamStore};
@@ -100,7 +100,13 @@ fn load_team_detail_data(
                 if let Some(m) = my_member {
                     set_current_user_level_val.set(m.level);
                 }
-                if let Some(team) = team_store.state.get().teams.iter().find(|t| t.team_id == team_id) {
+                if let Some(team) = team_store
+                    .state
+                    .get()
+                    .teams
+                    .iter()
+                    .find(|t| t.team_id == team_id)
+                {
                     set_team_leader_id_val.set(team.team_leader_id);
                 }
                 set_current_user_id_val.set(user_id);
@@ -146,8 +152,12 @@ fn TeamTaskRow(task: Task) -> impl IntoView {
             if let Some(team_id) = task_team_id {
                 let teams = team_store.state.get().teams.clone();
                 if let Some(team) = teams.iter().find(|t| t.team_id == team_id) {
-                    if let Some(member) = team.team_members.iter().find(|m| m.user_id == leader_id) {
-                        return member.username.clone().unwrap_or_else(|| leader_id.to_string());
+                    if let Some(member) = team.team_members.iter().find(|m| m.user_id == leader_id)
+                    {
+                        return member
+                            .username
+                            .clone()
+                            .unwrap_or_else(|| leader_id.to_string());
                     }
                     return leader_id.to_string();
                 }
@@ -444,10 +454,10 @@ pub fn TeamDetailPage() -> impl IntoView {
         })
     };
 
-    let on_back = {
-        let n = navigate.clone();
-        move |_| n("/teams", Default::default())
-    };
+    // let on_back = {
+    //     let n = navigate.clone();
+    //     move |_| n("/teams", Default::default())
+    // };
 
     let current_team = {
         let team_store = team_store.clone();
@@ -467,8 +477,15 @@ pub fn TeamDetailPage() -> impl IntoView {
             let teams = team_store.state.get().teams.clone();
             let team = teams.iter().find(|t| t.team_id == team_id);
             if let Some(team) = team {
-                if let Some(member) = team.team_members.iter().find(|m| m.user_id == team.team_leader_id) {
-                    return member.username.clone().unwrap_or_else(|| team.team_leader_id.to_string());
+                if let Some(member) = team
+                    .team_members
+                    .iter()
+                    .find(|m| m.user_id == team.team_leader_id)
+                {
+                    return member
+                        .username
+                        .clone()
+                        .unwrap_or_else(|| team.team_leader_id.to_string());
                 }
                 return team.team_leader_id.to_string();
             }
@@ -741,7 +758,9 @@ pub fn TeamDetailPage() -> impl IntoView {
         <div class="page">
             <header class="page-header">
                 <div>
+                    {/*
                     <button class="back-btn" on:click=on_back>"← Back"</button>
+                    */}
                     <a href=move || format!("/teams/{}", team_id) class="page-title">
                         {move || {
                             current_team()

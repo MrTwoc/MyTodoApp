@@ -25,11 +25,11 @@ pub fn TeamMembersPage() -> impl IntoView {
     let (loading, set_loading) = signal(true);
     let (members_error, set_members_error) = signal(Option::<String>::None);
 
-    let on_back = {
-        let n = navigate.clone();
-        let tid = team_id;
-        move |_| n(&format!("/teams/{}", tid), Default::default())
-    };
+    // let on_back = {
+    //     let n = navigate.clone();
+    //     let tid = team_id;
+    //     move |_| n(&format!("/teams/{}", tid), Default::default())
+    // };
 
     let current_team = {
         let team_store = team_store.clone();
@@ -88,7 +88,9 @@ pub fn TeamMembersPage() -> impl IntoView {
         <div class="page">
             <header class="page-header">
                 <div>
+                    {/*
                     <button class="back-btn" on:click=on_back>"← Back"</button>
+                    */}
                     <a href=move || format!("/teams/{}", team_id) class="page-title">
                         {move || {
                             current_team()
@@ -153,7 +155,7 @@ pub fn TeamMembersPage() -> impl IntoView {
                                             let _user_id = member.user_id;
                                             let level = member.level;
                                             let username = member.username.clone().unwrap_or_else(|| "Unknown".to_string());
-                                            
+
                                             view! {
                                                 <div class="team-member-item">
                                                     <div class="team-member-meta">

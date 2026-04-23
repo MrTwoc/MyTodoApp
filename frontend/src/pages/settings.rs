@@ -17,10 +17,10 @@ pub fn SettingsPage() -> impl IntoView {
         move || us.profile()
     };
 
-    let nav_back = {
-        let n = navigate.clone();
-        move |_| n("/", Default::default())
-    };
+    // let nav_back = {
+    //     let n = navigate.clone();
+    //     move |_| n("/", Default::default())
+    // };
 
     let nav_login = {
         let n = navigate.clone();
@@ -35,7 +35,9 @@ pub fn SettingsPage() -> impl IntoView {
         <div class="page">
             <header class="page-header">
                 <div>
+                    {/*
                     <button class="back-btn" on:click=nav_back>"← Back"</button>
+                    */}
                     <h1 class="page-title">"Settings"</h1>
                 </div>
             </header>

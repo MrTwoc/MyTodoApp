@@ -1,9 +1,9 @@
-use crate::api::task::{list_tasks, TaskListResponse};
-use crate::store::task_store::Task;
+use crate::api::task::{TaskListResponse, list_tasks};
 use crate::api::team::get_team;
 use crate::components::card::Card;
 use crate::components::loading::{Loading, LoadingVariant};
 use crate::components::team_module_nav::TeamModuleNav;
+use crate::store::task_store::Task;
 use crate::store::task_store::TaskStatus;
 use crate::store::{use_api_client, use_team_store};
 use leptos::prelude::*;
@@ -51,11 +51,11 @@ pub fn TeamTasksPage() -> impl IntoView {
     let (loading, set_loading) = signal(true);
     let (tasks_error, set_tasks_error) = signal(Option::<String>::None);
 
-    let on_back = {
-        let n = navigate.clone();
-        let tid = team_id;
-        move |_| n(&format!("/teams/{}", tid), Default::default())
-    };
+    // let on_back = {
+    //     let n = navigate.clone();
+    //     let tid = team_id;
+    //     move |_| n(&format!("/teams/{}", tid), Default::default())
+    // };
 
     let current_team = {
         let team_store = team_store.clone();
@@ -69,7 +69,7 @@ pub fn TeamTasksPage() -> impl IntoView {
         }
     };
 
-   Effect::new(move |_| {
+    Effect::new(move |_| {
         if team_id == 0 {
             set_page_error.set(Some("Invalid team id".to_string()));
             set_loading.set(false);
@@ -96,7 +96,9 @@ pub fn TeamTasksPage() -> impl IntoView {
             }
 
             match list_tasks(&client, 1, 100, None, Some(team_id)).await {
-                Ok(TaskListResponse { tasks: task_list, .. }) => {
+                Ok(TaskListResponse {
+                    tasks: task_list, ..
+                }) => {
                     set_tasks.set(task_list);
                 }
                 Err(e) => {
@@ -135,7 +137,9 @@ pub fn TeamTasksPage() -> impl IntoView {
         <div class="page">
             <header class="page-header">
                 <div>
+                    {/*
                     <button class="back-btn" on:click=on_back>"← Back"</button>
+                    */}
                     <a href=move || format!("/teams/{}", team_id) class="page-title">
                         {move || {
                             current_team()
@@ -215,7 +219,7 @@ pub fn TeamTasksPage() -> impl IntoView {
                                             let status = status_text(&task.task_status).to_string();
                                             let status_class = status_color(&task.task_status);
                                             let created = format_timestamp(task.task_create_time);
-                                            
+
                                             view! {
                                                 <div class="team-task-card">
                                                     <div class="team-task-card-header">

@@ -1,4 +1,7 @@
-use crate::api::task::{delete_task as api_delete_task, get_task as api_get_task, get_task_logs as api_get_task_logs, update_task as api_update_task};
+use crate::api::task::{
+    delete_task as api_delete_task, get_task as api_get_task, get_task_logs as api_get_task_logs,
+    update_task as api_update_task,
+};
 use crate::api::user::get_user as api_get_user;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::modal::Modal;
@@ -28,7 +31,10 @@ fn format_log_timestamp(ts: i64) -> String {
     let day = date.get_date();
     let hours = date.get_hours();
     let minutes = date.get_minutes();
-    format!("{:04}/{:02}/{:02} {:02}:{:02}", year, month, day, hours, minutes)
+    format!(
+        "{:04}/{:02}/{:02} {:02}:{:02}",
+        year, month, day, hours, minutes
+    )
 }
 
 fn format_action_type(action: &str) -> String {
@@ -136,7 +142,10 @@ impl From<Task> for EditableTaskData {
 }
 
 fn event_target_value(ev: &ev::Event) -> String {
-    ev.target().unwrap().unchecked_into::<web_sys::HtmlInputElement>().value()
+    ev.target()
+        .unwrap()
+        .unchecked_into::<web_sys::HtmlInputElement>()
+        .value()
 }
 
 #[component]
@@ -163,7 +172,8 @@ pub fn TaskDetailPage() -> impl IntoView {
     let (creator, set_creator) = signal(Option::<UserProfile>::None);
     let edit_data = RwSignal::new(EditableTaskData::default());
     let (task_logs, set_task_logs) = signal(Vec::<serde_json::Value>::new());
-    let (operator_names, set_operator_names) = signal(std::collections::HashMap::<u64, String>::new());
+    let (operator_names, set_operator_names) =
+        signal(std::collections::HashMap::<u64, String>::new());
 
     let load_task = {
         let client = client.clone();
@@ -188,7 +198,7 @@ pub fn TaskDetailPage() -> impl IntoView {
                     Ok(loaded_task) => {
                         set_task.set(loaded_task.clone());
                         edit_data.set(EditableTaskData::from(loaded_task.clone()));
-                        
+
                         match api_get_user(&client, loaded_task.task_leader_id).await {
                             Ok(user) => {
                                 set_creator.set(Some(user));
@@ -206,14 +216,14 @@ pub fn TaskDetailPage() -> impl IntoView {
                 match api_get_task_logs(&client, task_id).await {
                     Ok(logs) => {
                         set_task_logs.set(logs.clone());
-                        
+
                         let mut unique_ops = std::collections::HashSet::new();
                         for log in &logs {
                             if let Some(op_id) = log.get("operator_id").and_then(|v| v.as_u64()) {
                                 unique_ops.insert(op_id);
                             }
                         }
-                        
+
                         let mut names = std::collections::HashMap::new();
                         for op_id in unique_ops {
                             match api_get_user(&client, op_id).await {
@@ -246,18 +256,18 @@ pub fn TaskDetailPage() -> impl IntoView {
         move || task_signal.get()
     };
 
-    let nav_back = {
-        let n = navigate.clone();
-        let task = task.clone();
-        move |_| {
-            let t = task.get();
-            if let Some(team_id) = t.task_team_id {
-                n(&format!("/teams/{}", team_id), Default::default())
-            } else {
-                n("/tasks", Default::default())
-            }
-        }
-    };
+    // let nav_back = {
+    //     let n = navigate.clone();
+    //     let task = task.clone();
+    //     move |_| {
+    //         let t = task.get();
+    //         if let Some(team_id) = t.task_team_id {
+    //             n(&format!("/teams/{}", team_id), Default::default())
+    //         } else {
+    //             n("/tasks", Default::default())
+    //         }
+    //     }
+    // };
 
     let start_edit = {
         let task = task.clone();
@@ -276,38 +286,38 @@ pub fn TaskDetailPage() -> impl IntoView {
     });
 
     let update_edit_field = move |field: &str, value: String| {
-        edit_data.update(|data| {
-            match field {
-                "task_name" => data.task_name = value,
-                "task_description" => data.task_description = if value.is_empty() { None } else { Some(value) },
-                "task_priority" => {
-                    if let Ok(p) = value.parse::<u8>() {
-                        data.task_priority = p.min(10);
-                    }
-                }
-                "task_difficulty" => {
-                    if let Ok(d) = value.parse::<u8>() {
-                        data.task_difficulty = d.min(10);
-                    }
-                }
-                "task_deadline" => {
-                    if value.is_empty() {
-                        data.task_deadline = None;
-                    } else if let Ok(date) = chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d") {
-                        let timestamp = date.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp();
-                        data.task_deadline = Some(timestamp);
-                    }
-                }
-                "task_status" => {
-                    data.task_status = match value.as_str() {
-                        "Active" => TaskStatus::Active,
-                        "Completed" => TaskStatus::Completed,
-                        "Paused" => TaskStatus::Paused,
-                        _ => data.task_status.clone(),
-                    };
-                }
-                _ => {}
+        edit_data.update(|data| match field {
+            "task_name" => data.task_name = value,
+            "task_description" => {
+                data.task_description = if value.is_empty() { None } else { Some(value) }
             }
+            "task_priority" => {
+                if let Ok(p) = value.parse::<u8>() {
+                    data.task_priority = p.min(10);
+                }
+            }
+            "task_difficulty" => {
+                if let Ok(d) = value.parse::<u8>() {
+                    data.task_difficulty = d.min(10);
+                }
+            }
+            "task_deadline" => {
+                if value.is_empty() {
+                    data.task_deadline = None;
+                } else if let Ok(date) = chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d") {
+                    let timestamp = date.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp();
+                    data.task_deadline = Some(timestamp);
+                }
+            }
+            "task_status" => {
+                data.task_status = match value.as_str() {
+                    "Active" => TaskStatus::Active,
+                    "Completed" => TaskStatus::Completed,
+                    "Paused" => TaskStatus::Paused,
+                    _ => data.task_status.clone(),
+                };
+            }
+            _ => {}
         });
     };
 
@@ -404,12 +414,12 @@ pub fn TaskDetailPage() -> impl IntoView {
         <div class="page task-detail-page">
             // Top Bar
             <header class="task-detail-topbar">
-                <button class="back-btn" on:click=nav_back>
+                {/* <button class="back-btn" on:click=nav_back>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
                     "Back"
-                </button>
+                </button> */}
                 <div class="task-detail-topbar-actions">
                     {move || {
                         if is_editing.get() {
@@ -677,7 +687,7 @@ pub fn TaskDetailPage() -> impl IntoView {
                                                 let details = log.get("details").and_then(|v| v.as_str()).unwrap_or("").to_string();
                                                 let operator_id = log.get("operator_id").and_then(|v| v.as_u64()).unwrap_or(0);
                                                 let operator_name = operator_names.get().get(&operator_id).cloned().unwrap_or_else(|| format!("User {}", operator_id));
-                                                
+
                                                 view! {
                                                     <div class="task-history-item">
                                                         <div class="task-history-dot"></div>

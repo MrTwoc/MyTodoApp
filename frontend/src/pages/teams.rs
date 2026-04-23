@@ -38,10 +38,10 @@ pub fn TeamsPage() -> impl IntoView {
     let (create_loading, set_create_loading) = signal(false);
     let (form_error, set_form_error) = signal(Option::<String>::None);
 
-    let nav_back = {
-        let n = navigate.clone();
-        move |_| n("/dashboard", Default::default())
-    };
+    // let nav_back = {
+    //     let n = navigate.clone();
+    //     move |_| n("/dashboard", Default::default())
+    // };
 
     let open_create = Callback::from(move |_| {
         set_form_error.set(None);
@@ -158,7 +158,9 @@ pub fn TeamsPage() -> impl IntoView {
         <div class="teams-page">
             <div class="teams-header">
                 <div class="teams-header-left">
+                    {/*
                     <button class="back-btn" on:click=nav_back>"← Back"</button>
+                    */}
                     <h1 class="teams-page-title">"Teams"</h1>
                     <p class="teams-page-subtitle">"Manage your " <span class="teams-accent">"collaborative workspaces"</span></p>
                 </div>

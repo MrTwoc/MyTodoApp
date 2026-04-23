@@ -13,7 +13,10 @@ fn format_timestamp(ts: i64) -> String {
     let day = date.get_date();
     let hours = date.get_hours();
     let minutes = date.get_minutes();
-    format!("{:04}-{:02}-{:02} {:02}:{:02}", year, month, day, hours, minutes)
+    format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}",
+        year, month, day, hours, minutes
+    )
 }
 
 fn format_action(action: &str) -> String {
@@ -67,11 +70,11 @@ pub fn TeamHistoryPage() -> impl IntoView {
     let (loading, set_loading) = signal(true);
     let (logs_error, set_logs_error) = signal(Option::<String>::None);
 
-    let on_back = {
-        let n = navigate.clone();
-        let tid = team_id;
-        move |_| n(&format!("/teams/{}", tid), Default::default())
-    };
+    // let on_back = {
+    //     let n = navigate.clone();
+    //     let tid = team_id;
+    //     move |_| n(&format!("/teams/{}", tid), Default::default())
+    // };
 
     let current_team = {
         let team_store = team_store.clone();
@@ -85,7 +88,7 @@ pub fn TeamHistoryPage() -> impl IntoView {
         }
     };
 
-   Effect::new(move |_| {
+    Effect::new(move |_| {
         if team_id == 0 {
             set_page_error.set(Some("Invalid team id".to_string()));
             set_loading.set(false);
@@ -118,13 +121,29 @@ pub fn TeamHistoryPage() -> impl IntoView {
                         .map(|v| {
                             let log_id = v.get("log_id").and_then(|x| x.as_u64()).unwrap_or(0);
                             let team_id = v.get("team_id").and_then(|x| x.as_u64()).unwrap_or(0);
-                            let operator_id = v.get("operator_id").and_then(|x| x.as_u64()).unwrap_or(0);
-                            let action = v.get("action").and_then(|x| x.as_str()).unwrap_or("").to_string();
-                            let target_type = v.get("target_type").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                            let operator_id =
+                                v.get("operator_id").and_then(|x| x.as_u64()).unwrap_or(0);
+                            let action = v
+                                .get("action")
+                                .and_then(|x| x.as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            let target_type = v
+                                .get("target_type")
+                                .and_then(|x| x.as_str())
+                                .unwrap_or("")
+                                .to_string();
                             let target_id = v.get("target_id").and_then(|x| x.as_u64());
-                            let details = v.get("details").and_then(|x| x.as_str()).map(|s| s.to_string());
-                            let created_at = v.get("created_at").and_then(|x| x.as_i64()).unwrap_or(0);
-                            let ip_address = v.get("ip_address").and_then(|x| x.as_str()).map(|s| s.to_string());
+                            let details = v
+                                .get("details")
+                                .and_then(|x| x.as_str())
+                                .map(|s| s.to_string());
+                            let created_at =
+                                v.get("created_at").and_then(|x| x.as_i64()).unwrap_or(0);
+                            let ip_address = v
+                                .get("ip_address")
+                                .and_then(|x| x.as_str())
+                                .map(|s| s.to_string());
                             TeamLog {
                                 log_id,
                                 team_id,
@@ -153,7 +172,9 @@ pub fn TeamHistoryPage() -> impl IntoView {
         <div class="page">
             <header class="page-header">
                 <div>
+                    {/*
                     <button class="back-btn" on:click=on_back>"← Back"</button>
+                    */}
                     <a href=move || format!("/teams/{}", team_id) class="page-title">
                         {move || {
                             current_team()
@@ -210,7 +231,7 @@ pub fn TeamHistoryPage() -> impl IntoView {
                                             let action_text = format_action(&log.action);
                                             let operator = log.operator_id.to_string();
                                             let details = log.details.clone().unwrap_or_default();
-                                            
+
                                             view! {
                                                 <div class="team-history-item">
                                                     <div class="team-history-time">{time}</div>

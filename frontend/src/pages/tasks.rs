@@ -1,7 +1,9 @@
 use chrono::Utc;
 use std::collections::HashSet;
 
-use crate::api::task::{CreateTaskRequest, create_task as api_create_task, list_tasks, toggle_task_favorite};
+use crate::api::task::{
+    CreateTaskRequest, create_task as api_create_task, list_tasks, toggle_task_favorite,
+};
 use crate::api::team::list_teams;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::card::Card;
@@ -53,10 +55,10 @@ pub fn TasksPage() -> impl IntoView {
     let client = use_api_client();
     let navigate = use_navigate();
 
-    let nav_back = {
-        let n = navigate.clone();
-        move |_| n("/", Default::default())
-    };
+    // let nav_back = {
+    //     let n = navigate.clone();
+    //     move |_| n("/", Default::default())
+    // };
 
     let (show_create_modal, set_show_create_modal) = signal(false);
     let (show_edit_modal, set_show_edit_modal) = signal(false);
@@ -141,30 +143,30 @@ pub fn TasksPage() -> impl IntoView {
     // let is_offline_check = is_offline_mode.clone();
     Effect::new(move |_| {
         // if !is_offline_check() {
-            let client = client_load.clone();
-            let store = store_load.clone();
-            let client_teams = client_teams.clone();
-            let team_store = team_store_load.clone();
+        let client = client_load.clone();
+        let store = store_load.clone();
+        let client_teams = client_teams.clone();
+        let team_store = team_store_load.clone();
 
-            wasm_bindgen_futures::spawn_local(async move {
-                store.set_loading(true);
+        wasm_bindgen_futures::spawn_local(async move {
+            store.set_loading(true);
 
-                if need_load_teams {
-                    let teams_result = list_teams(&client_teams).await;
-                    if let Ok(teams) = teams_result {
-                        team_store.set_teams(teams);
-                    }
+            if need_load_teams {
+                let teams_result = list_teams(&client_teams).await;
+                if let Ok(teams) = teams_result {
+                    team_store.set_teams(teams);
                 }
+            }
 
-                match list_tasks(&client, 1, 20, None, None).await {
-                    Ok(resp) => {
-                        store.set_tasks(resp.tasks, resp.total.unwrap_or(0));
-                    }
-                    Err(e) => {
-                        store.set_error(e.message);
-                    }
+            match list_tasks(&client, 1, 20, None, None).await {
+                Ok(resp) => {
+                    store.set_tasks(resp.tasks, resp.total.unwrap_or(0));
                 }
-            });
+                Err(e) => {
+                    store.set_error(e.message);
+                }
+            }
+        });
         // }
     });
 
@@ -214,7 +216,7 @@ pub fn TasksPage() -> impl IntoView {
             // if is_offline_mode() {
             //     offline_page.set(page);
             // } else {
-                online_store.set_page(page);
+            online_store.set_page(page);
             // }
         })
     };
@@ -244,41 +246,41 @@ pub fn TasksPage() -> impl IntoView {
             //     store.add_task(task);
             //     set_offline_page.set(1);
             // } else {
-                let client = client.clone();
-                let task_store = task_store.clone();
-                let task_name = data.task_name.clone();
-                let task_description = data.task_description.clone();
-                let task_keywords = data.task_keywords.clone();
-                let task_priority = data.task_priority;
-                let task_difficulty = data.task_difficulty;
-                let task_deadline = data.task_deadline;
-                let task_team_id = data.task_team_id;
-                let user_id = user_store.user_id().unwrap_or(0);
-                let team_id = if data.task_team_id.is_some() {
-                    data.task_team_id
-                } else {
-                    team_store.state.get().active_team_id
+            let client = client.clone();
+            let task_store = task_store.clone();
+            let task_name = data.task_name.clone();
+            let task_description = data.task_description.clone();
+            let task_keywords = data.task_keywords.clone();
+            let task_priority = data.task_priority;
+            let task_difficulty = data.task_difficulty;
+            let task_deadline = data.task_deadline;
+            let task_team_id = data.task_team_id;
+            let user_id = user_store.user_id().unwrap_or(0);
+            let team_id = if data.task_team_id.is_some() {
+                data.task_team_id
+            } else {
+                team_store.state.get().active_team_id
+            };
+            wasm_bindgen_futures::spawn_local(async move {
+                let req = CreateTaskRequest {
+                    task_name,
+                    task_description,
+                    task_keywords,
+                    task_priority,
+                    task_difficulty,
+                    task_deadline,
+                    task_leader_id: user_id,
+                    task_team_id: team_id,
                 };
-                wasm_bindgen_futures::spawn_local(async move {
-                    let req = CreateTaskRequest {
-                        task_name,
-                        task_description,
-                        task_keywords,
-                        task_priority,
-                        task_difficulty,
-                        task_deadline,
-                        task_leader_id: user_id,
-                        task_team_id: team_id,
-                    };
-                    match api_create_task(&client, &req).await {
-                        Ok(task) => {
-                            task_store.add_task(task);
-                        }
-                        Err(e) => {
-                            tracing::error!("Failed to create task: {}", e.message);
-                        }
+                match api_create_task(&client, &req).await {
+                    Ok(task) => {
+                        task_store.add_task(task);
                     }
-                });
+                    Err(e) => {
+                        tracing::error!("Failed to create task: {}", e.message);
+                    }
+                }
+            });
             // }
             set_show_create_modal.set(false);
         })
@@ -358,7 +360,9 @@ pub fn TasksPage() -> impl IntoView {
         <div class="page">
             <header class="page-header">
                 <div>
+                    {/*
                     <button class="back-btn" on:click=nav_back>"← Back"</button>
+                    */}
                     <h1 class="page-title">"Tasks"</h1>
                 </div>
                 <div class="task-header-actions">
