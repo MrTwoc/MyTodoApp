@@ -19,7 +19,7 @@ mod services;
 
 use routes::{task_routes, user_routes};
 
-use crate::routes::{dashboard_routes, sub_task_routes, sub_team_routes, team_routes, ws_routes};
+use crate::routes::{dashboard_routes, group_routes, sub_task_routes, team_routes, ws_routes};
 
 #[endpoint]
 async fn hello(name: QueryParam<String, false>) -> String {
@@ -69,8 +69,8 @@ async fn main() {
         .push(task_routes::comment_router())
         .push(team_routes::team_router())
         .push(dashboard_routes::dashboard_router())
-        .push(sub_team_routes::sub_team_router())
-        .push(sub_team_routes::sub_team_single_router())
+        .push(group_routes::group_router())
+        .push(group_routes::group_single_router())
         .push(sub_task_routes::sub_task_router())
         .push(ws_routes::ws_router());
 

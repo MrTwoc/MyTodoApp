@@ -146,10 +146,16 @@ fn AppSidebar() -> impl IntoView {
     let logo_text = move || {
         let state = user_store.state.get();
         if state.is_authenticated {
-            state.profile.as_ref()
+            state
+                .profile
+                .as_ref()
                 .and_then(|p| {
                     let username = &p.username;
-                    if username.is_empty() { None } else { Some(username.clone()) }
+                    if username.is_empty() {
+                        None
+                    } else {
+                        Some(username.clone())
+                    }
                 })
                 .unwrap_or_else(|| "todoManager".to_string())
         } else {
@@ -157,9 +163,7 @@ fn AppSidebar() -> impl IntoView {
         }
     };
 
-    let is_active = move |path: &str| -> bool {
-        location.pathname.get().starts_with(path)
-    };
+    let is_active = move |path: &str| -> bool { location.pathname.get().starts_with(path) };
 
     view! {
         <aside class="app-sidebar">

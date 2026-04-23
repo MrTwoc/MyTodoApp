@@ -12,22 +12,22 @@ impl DbTeam {
         let team_id = generate_team_id();
         let team_create_time = chrono::Utc::now().timestamp();
 
-        let sub_team_ids: Vec<i64> = vec![];
-        let sub_team_ids_json = serde_json::to_value(&sub_team_ids).unwrap();
+        let group_ids: Vec<i64> = vec![];
+        let group_ids_json = serde_json::to_value(&group_ids).unwrap();
         let team_settings = TeamSettings::default();
 
         let result = sqlx::query(
             r#"
-            INSERT INTO teams (team_id, team_name, team_leader_id, team_create_time, sub_team_ids, team_settings)
+            INSERT INTO teams (team_id, team_name, team_leader_id, team_create_time, group_ids, team_settings)
             VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING team_id, team_name, team_leader_id, team_create_time, sub_team_ids, team_settings
+            RETURNING team_id, team_name, team_leader_id, team_create_time, group_ids, team_settings
             "#,
         )
         .bind(team_id as i64)
         .bind(team_name)
         .bind(team_leader_id as i64)
         .bind(team_create_time)
-        .bind(sub_team_ids_json)
+        .bind(group_ids_json)
         .bind(serde_json::to_value(&team_settings)?)
         .fetch_one(pool)
         .await?;
@@ -44,7 +44,7 @@ impl DbTeam {
     pub async fn get_team_by_id(pool: &PgPool, team_id: u64) -> Result<Option<Team>> {
         let result = sqlx::query(
             r#"
-            SELECT team_id, team_name, team_leader_id, team_create_time, sub_team_ids, team_settings
+            SELECT team_id, team_name, team_leader_id, team_create_time, group_ids, team_settings
             FROM teams
             WHERE team_id = $1
             "#,
@@ -69,7 +69,7 @@ impl DbTeam {
         user_id: Option<u64>,
     ) -> Result<Vec<Team>> {
         let mut query = String::from(
-            "SELECT DISTINCT t.team_id, t.team_name, t.team_leader_id, t.team_create_time, t.sub_team_ids, t.team_settings FROM teams t WHERE 1=1",
+            "SELECT DISTINCT t.team_id, t.team_name, t.team_leader_id, t.team_create_time, t.group_ids, t.team_settings FROM teams t WHERE 1=1",
         );
         let mut param_count = 0;
 
@@ -146,7 +146,7 @@ impl DbTeam {
             UPDATE teams 
             SET team_name = $1, team_settings = $2 
             WHERE team_id = $3 
-            RETURNING team_id, team_name, team_leader_id, team_create_time, sub_team_ids, team_settings
+            RETURNING team_id, team_name, team_leader_id, team_create_time, group_ids, team_settings
             "#,
         )
         .bind(new_team_name)
@@ -251,7 +251,7 @@ impl DbTeam {
                 level: level as u8,
                 join_time,
                 team_id: Some(team_id),
-                sub_team_id: None,
+                group_id: None,
                 username,
             });
         }
@@ -517,11 +517,11 @@ impl DbTeam {
         let team_name: String = row.get("team_name");
         let team_leader_id: i64 = row.get("team_leader_id");
         let team_create_time: i64 = row.get("team_create_time");
-        let sub_team_ids: serde_json::Value = row.get("sub_team_ids");
+        let group_ids: serde_json::Value = row.get("group_ids");
         let team_settings: serde_json::Value = row.get("team_settings");
 
-        let sub_team_ids: Vec<i64> = serde_json::from_value(sub_team_ids)
-            .map_err(|e| anyhow::anyhow!("解析子团队ID失败: {}", e))?;
+        let group_ids: Vec<i64> = serde_json::from_value(group_ids)
+            .map_err(|e| anyhow::anyhow!("解析小组ID失败: {}", e))?;
         let team_settings: TeamSettings = serde_json::from_value(team_settings)
             .map_err(|e| anyhow::anyhow!("解析团队设置失败: {}", e))?;
 
@@ -531,7 +531,7 @@ impl DbTeam {
             team_leader_id: team_leader_id as u64,
             team_members: vec![], // 成员通过单独的查询获取，避免N+1查询问题
             team_create_time,
-            sub_team_ids: sub_team_ids.into_iter().map(|v| v as u64).collect(),
+            group_ids: group_ids.into_iter().map(|v| v as u64).collect(),
             team_settings,
         })
     }

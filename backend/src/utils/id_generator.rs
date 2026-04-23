@@ -30,7 +30,7 @@ use sonyflake::Sonyflake;
 pub enum EntityType {
     User = 1,        // 用户
     Team = 2,        // 团队
-    SubTeam = 3,     // 子团队
+    Group = 3,       // 小组
     Task = 4,        // 任务
     TeamInvite = 5,  // 团队邀请
     JoinRequest = 6, // 加入申请
@@ -45,7 +45,7 @@ impl EntityType {
         match code {
             1 => Some(EntityType::User),
             2 => Some(EntityType::Team),
-            3 => Some(EntityType::SubTeam),
+            3 => Some(EntityType::Group),
             4 => Some(EntityType::Task),
             5 => Some(EntityType::TeamInvite),
             6 => Some(EntityType::JoinRequest),
@@ -66,7 +66,7 @@ impl EntityType {
         match self {
             EntityType::User => "User",
             EntityType::Team => "Team",
-            EntityType::SubTeam => "SubTeam",
+            EntityType::Group => "Group",
             EntityType::Task => "Task",
             EntityType::TeamInvite => "TeamInvite",
             EntityType::JoinRequest => "JoinRequest",
@@ -202,9 +202,9 @@ pub fn generate_team_id() -> u64 {
     global_generator().generate(EntityType::Team)
 }
 
-/// 便捷函数：生成子团队ID
-pub fn generate_sub_team_id() -> u64 {
-    global_generator().generate(EntityType::SubTeam)
+/// 便捷函数：生成小组ID
+pub fn generate_group_id() -> u64 {
+    global_generator().generate(EntityType::Group)
 }
 
 /// 便捷函数：生成任务ID

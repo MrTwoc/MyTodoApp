@@ -206,7 +206,7 @@ pub enum ResourceType {
     User,
     Task,
     Team,
-    SubTeam,
+    Group,
 }
 
 pub struct PermissionService;
@@ -224,8 +224,8 @@ impl PermissionService {
         user_id == team_leader_id
     }
 
-    pub fn check_sub_team_ownership(user_id: u64, sub_team_leader_id: u64) -> bool {
-        user_id == sub_team_leader_id
+    pub fn check_group_ownership(user_id: u64, group_leader_id: u64) -> bool {
+        user_id == group_leader_id
     }
 
     pub fn check_resource_ownership(
@@ -237,7 +237,7 @@ impl PermissionService {
             ResourceType::User => Self::check_user_ownership(user_id, resource_owner_id),
             ResourceType::Task => Self::check_task_ownership(user_id, resource_owner_id),
             ResourceType::Team => Self::check_team_ownership(user_id, resource_owner_id),
-            ResourceType::SubTeam => Self::check_sub_team_ownership(user_id, resource_owner_id),
+            ResourceType::Group => Self::check_group_ownership(user_id, resource_owner_id),
         }
     }
 
@@ -329,22 +329,22 @@ impl PermissionService {
         }
     }
 
-    pub fn has_sub_team_access(
+    pub fn has_group_access(
         user_id: u64,
-        sub_team_id: u64,
-        sub_team_leader_id: u64,
-        sub_team_members: &[crate::models::team::Member],
+        group_id: u64,
+        group_leader_id: u64,
+        group_members: &[crate::models::team::Member],
     ) -> Result<bool, &'static str> {
-        if Self::check_sub_team_ownership(user_id, sub_team_leader_id) {
+        if Self::check_group_ownership(user_id, group_leader_id) {
             return Ok(true);
         }
-        let is_member = sub_team_members.iter().any(|m| {
-            m.user_id == user_id && m.sub_team_id.map(|id| id == sub_team_id).unwrap_or(false)
-        });
+        let is_member = group_members
+            .iter()
+            .any(|m| m.user_id == user_id && m.group_id.map(|id| id == group_id).unwrap_or(false));
         if is_member {
             Ok(true)
         } else {
-            Err("User is not a member of this sub-team")
+            Err("User is not a member of this group")
         }
     }
 }
@@ -571,9 +571,9 @@ pub async fn require_resource_owner(
                 _ => false,
             }
         }
-        Some("sub_team") => {
-            match crate::db::db_sub_team::DbSubTeam::get_sub_team_by_id(&pool, resource_id).await {
-                Ok(Some(sub_team)) => sub_team.sub_team_leader_id == user_id,
+        Some("group") => {
+            match crate::db::db_group::DbGroup::get_group_by_id(&pool, resource_id).await {
+                Ok(Some(group)) => group.group_leader_id == user_id,
                 _ => false,
             }
         }

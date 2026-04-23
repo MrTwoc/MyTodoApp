@@ -34,8 +34,8 @@ pub struct Team {
     pub team_members: Vec<Member>,
     // 团队创建时间，Unix时间戳
     pub team_create_time: i64,
-    // 子团队ID列表，Vec<u64>类型
-    pub sub_team_ids: Vec<u64>,
+    // 小组ID列表，Vec<u64>类型
+    pub group_ids: Vec<u64>,
     // 团队设置：包括团队描述、可见性、状态、头像、总成员上限
     pub team_settings: TeamSettings,
 }
@@ -56,20 +56,20 @@ pub struct TeamSettings {
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct SubTeam {
-    // 子团队ID，雪花ID，全局唯一，u64类型
-    pub sub_team_id: u64,
-    // 子团队名称
-    pub sub_team_name: String,
-    // 子团队负责人ID，雪花ID，u64类型(user中user_id)
-    pub sub_team_leader_id: u64,
-    // 子团队成员列表
-    pub sub_team_members: Vec<Member>,
-    // 子团队创建时间，Unix时间戳
-    pub sub_team_create_time: i64,
-    // 子团队描述，可选
-    pub sub_team_description: Option<String>,
-    // 子团队所属团队ID，雪花ID，u64类型
+pub struct Group {
+    // 小组ID，雪花ID，全局唯一，u64类型
+    pub group_id: u64,
+    // 小组名称
+    pub group_name: String,
+    // 小组负责人ID，雪花ID，u64类型(user中user_id)
+    pub group_leader_id: u64,
+    // 小组成员列表
+    pub group_members: Vec<Member>,
+    // 小组创建时间，Unix时间戳
+    pub group_create_time: i64,
+    // 小组描述，可选
+    pub group_description: Option<String>,
+    // 小组所属团队ID，雪花ID，u64类型
     pub team_id: u64,
 }
 
@@ -83,11 +83,11 @@ pub struct SubTeam {
 //     pub join_time: i64,
 // }
 
-// 统一成员结构体，适用于主团队和子团队
+// 统一成员结构体，适用于主团队和小组
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Member {
     pub team_id: Option<u64>,
-    pub sub_team_id: Option<u64>,
+    pub group_id: Option<u64>,
     pub user_id: u64,
     pub username: Option<String>,
     pub level: u8,

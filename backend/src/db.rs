@@ -10,6 +10,6 @@ pub mod db_user_log;
 
 pub mod db_task_comment;
 
-pub mod db_sub_team;
-pub mod db_sub_team_member;
+pub mod db_group;
+pub mod db_group_member;
 pub mod db_sub_task;

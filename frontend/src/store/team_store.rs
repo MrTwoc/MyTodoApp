@@ -55,14 +55,14 @@ pub struct Team {
     pub team_leader_id: u64,
     pub team_members: Vec<TeamMember>,
     pub team_create_time: i64,
-    pub sub_team_ids: Vec<u64>,
+    pub group_ids: Vec<u64>,
     pub team_settings: TeamSettings,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct TeamMember {
     pub team_id: Option<u64>,
-    pub sub_team_id: Option<u64>,
+    pub group_id: Option<u64>,
     pub user_id: u64,
     pub username: Option<String>,
     pub level: u8,
