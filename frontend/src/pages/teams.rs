@@ -1,13 +1,11 @@
 use crate::api::ApiClient;
 use crate::api::team::{CreateTeamRequest, create_team, list_teams};
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
-use crate::components::card::Card;
 use crate::components::form::{Form, FormActions, FormGroup};
 use crate::components::input::Input;
 use crate::components::loading::{Loading, LoadingVariant};
 use crate::components::modal::Modal;
 use crate::components::search::SearchInput;
-use crate::components::team_card::TeamCard;
 use crate::store::team_store::TeamStore;
 use crate::store::{use_api_client, use_team_store};
 use leptos::ev;
@@ -157,16 +155,19 @@ pub fn TeamsPage() -> impl IntoView {
     });
 
     view! {
-        <div class="page">
-            <header class="page-header">
-                <div>
-                    <button class="back-btn" on:click=nav_back>{"← Back"}</button>
-                    <h1 class="page-title">"Teams"</h1>
+        <div class="teams-page">
+            <div class="teams-header">
+                <div class="teams-header-left">
+                    <button class="back-btn" on:click=nav_back>"← Back"</button>
+                    <h1 class="teams-page-title">"Teams"</h1>
+                    <p class="teams-page-subtitle">"Manage your " <span class="teams-accent">"collaborative workspaces"</span></p>
                 </div>
-                <Button variant=ButtonVariant::Primary size=ButtonSize::Sm on_click=open_create>
-                    "New Team"
-                </Button>
-            </header>
+                <div class="teams-header-right">
+                    <Button variant=ButtonVariant::Primary size=ButtonSize::Sm on_click=open_create>
+                        "+ New Team"
+                    </Button>
+                </div>
+            </div>
 
             <div class="teams-toolbar">
                 <SearchInput
@@ -180,29 +181,37 @@ pub fn TeamsPage() -> impl IntoView {
 
             {move || {
                 if team_store.state.get().is_loading {
-                    view! { <Loading variant=LoadingVariant::Spinner label="Loading teams...".to_string() /> }.into_any()
+                    view! {
+                        <div class="teams-loading">
+                            <Loading variant=LoadingVariant::Spinner label="Loading teams...".to_string() />
+                        </div>
+                    }.into_any()
                 } else if let Some(err) = team_store.state.get().error.clone() {
                     view! {
-                        <Card
-                            title="Load failed".to_string()
-                            subtitle="Team data could not be loaded".to_string()
-                        >
-                                        <p class="auth-error">{err}</p>
-                                    <Button
-                                        variant=ButtonVariant::Primary
-                                        size=ButtonSize::Sm
-                                    on_click=retry_load
+                        <div class="teams-error">
+                            <div class="teams-error-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="12" y1="8" x2="12" y2="12"/>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                </svg>
+                            </div>
+                            <p class="teams-error-text">{err}</p>
+                            <Button
+                                variant=ButtonVariant::Primary
+                                size=ButtonSize::Sm
+                                on_click=retry_load
                             >
                                 "Retry"
                             </Button>
-                        </Card>
+                        </div>
                     }.into_any()
                 } else {
                     let teams = filtered_teams();
                     if teams.is_empty() {
                         view! {
-                            <div class="empty-state">
-                                <div class="empty-state-icon">
+                            <div class="teams-empty">
+                                <div class="teams-empty-icon">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                                         <circle cx="9" cy="7" r="4"/>
@@ -210,8 +219,8 @@ pub fn TeamsPage() -> impl IntoView {
                                         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                                     </svg>
                                 </div>
-                                <h3 class="empty-state-title">"No Teams Yet"</h3>
-                                <p class="empty-state-desc">"Create your first team to start collaborating with others"</p>
+                                <h3 class="teams-empty-title">"No Teams Yet"</h3>
+                                <p class="teams-empty-desc">"Create your first team to start collaborating with others"</p>
                                 <Button variant=ButtonVariant::Primary size=ButtonSize::Sm on_click=open_create>
                                     "Create Team"
                                 </Button>
@@ -225,19 +234,57 @@ pub fn TeamsPage() -> impl IntoView {
                                 let nav = navigate.clone();
                                 let id = team.team_id;
                                 view! {
-                                    <TeamCard
-                                        team=team.clone()
-                                        interactive=true
-                                        on_click=Callback::from(move |_| {
-                                            team_store_for_detail.set_active_team(Some(id));
-                                            let path = format!("/teams/{}", id);
-                                            nav(&path, Default::default());
-                                        })
-                                    />
+                                    <div class="team-card" on:click=move |_| {
+                                        team_store_for_detail.set_active_team(Some(id));
+                                        let path = format!("/teams/{}", id);
+                                        nav(&path, Default::default());
+                                    }>
+                                        <div class="team-card-header">
+                                            <div class="team-card-icon">
+                                                {team.team_name.split_whitespace().take(2).map(|w| w.chars().next().map(|c| c.to_ascii_uppercase()).unwrap_or(' ')).collect::<String>()}
+                                            </div>
+                                            <div class="team-card-info">
+                                                <h3 class="team-card-name">{team.team_name.clone()}</h3>
+                                                <span class="team-card-id">"#" {team.team_id}</span>
+                                            </div>
+                                        </div>
+                                        <p class="team-card-desc">{team.team_settings.team_description.unwrap_or_else(|| "No description".to_string())}</p>
+                                        <div class="team-card-stats">
+                                            <div class="team-card-stat">
+                                                <svg class="team-card-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                                    <circle cx="9" cy="7" r="4"/>
+                                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                                </svg>
+                                                <span class="team-card-stat-value">{team.team_members.len()}</span>
+                                                <span class="team-card-stat-label">"members"</span>
+                                            </div>
+                                            {if team.team_settings.team_member_limit > 0 {
+                                                view! {
+                                                    <div class="team-card-stat">
+                                                        <svg class="team-card-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                                                            <path d="M12 6v6l4 2"/>
+                                                        </svg>
+                                                        <span class="team-card-stat-value">{team.team_settings.team_member_limit}</span>
+                                                        <span class="team-card-stat-label">"limit"</span>
+                                                    </div>
+                                                }.into_any()
+                                            } else {
+                                                ().into_any()
+                                            }}
+                                        </div>
+                                        <div class="team-card-arrow">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M9 18l6-6-6-6"/>
+                                            </svg>
+                                        </div>
+                                    </div>
                                 }
                             })
                             .collect::<Vec<_>>();
-                        view! { <div class="team-grid">{cards}</div> }.into_any()
+                        view! { <div class="teams-grid">{cards}</div> }.into_any()
                     }
                 }
             }}
