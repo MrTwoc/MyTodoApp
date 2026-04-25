@@ -187,3 +187,21 @@ pub async fn permanent_delete_task(client: &ApiClient, task_id: u64) -> ApiResul
     let _: DeleteResponse = client.delete(&path).await?;
     Ok(())
 }
+
+pub async fn assign_task_to_group(
+    client: &ApiClient,
+    task_id: u64,
+    group_id: u64,
+) -> ApiResult<Task> {
+    let path = format!("/api/tasks/{}/assign-to-group", task_id);
+    #[derive(Serialize)]
+    struct AssignReq {
+        group_id: u64,
+    }
+    #[derive(Deserialize)]
+    struct TaskResponse {
+        task: Task,
+    }
+    let resp: TaskResponse = client.post(&path, &AssignReq { group_id }).await?;
+    Ok(resp.task)
+}

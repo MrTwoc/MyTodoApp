@@ -21,6 +21,7 @@ use pages::tasks::TasksPage;
 use pages::team_detail::TeamDetailPage;
 use pages::team_history::TeamHistoryPage;
 use pages::team_members::TeamMembersPage;
+use pages::team_groups::TeamGroupsPage;
 use pages::team_tasks::TeamTasksPage;
 use pages::teams::TeamsPage;
 use store::{create_stores, provide_stores};
@@ -108,6 +109,14 @@ fn App() -> impl IntoView {
                             view=|| view! {
                                 <ProtectedRoute>
                                     <TeamHistoryPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path=path!("/teams/:team_id/groups")
+                            view=|| view! {
+                                <ProtectedRoute>
+                                    <TeamGroupsPage />
                                 </ProtectedRoute>
                             }
                         />

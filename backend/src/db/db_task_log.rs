@@ -210,6 +210,7 @@ mod tests {
             0,
             None,
             test_user.user_id,
+            None, // 无团队ID
             None,
         )
         .await

@@ -29,6 +29,7 @@ pub struct Task {
     pub task_create_time: i64,
     pub task_leader_id: u64,
     pub task_team_id: Option<u64>,
+    pub task_group_id: Option<u64>,
     pub task_update_time: Option<i64>,
     pub is_favorite: bool,
     pub is_deleted: bool,

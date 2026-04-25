@@ -23,7 +23,8 @@ pub fn task_router() -> Router {
                 .push(Router::with_path("logs").get(task_handler::get_task_logs))
                 .push(Router::with_path("comments").post(task_comment_handler::create_comment).get(task_comment_handler::get_comments))
                 .push(Router::with_path("restore").post(task_handler::restore_task))
-                .push(Router::with_path("permanent").delete(task_handler::permanent_delete_task)),
+                .push(Router::with_path("permanent").delete(task_handler::permanent_delete_task))
+                .push(Router::with_path("assign-to-group").post(task_handler::assign_task_to_group)),
         )
 }
 

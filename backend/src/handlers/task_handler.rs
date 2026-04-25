@@ -1,5 +1,6 @@
 use salvo::oapi::extract::PathParam;
 use salvo::prelude::*;
+use serde::Deserialize;
 
 use crate::db::db_task_log::{DbTaskLog, TaskLogAction};
 use crate::db::pool::DbPool;
@@ -782,6 +783,77 @@ pub async fn permanent_delete_task(task_id: PathParam<u64>, depot: &mut Depot, r
             res.render(Json(serde_json::json!({
                 "error": "Failed to permanently delete task",
                 "message": e.to_string()
+            })));
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AssignTaskToGroupRequest {
+    pub group_id: u64,
+}
+
+#[endpoint]
+pub async fn assign_task_to_group(
+    task_id: PathParam<u64>,
+    req: &mut Request,
+    depot: &mut Depot,
+    res: &mut Response,
+) {
+    let task_id: u64 = task_id.into_inner();
+
+    let user_id = match depot.get::<i64>("user_id").ok() {
+        Some(id) => *id as u64,
+        None => {
+            res.status_code(StatusCode::UNAUTHORIZED);
+            res.render(Json(serde_json::json!({
+                "error": "Unauthorized",
+                "message": "User not authenticated"
+            })));
+            return;
+        }
+    };
+
+    let request: AssignTaskToGroupRequest = match req.parse_json().await {
+        Ok(req) => req,
+        Err(e) => {
+            res.status_code(StatusCode::BAD_REQUEST);
+            res.render(Json(serde_json::json!({
+                "error": "Invalid request body",
+                "message": e.to_string()
+            })));
+            return;
+        }
+    };
+
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
+
+    match TaskService::assign_task_to_group(pool, task_id, request.group_id, user_id).await {
+        Ok(Some(task)) => {
+            res.status_code(StatusCode::OK);
+            res.render(Json(serde_json::json!({
+                "message": "Task assigned to group successfully",
+                "task": serde_json::to_value(&task).unwrap_or_default()
+            })));
+        }
+        Ok(None) => {
+            res.status_code(StatusCode::NOT_FOUND);
+            res.render(Json(serde_json::json!({
+                "error": "Task not found"
+            })));
+        }
+        Err(e) => {
+            let msg = e.to_string();
+            if msg.contains("Forbidden") {
+                res.status_code(StatusCode::FORBIDDEN);
+            } else {
+                res.status_code(StatusCode::BAD_REQUEST);
+            }
+            res.render(Json(serde_json::json!({
+                "error": "Failed to assign task to group",
+                "message": msg
             })));
         }
     }

@@ -27,6 +27,7 @@ impl DbTask {
         task_deadline: Option<i64>,
         task_leader_id: u64,
         task_team_id: Option<u64>,
+        task_group_id: Option<u64>,
     ) -> Result<Task> {
         let task_id = generate_task_id();
         let task_create_time = chrono::Utc::now().timestamp();
@@ -45,13 +46,13 @@ impl DbTask {
                 task_id, task_name, task_description, task_keywords,
                 task_priority, task_difficulty, task_deadline, task_complete_time,
                 task_status, task_create_time, task_leader_id,
-                task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
+                task_team_id, task_group_id, task_update_time, is_favorite, is_deleted, deleted_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
             RETURNING task_id, task_name, task_description, task_keywords,
                       task_priority, task_difficulty, task_deadline, task_complete_time,
                       task_status, task_create_time, task_leader_id,
-                      task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
+                      task_team_id, task_group_id, task_update_time, is_favorite, is_deleted, deleted_at
             "#,
         )
         .bind(task_id as i64)
@@ -66,6 +67,7 @@ impl DbTask {
         .bind(task_create_time)
         .bind(task_leader_id as i64)
         .bind(task_team_id.map(|id| id as i64))
+        .bind(task_group_id.map(|id| id as i64))
         .bind(task_update_time)
         .bind(is_favorite)
         .bind(is_deleted)
@@ -85,7 +87,7 @@ impl DbTask {
             SELECT task_id, task_name, task_description, task_keywords,
                    task_priority, task_difficulty, task_deadline, task_complete_time,
                    task_status, task_create_time, task_leader_id,
-                   task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
+                   task_team_id, task_group_id, task_update_time, is_favorite, is_deleted, deleted_at
             FROM tasks
             WHERE task_id = $1
             "#,
@@ -117,27 +119,28 @@ impl DbTask {
             "SELECT task_id, task_name, task_description, task_keywords,
                     task_priority, task_difficulty, task_deadline, task_complete_time,
                     task_status, task_create_time, task_leader_id,
-                    task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
+                    task_team_id, task_group_id, task_update_time, is_favorite, is_deleted, deleted_at
              FROM tasks WHERE is_deleted = false",
         );
         let mut param_count = 1;
 
         let mut user_team_ids: Vec<i64> = Vec::new();
         let mut leader_filter_added = false;
-        
+
         if let Some(team_id) = task_team_id {
             query.push_str(&format!(" AND task_team_id = ${}", param_count));
             param_count += 1;
         } else if let Some(leader_id) = task_leader_id {
             let teams = crate::db::db_team::DbTeam::list_teams(pool, None, Some(leader_id)).await?;
             user_team_ids = teams.into_iter().map(|t| t.team_id as i64).collect();
-            
+
             if user_team_ids.is_empty() {
                 query.push_str(&format!(" AND task_leader_id = ${}", param_count));
                 param_count += 1;
                 leader_filter_added = true;
             } else {
-                let team_ids_str: Vec<String> = user_team_ids.iter().map(|id| id.to_string()).collect();
+                let team_ids_str: Vec<String> =
+                    user_team_ids.iter().map(|id| id.to_string()).collect();
                 query.push_str(&format!(
                     " AND (task_leader_id = ${} OR task_team_id IN ({}))",
                     param_count,
@@ -176,7 +179,11 @@ impl DbTask {
         }
 
         let use_leader_filter = leader_filter_added;
-        let team_filter = if !leader_filter_added { task_team_id } else { None };
+        let team_filter = if !leader_filter_added {
+            task_team_id
+        } else {
+            None
+        };
 
         let mut query_builder = sqlx::query(&query);
 
@@ -228,7 +235,8 @@ impl DbTask {
         task_deadline: Option<Option<i64>>, // Option<Option> 表示可以更新为None
         task_status: Option<TaskStatus>,
         task_leader_id: Option<u64>,
-        task_team_id: Option<Option<u64>>, // Option<Option> 表示可以更新为None
+        task_team_id: Option<Option<u64>>,
+        task_group_id: Option<Option<u64>>,
     ) -> Result<Option<Task>> {
         let mut updates = Vec::new();
         let mut param_count = 1usize;
@@ -269,6 +277,10 @@ impl DbTask {
             updates.push(format!("task_team_id = ${}", param_count));
             param_count += 1;
         }
+        if task_group_id.is_some() {
+            updates.push(format!("task_group_id = ${}", param_count));
+            param_count += 1;
+        }
         updates.push(format!("task_update_time = ${}", param_count));
         param_count += 1;
 
@@ -279,7 +291,7 @@ impl DbTask {
 
         let set_clause = updates.join(", ");
         let query = format!(
-            "UPDATE tasks SET {} WHERE task_id = ${} RETURNING task_id, task_name, task_description, task_keywords, task_priority, task_difficulty, task_deadline, task_complete_time, task_status, task_create_time, task_leader_id, task_team_id, task_update_time, is_favorite, is_deleted, deleted_at",
+            "UPDATE tasks SET {} WHERE task_id = ${} RETURNING task_id, task_name, task_description, task_keywords, task_priority, task_difficulty, task_deadline, task_complete_time, task_status, task_create_time, task_leader_id, task_team_id, task_group_id, task_update_time, is_favorite, is_deleted, deleted_at",
             set_clause, param_count
         );
 
@@ -313,6 +325,9 @@ impl DbTask {
         if let Some(v) = task_team_id {
             row_result = row_result.bind(v.map(|id| id as i64));
         }
+        if let Some(v) = task_group_id {
+            row_result = row_result.bind(v.map(|id| id as i64));
+        }
         // 绑定task_update_time（当前时间戳）
         let update_time = chrono::Utc::now().timestamp();
         row_result = row_result.bind(update_time);
@@ -333,11 +348,12 @@ impl DbTask {
     /// 删除任务（软删除）
     pub async fn delete_task(pool: &PgPool, task_id: u64) -> Result<bool> {
         let delete_time = chrono::Utc::now().timestamp();
-        let result = sqlx::query("UPDATE tasks SET is_deleted = true, deleted_at = $1 WHERE task_id = $2")
-            .bind(delete_time)
-            .bind(task_id as i64)
-            .execute(pool)
-            .await?;
+        let result =
+            sqlx::query("UPDATE tasks SET is_deleted = true, deleted_at = $1 WHERE task_id = $2")
+                .bind(delete_time)
+                .bind(task_id as i64)
+                .execute(pool)
+                .await?;
 
         let affected = result.rows_affected();
         tracing::info!("软删除任务: task_id = {}, affected = {}", task_id, affected);
@@ -366,7 +382,11 @@ impl DbTask {
             .await?;
 
         let affected = result.rows_affected();
-        tracing::info!("永久删除任务: task_id = {}, affected = {}", task_id, affected);
+        tracing::info!(
+            "永久删除任务: task_id = {}, affected = {}",
+            task_id,
+            affected
+        );
         Ok(affected > 0)
     }
 
@@ -381,7 +401,7 @@ impl DbTask {
             "SELECT task_id, task_name, task_description, task_keywords,
                     task_priority, task_difficulty, task_deadline, task_complete_time,
                     task_status, task_create_time, task_leader_id,
-                    task_team_id, task_update_time, is_favorite, is_deleted, deleted_at
+                    task_team_id, task_group_id, task_update_time, is_favorite, is_deleted, deleted_at
              FROM tasks WHERE is_deleted = true",
         );
 
@@ -396,7 +416,8 @@ impl DbTask {
             if user_team_ids.is_empty() {
                 query.push_str(&format!(" AND task_leader_id = ${}", 1));
             } else {
-                let team_ids_str: Vec<String> = user_team_ids.iter().map(|id| id.to_string()).collect();
+                let team_ids_str: Vec<String> =
+                    user_team_ids.iter().map(|id| id.to_string()).collect();
                 query.push_str(&format!(
                     " AND (task_leader_id = ${} OR task_team_id IN ({}))",
                     1,
@@ -505,6 +526,7 @@ impl DbTask {
         let task_create_time: i64 = row.get("task_create_time");
         let task_leader_id: i64 = row.get("task_leader_id");
         let task_team_id: Option<i64> = row.get("task_team_id");
+        let task_group_id: Option<i64> = row.get("task_group_id");
         let task_update_time: Option<i64> = row.get("task_update_time");
         let is_favorite: bool = row.get("is_favorite");
         let is_deleted: bool = row.get("is_deleted");
@@ -530,6 +552,7 @@ impl DbTask {
             task_create_time,
             task_leader_id: task_leader_id as u64,
             task_team_id: task_team_id.map(|id| id as u64),
+            task_group_id: task_group_id.map(|id| id as u64),
             task_update_time,
             is_favorite,
             is_deleted,
@@ -562,6 +585,7 @@ mod tests {
             0,
             Some(chrono::Utc::now().timestamp() + 86400), // 1天后
             1,                                            // 假设存在用户ID 1
+            None,                                         // 无团队ID
             None,
         )
         .await
@@ -581,10 +605,20 @@ mod tests {
         assert_eq!(found.task_name, "测试任务");
 
         // 测试列表查询
-        let tasks =
-            DbTask::list_tasks(&pool, Some(1), None, None, None, None, None, Some(10), None, false)
-                .await
-                .unwrap();
+        let tasks = DbTask::list_tasks(
+            &pool,
+            Some(1),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(10),
+            None,
+            false,
+        )
+        .await
+        .unwrap();
         assert!(tasks.len() >= 1);
 
         // 更新任务
@@ -597,6 +631,7 @@ mod tests {
             Some(3),
             Some(5),
             Some(None), // 移除截止时间
+            None,
             None,
             None,
             None,

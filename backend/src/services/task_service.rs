@@ -101,6 +101,7 @@ impl TaskService {
             request.task_deadline,
             user_id,
             request.task_team_id,
+            None,
         )
         .await?;
 
@@ -203,6 +204,7 @@ impl TaskService {
             request.task_status,
             request.task_leader_id,
             request.task_team_id,
+            None,
         )
         .await
     }
@@ -225,6 +227,7 @@ impl TaskService {
         task_id: u64,
         priority: u8,
     ) -> Result<Option<Task>> {
+        // update_task: name, desc, keywords, priority, difficulty, deadline, status, leader, team, group
         DbTask::update_task(
             pool,
             task_id,
@@ -237,6 +240,61 @@ impl TaskService {
             None,
             None,
             None,
+            None,
+        )
+        .await
+    }
+
+    /// 将团队任务指派给指定小组
+    /// 仅团队 leader 有权操作
+    pub async fn assign_task_to_group(
+        pool: &PgPool,
+        task_id: u64,
+        group_id: u64,
+        requester_id: u64,
+    ) -> Result<Option<Task>> {
+        // 1. 获取任务
+        let task = DbTask::get_task_by_id(pool, task_id).await?;
+        let task = task.ok_or_else(|| anyhow::anyhow!("Task not found"))?;
+
+        // 2. 任务必须属于某个团队
+        let team_id = task.task_team_id.ok_or_else(|| {
+            anyhow::anyhow!("Task does not belong to any team, cannot assign to group")
+        })?;
+
+        // 3. 校验请求者是团队 leader
+        let team = crate::db::db_team::DbTeam::get_team_by_id(pool, team_id).await?;
+        let team = team.ok_or_else(|| anyhow::anyhow!("Team not found"))?;
+        if team.team_leader_id != requester_id {
+            return Err(anyhow::anyhow!(
+                "Forbidden: only team leader can assign task to group"
+            ));
+        }
+
+        // 4. 校验小组属于该团队
+        let group = crate::db::db_group::DbGroup::get_group_by_id(pool, group_id).await?;
+        let group = group.ok_or_else(|| anyhow::anyhow!("Group not found"))?;
+        if group.team_id != team_id {
+            return Err(anyhow::anyhow!(
+                "Forbidden: group does not belong to the task's team"
+            ));
+        }
+
+        // 5. 更新任务的 task_group_id = Some(group_id)
+        // update_task args: name, desc, keywords, priority, difficulty, deadline, status, leader, team, group
+        DbTask::update_task(
+            pool,
+            task_id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(Some(group_id)),
         )
         .await
     }

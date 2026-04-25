@@ -29,6 +29,8 @@ pub struct Task {
     pub task_leader_id: u64,
     // 任务团队ID，雪花ID，u64类型(team中team_id)
     pub task_team_id: Option<u64>,
+    // 任务所属小组ID，u64类型(group中group_id)，仅在 task_team_id 有值时有效
+    pub task_group_id: Option<u64>,
     // 任务更新时间，Unix时间戳
     pub task_update_time: Option<i64>,
     // 任务难度值(0-10)
