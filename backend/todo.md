@@ -365,19 +365,19 @@ db/db_team.rs             (数据库操作)
 
 ---
 
-### 第十二阶段：子团队（依赖第八阶段） [无单元测试]
+### 第十二阶段：小组（依赖第八阶段） [无单元测试]
 
-#### 12.1 子团队 API
-- [完成] **创建子团队** - `POST /api/teams/{team_id}/subteams`
-- [完成] **获取子团队列表** - `GET /api/teams/{team_id}/subteams`
-- [完成] **获取子团队详情** - `GET /api/subteams/{sub_team_id}`
-- [完成] **更新子团队** - `PUT /api/subteams/{sub_team_id}`
-- [完成] **删除子团队** - `DELETE /api/subteams/{sub_team_id}`
+#### 12.1 小组 API
+- [完成] **创建小组** - `POST /api/teams/{team_id}/subteams`
+- [完成] **获取小组列表** - `GET /api/teams/{team_id}/subteams`
+- [完成] **获取小组详情** - `GET /api/subteams/{sub_team_id}`
+- [完成] **更新小组** - `PUT /api/subteams/{sub_team_id}`
+- [完成] **删除小组** - `DELETE /api/subteams/{sub_team_id}`
 
-#### 12.2 子团队前端
-- [ ] **子团队列表**
-- [ ] **子团队创建**
-- [ ] **子团队成员管理**
+#### 12.2 小组前端
+- [ ] **小组列表**
+- [ ] **小组创建**
+- [ ] **小组成员管理**
 
 ---
 
