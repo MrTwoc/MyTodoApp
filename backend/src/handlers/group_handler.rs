@@ -385,3 +385,41 @@ pub async fn update_group_member_level(
         }
     }
 }
+
+/// 成员主动退出小组（组长不能调用此接口，只能解散小组）
+#[endpoint]
+pub async fn leave_group(
+    group_id: PathParam<u64>,
+    user_id: PathParam<u64>,
+    depot: &mut Depot,
+    res: &mut Response,
+) {
+    let group_id: u64 = group_id.into_inner();
+    let user_id: u64 = user_id.into_inner();
+
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
+
+    match GroupService::leave_group(pool, group_id, user_id).await {
+        Ok(true) => {
+            res.status_code(StatusCode::OK);
+            res.render(Json(serde_json::json!({
+                "message": "Left group successfully"
+            })));
+        }
+        Ok(false) => {
+            res.status_code(StatusCode::NOT_FOUND);
+            res.render(Json(serde_json::json!({
+                "error": "Group member not found or cannot leave (leader must delete group)"
+            })));
+        }
+        Err(e) => {
+            res.status_code(StatusCode::BAD_REQUEST);
+            res.render(Json(serde_json::json!({
+                "error": "Failed to leave group",
+                "message": e.to_string()
+            })));
+        }
+    }
+}

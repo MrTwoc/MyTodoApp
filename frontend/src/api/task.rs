@@ -205,3 +205,17 @@ pub async fn assign_task_to_group(
     let resp: TaskResponse = client.post(&path, &AssignReq { group_id }).await?;
     Ok(resp.task)
 }
+
+/// 取消任务的小组指派（任务负责人放弃领取，或组长取消指派）
+pub async fn unassign_task_from_group(
+    client: &ApiClient,
+    task_id: u64,
+) -> ApiResult<Task> {
+    let path = format!("/api/tasks/{}/unassign-from-group", task_id);
+    #[derive(Deserialize)]
+    struct TaskResponse {
+        task: Task,
+    }
+    let resp: TaskResponse = client.post(&path, &()).await?;
+    Ok(resp.task)
+}

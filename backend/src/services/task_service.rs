@@ -298,4 +298,59 @@ impl TaskService {
         )
         .await
     }
+
+    /// 取消任务的小组指派（将 task_group_id 设为 None）
+    /// 仅团队 leader 有权操作，或任务负责人可放弃领取
+    pub async fn unassign_task_from_group(
+        pool: &PgPool,
+        task_id: u64,
+        requester_id: u64,
+    ) -> Result<Option<Task>> {
+        // 1. 获取任务
+        let task = DbTask::get_task_by_id(pool, task_id).await?;
+        let task = task.ok_or_else(|| anyhow::anyhow!("Task not found"))?;
+
+        // 2. 任务必须已有小组
+        let current_group_id = task.task_group_id
+            .ok_or_else(|| anyhow::anyhow!("Task is not assigned to any group"))?;
+
+        // 3. 任务必须属于某个团队
+        let team_id = task.task_team_id
+            .ok_or_else(|| anyhow::anyhow!("Task does not belong to any team"))?;
+
+        // 4. 校验权限：团队 leader 或 任务负责人 均可取消指派
+        let team = crate::db::db_team::DbTeam::get_team_by_id(pool, team_id).await?;
+        let team = team.ok_or_else(|| anyhow::anyhow!("Team not found"))?;
+        let is_team_leader = team.team_leader_id == requester_id;
+        let is_task_leader = task.task_leader_id == requester_id;
+        if !is_team_leader && !is_task_leader {
+            return Err(anyhow::anyhow!(
+                "Forbidden: only team leader or task leader can unassign task from group"
+            ));
+        }
+
+        // 5. 校验小组存在
+        let group = crate::db::db_group::DbGroup::get_group_by_id(pool, current_group_id).await?;
+        if group.is_none() {
+            return Err(anyhow::anyhow!("Group not found"));
+        }
+
+        // 6. 更新任务的 task_group_id = None
+        // 顺序: pool, task_id, name, desc, keywords, priority, difficulty, deadline, status, leader, team, group
+        DbTask::update_task(
+            pool,
+            task_id,
+            None,   // name
+            None,   // desc
+            None,   // keywords
+            None,   // priority
+            None,   // difficulty
+            None,   // deadline
+            None,   // status
+            None,   // leader
+            None,   // team
+            Some(None), // group → None
+        )
+        .await
+    }
 }

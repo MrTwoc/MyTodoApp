@@ -858,3 +858,57 @@ pub async fn assign_task_to_group(
         }
     }
 }
+
+/// 取消任务的小组指派（将 task_group_id 设为 None）
+#[endpoint]
+pub async fn unassign_task_from_group(
+    task_id: PathParam<u64>,
+    depot: &mut Depot,
+    res: &mut Response,
+) {
+    let task_id: u64 = task_id.into_inner();
+
+    let user_id = match depot.get::<i64>("user_id").ok() {
+        Some(id) => *id as u64,
+        None => {
+            res.status_code(StatusCode::UNAUTHORIZED);
+            res.render(Json(serde_json::json!({
+                "error": "Unauthorized",
+                "message": "User not authenticated"
+            })));
+            return;
+        }
+    };
+
+    let pool = depot
+        .get::<DbPool>("db_pool")
+        .expect("DbPool not found in depot");
+
+    match TaskService::unassign_task_from_group(pool, task_id, user_id).await {
+        Ok(Some(task)) => {
+            res.status_code(StatusCode::OK);
+            res.render(Json(serde_json::json!({
+                "message": "Task unassigned from group successfully",
+                "task": serde_json::to_value(&task).unwrap_or_default()
+            })));
+        }
+        Ok(None) => {
+            res.status_code(StatusCode::NOT_FOUND);
+            res.render(Json(serde_json::json!({
+                "error": "Task not found"
+            })));
+        }
+        Err(e) => {
+            let msg = e.to_string();
+            if msg.contains("Forbidden") {
+                res.status_code(StatusCode::FORBIDDEN);
+            } else {
+                res.status_code(StatusCode::BAD_REQUEST);
+            }
+            res.render(Json(serde_json::json!({
+                "error": "Failed to unassign task from group",
+                "message": msg
+            })));
+        }
+    }
+}

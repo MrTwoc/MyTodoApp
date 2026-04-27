@@ -45,3 +45,13 @@
 项目运行所需：
 Linux（ubuntu）
 PostgreSQL数据库：url="postgres://mytodoapp:mytodoapp@localhost:5432/mytodoapp_db"
+
+项目启动：
+在backend目录下执行以下命令：
+```bash
+cargo run
+```
+在frontend目录下执行以下命令：
+```bash
+trunk serve --open
+```

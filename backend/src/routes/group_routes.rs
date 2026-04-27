@@ -32,6 +32,7 @@ pub fn group_single_router() -> Router {
             .push(
                 Router::with_path("members/{user_id}/role")
                     .put(group_handler::update_group_member_level),
-            ),
+            )
+            .push(Router::with_path("leave/{user_id}").post(group_handler::leave_group)),
     )
 }

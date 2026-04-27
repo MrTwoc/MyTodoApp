@@ -131,3 +131,10 @@ pub async fn remove_group_member(client: &ApiClient, group_id: u64, user_id: u64
     let _: MessageResponse = client.delete(&path).await?;
     Ok(())
 }
+
+/// 退出小组（成员主动退出，组长不能退出，只能解散）
+pub async fn leave_group(client: &ApiClient, group_id: u64, user_id: u64) -> ApiResult<()> {
+    let path = format!("/api/groups/{}/leave/{}", group_id, user_id);
+    let _: MessageResponse = client.post(&path, &()).await?;
+    Ok(())
+}

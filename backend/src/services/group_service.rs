@@ -123,6 +123,23 @@ impl GroupService {
     ) -> Result<bool> {
         DbGroupMember::update_member_level(pool, group_id, user_id, request.level).await
     }
+
+    /// 成员主动退出小组。组长不能调用此方法（须用 delete_group 解散）。
+    pub async fn leave_group(pool: &PgPool, group_id: u64, user_id: u64) -> Result<bool> {
+        // 1. 检查小组是否存在
+        let group = DbGroup::get_group_by_id(pool, group_id).await?;
+        let group = group.ok_or_else(|| anyhow::anyhow!("Group not found"))?;
+
+        // 2. 组长不能退出，只能解散小组
+        if group.group_leader_id == user_id {
+            return Err(anyhow::anyhow!(
+                "Group leader cannot leave. Please delete the group instead."
+            ));
+        }
+
+        // 3. 移除成员
+        DbGroupMember::remove_group_member(pool, group_id, user_id).await
+    }
 }
 
 async fn add_group_to_parent(pool: &PgPool, team_id: u64, group_id: u64) -> Result<()> {

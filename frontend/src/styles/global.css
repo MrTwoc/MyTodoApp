@@ -6791,3 +6791,324 @@ input, textarea, select, button, .no-transition {
   padding-top: 8px;
   border-top: 1px solid var(--border);
 }
+
+/* --- Group Detail Modal --- */
+.group-detail-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 420px;
+  max-width: 600px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.group-detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.group-detail-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
+.group-detail-desc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.group-detail-meta {
+  display: flex;
+  gap: 16px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* --- Tabs --- */
+.group-detail-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  margin-bottom: -1px;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-btn-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* --- Tab Content --- */
+.group-detail-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+/* --- Member List --- */
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.member-item:hover {
+  border-color: var(--accent-light);
+}
+
+.member-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.member-role-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  border-radius: 20px;
+  padding: 1px 7px;
+}
+
+/* --- Task List --- */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.task-item:hover {
+  border-color: var(--accent-light);
+}
+
+.task-item-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.task-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.task-name {
+  font-size: 0.875rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.priority-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.priority-1 { background: rgba(239, 68, 68, 0.15); color: #EF4444; }
+.priority-2 { background: rgba(245, 158, 11, 0.15); color: #F59E0B; }
+.priority-3 { background: rgba(59, 130, 246, 0.15); color: #3B82F6; }
+.priority-0 { background: rgba(100, 116, 139, 0.15); color: #64748B; }
+
+.status-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.status-todo { background: rgba(100, 116, 139, 0.12); color: #64748B; }
+.status-in-progress { background: rgba(59, 130, 246, 0.12); color: #3B82F6; }
+.status-review { background: rgba(168, 85, 247, 0.12); color: #A855F7; }
+.status-done { background: rgba(34, 197, 94, 0.12); color: #22C55E; }
+
+/* --- Invite Section --- */
+.invite-section,
+.assign-task-section {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 0 0 8px 0;
+}
+
+.task-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.task-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* --- Confirm Overlay --- */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.confirm-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  min-width: 300px;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.confirm-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.confirm-msg {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* --- Invite Box --- */
+.invite-box {
+  min-width: 360px;
+}
+
+.invite-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.invite-member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* --- Detail Footer --- */
+.group-detail-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.empty-hint {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 0;
+  margin: 0;
+}
