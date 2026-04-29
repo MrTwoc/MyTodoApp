@@ -54,13 +54,15 @@ pub fn GroupAssignPage() -> impl IntoView {
             .map(|g| g.group_name.clone())
             .unwrap_or_default()
     };
-    let unassigned_tasks: Vec<Task> = all_tasks
-        .get()
-        .iter()
-        .filter(|t| t.task_group_id.is_none())
-        .cloned()
-        .collect();
-    let tasks_empty = unassigned_tasks.is_empty();
+    let unassigned_tasks: Memo<Vec<Task>> = Memo::new(move |_| {
+        all_tasks
+            .get()
+            .iter()
+            .filter(|t| t.task_group_id.is_none())
+            .cloned()
+            .collect()
+    });
+    let tasks_empty = move || unassigned_tasks.get().is_empty();
 
     // Load data
     let do_load: Callback<((),), ()> = Callback::from(move |_: ()| {
@@ -185,7 +187,7 @@ pub fn GroupAssignPage() -> impl IntoView {
                                     on:change=on_task_change
                                 >
                                     <option value="0">"-- 选择任务 --"</option>
-                                    {unassigned_tasks.iter().map(|t| {
+                                    {unassigned_tasks.get().iter().map(|t| {
                                         view! {
                                             <option value=t.task_id>{t.task_name.clone()}</option>
                                         }
@@ -218,7 +220,7 @@ pub fn GroupAssignPage() -> impl IntoView {
                                 <Button
                                     variant=ButtonVariant::Primary
                                     size=ButtonSize::Sm
-                                    disabled=assign_loading.get() || tasks_empty
+                                    disabled=assign_loading.get() || tasks_empty()
                                     on_click=on_assign_confirm
                                 >
                                     {if assign_loading.get() { "指派中..." } else { "确认指派" }}
