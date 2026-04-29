@@ -61,9 +61,10 @@ impl DbGroupMember {
     pub async fn get_group_members(pool: &PgPool, group_id: u64) -> Result<Vec<Member>> {
         let rows = sqlx::query(
             r#"
-            SELECT group_id, user_id, level, join_time
-            FROM group_members
-            WHERE group_id = $1
+            SELECT gm.group_id, gm.user_id, gm.level, gm.join_time, u.user_username
+            FROM group_members gm
+            LEFT JOIN users u ON gm.user_id = u.user_id
+            WHERE gm.group_id = $1
             "#,
         )
         .bind(group_id as i64)
@@ -72,11 +73,12 @@ impl DbGroupMember {
 
         let mut members = Vec::new();
         for row in rows {
+            let username: Option<String> = row.get("user_username");
             members.push(Member {
                 team_id: None,
                 group_id: Some(row.get::<i64, _>("group_id") as u64),
                 user_id: row.get::<i64, _>("user_id") as u64,
-                username: None,
+                username,
                 level: row.get::<i32, _>("level") as u8,
                 join_time: row.get("join_time"),
             });
