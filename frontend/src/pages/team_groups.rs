@@ -15,7 +15,7 @@ use crate::store::team_store::TeamMember;
 use crate::store::{use_api_client, use_team_store, use_user_store};
 use leptos::ev;
 use leptos::prelude::*;
-use leptos_router::hooks::use_params_map;
+use leptos_router::hooks::{use_navigate, use_params_map};
 
 fn format_timestamp(ts: i64) -> String {
     let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_f64((ts * 1000) as f64));
@@ -681,6 +681,7 @@ fn GroupCard(
     on_join_success: Callback<((),)>,
 ) -> impl IntoView {
     let client = use_api_client();
+    let navigate = use_navigate();
 
     // Pre-compute all derived values BEFORE any move closures
     let is_member = group
@@ -706,44 +707,8 @@ fn GroupCard(
     let tasks_not_empty = !team_tasks.is_empty();
     let group_id = group.group_id;
 
-    let (show_assign_modal, set_show_assign_modal) = signal(false);
-    let (show_detail_modal, set_show_detail_modal) = signal(false);
-    let (selected_task_id, set_selected_task_id) = signal(0u64);
-    let (assign_loading, set_assign_loading) = signal(false);
-    let (assign_error, set_assign_error) = signal(Option::<String>::None);
-
     let (join_loading, set_join_loading) = signal(false);
     let (join_error, set_join_error) = signal(Option::<String>::None);
-
-    let on_assign_confirm: Callback<(ev::MouseEvent,)> = {
-        let client = client.clone();
-        let on_assign_success = on_assign_success.clone();
-        let group_id = group.group_id;
-        Callback::from(move |_: ev::MouseEvent| {
-            let task_id = selected_task_id.get();
-            if task_id == 0 {
-                set_assign_error.set(Some("Please select a task".to_string()));
-                return;
-            }
-            let client = client.clone();
-            set_assign_loading.set(true);
-            set_assign_error.set(None);
-
-            wasm_bindgen_futures::spawn_local(async move {
-                match assign_task_to_group(&client, task_id, group_id).await {
-                    Ok(_updated_task) => {
-                        set_assign_loading.set(false);
-                        set_show_assign_modal.set(false);
-                        on_assign_success.run(((),));
-                    }
-                    Err(e) => {
-                        set_assign_error.set(Some(e.message));
-                        set_assign_loading.set(false);
-                    }
-                }
-            });
-        })
-    };
 
     let on_join: Callback<(ev::MouseEvent,)> = {
         let client = client.clone();
@@ -771,31 +736,6 @@ fn GroupCard(
                 }
             });
         })
-    };
-
-    let do_assign_close: Callback<(ev::MouseEvent,)> = Callback::from(move |_: ev::MouseEvent| {
-        set_show_assign_modal.set(false);
-    });
-
-    let do_detail_close: Callback<(ev::MouseEvent,)> = Callback::from(move |_: ev::MouseEvent| {
-        set_show_detail_modal.set(false);
-    });
-
-    let on_action_done: Callback<((),)> = {
-        let on_join_success = on_join_success.clone();
-        let on_assign_success = on_assign_success.clone();
-        Callback::from(move |_: ()| {
-            on_join_success.run(((),));
-            on_assign_success.run(((),));
-        })
-    };
-
-    // Use stored task list (not moved) for rendering
-    let stored_tasks = team_tasks.clone();
-    let stored_tasks_for_opts = stored_tasks.clone();
-    let on_task_change = move |e: leptos::ev::Event| {
-        let v = event_target_value(&e);
-        set_selected_task_id.set(v.parse().unwrap_or(0));
     };
 
     view! {
@@ -836,12 +776,19 @@ fn GroupCard(
             </Show>
 
             <div class="group-card-actions">
-                // 打开详情/管理弹窗（成员可见）
+                // 打开小组详情管理页（成员可见）
                 <Show when=move || is_member>
                     <Button
                         variant=ButtonVariant::Secondary
                         size=ButtonSize::Sm
-                        on_click=Callback::from(move |_: ev::MouseEvent| set_show_detail_modal.set(true))
+                        on_click=Callback::from({
+                            let tid = team_id;
+                            let gid = group_id;
+                            move |_: ev::MouseEvent| {
+                                let navigate = use_navigate();
+                                navigate(&format!("/teams/{}/groups/{}", tid, gid), Default::default());
+                            }
+                        })
                     >
                         "管理"
                     </Button>
@@ -852,7 +799,14 @@ fn GroupCard(
                     <Button
                         variant=ButtonVariant::Primary
                         size=ButtonSize::Sm
-                        on_click=Callback::from(move |_: ev::MouseEvent| set_show_assign_modal.set(true))
+                        on_click=Callback::from({
+                            let tid = team_id;
+                            let gid = group_id;
+                            move |_: ev::MouseEvent| {
+                                let navigate = use_navigate();
+                                navigate(&format!("/teams/{}/groups/{}/assign", tid, gid), Default::default());
+                            }
+                        })
                     >
                         "指派任务"
                     </Button>
@@ -874,70 +828,6 @@ fn GroupCard(
             <Show when=move || join_error.get().is_some()>
                 <p class="group-card-error">{join_error.get().unwrap()}</p>
             </Show>
-
-            // 指派任务弹窗
-            <Modal
-                title=format!("指派任务到 {}", group_name)
-                open=MaybeSignal::derive(move || show_assign_modal.get())
-                on_close=do_assign_close
-            >
-                <div class="assign-modal-body">
-                    <div class="form-group">
-                        <label class="form-label">"选择任务"</label>
-                        <select
-                            class="form-select"
-                            on:change=on_task_change
-                        >
-                            <option value="0">"-- 选择任务 --"</option>
-                            {let opts: Vec<_> = stored_tasks_for_opts.iter().map(|t| {
-                                view! {
-                                    <option value=t.task_id>{t.task_name.clone()}</option>
-                                }
-                            }).collect(); opts}
-                        </select>
-                    </div>
-
-                    <Show when=move || assign_error.get().is_some()>
-                        <p class="form-error">{assign_error.get().unwrap()}</p>
-                    </Show>
-
-                    <div class="assign-modal-actions">
-                        <Button
-                            variant=ButtonVariant::Secondary
-                            size=ButtonSize::Sm
-                            on_click=Callback::from(move |_: ev::MouseEvent| set_show_assign_modal.set(false))
-                        >
-                            "取消"
-                        </Button>
-                        <Button
-                            variant=ButtonVariant::Primary
-                            size=ButtonSize::Sm
-                            disabled=assign_loading.get()
-                            on_click=on_assign_confirm
-                        >
-                            {if assign_loading.get() { "指派中..." } else { "确认指派" }}
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
-
-            // 小组详情管理弹窗
-            <Modal
-                title=format!("小组详情 - {}", group_name)
-                open=MaybeSignal::derive(move || show_detail_modal.get())
-                on_close=do_detail_close
-            >
-                <GroupDetailModal
-                    group=group.clone()
-                    team_id
-                    current_user_id
-                    is_group_leader
-                    team_members=Vec::new()
-                    team_tasks=stored_tasks.clone()
-                    on_close=do_detail_close
-                    on_action=on_action_done
-                />
-            </Modal>
         </div>
     }
 }
@@ -948,6 +838,7 @@ fn GroupCard(
 #[component]
 pub fn TeamGroupsPage() -> impl IntoView {
     let params = use_params_map();
+    let navigate = use_navigate();
     let team_id = params
         .get()
         .get("team_id")

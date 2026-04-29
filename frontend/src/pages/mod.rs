@@ -1,4 +1,6 @@
 pub mod dashboard;
+pub mod group_assign;
+pub mod group_manage;
 pub mod login;
 pub mod not_found;
 pub mod profile;
