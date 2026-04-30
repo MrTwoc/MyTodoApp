@@ -635,7 +635,7 @@ pub fn TeamDetailPage() -> impl IntoView {
                 .unwrap_or_default();
             let input = disband_confirm_name.get();
             if input != team_name {
-                set_disband_error.set(Some("Team name does not match. Please enter the correct team name.".to_string()));
+                set_disband_error.set(Some("团队名称不正确，请输入正确的团队名称以确认解散操作。".to_string()));
                 return;
             }
             set_disband_loading.set(true);
@@ -837,7 +837,7 @@ pub fn TeamDetailPage() -> impl IntoView {
                         size=ButtonSize::Sm
                         on_click=on_disband_team
                     >
-                        "Disband Team"
+                        "解散团队"
                     </Button>
                 </Show>
             </header>
@@ -1183,27 +1183,27 @@ pub fn TeamDetailPage() -> impl IntoView {
             />
 
             <Modal
-                title="Disband Team".to_string()
+                title="解散团队".to_string()
                 open=show_disband_modal.into()
                 close_on_overlay=false
                 show_close_button=false
             >
                 <div class="disband-modal-content">
                     <p class="disband-warning">
-                        "This action is irreversible. All team data will be permanently deleted."
+                        "此操作不可逆，解散后所有团队数据将被永久删除。"
                     </p>
                     <p class="disband-instruction">
                         {move || {
                             let name = current_team()
                                 .map(|t| t.team_name.clone())
                                 .unwrap_or_default();
-                            format!("To confirm, please enter the team name: \"{}\"", name)
+                            format!("请输入团队名称「{}」以确认解散操作", name)
                         }}
                     </p>
                     <input
                         type="text"
                         class="disband-input"
-                        placeholder="Enter team name"
+                        placeholder="请输入团队名称"
                         value=disband_confirm_name.get()
                         on:input=move |ev| {
                             set_disband_confirm_name.set(event_target_value(&ev));
@@ -1221,7 +1221,7 @@ pub fn TeamDetailPage() -> impl IntoView {
                             disabled=disband_loading.get()
                             on_click=on_disband_cancel
                         >
-                            "Cancel"
+                            "取消"
                         </Button>
                         <Button
                             variant=ButtonVariant::Danger
@@ -1231,9 +1231,9 @@ pub fn TeamDetailPage() -> impl IntoView {
                         >
                             {move || {
                                 if disband_loading.get() {
-                                    "Disbanding..."
+                                    "解散中..."
                                 } else {
-                                    "Disband Team"
+                                    "确认解散"
                                 }
                             }}
                         </Button>
