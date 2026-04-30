@@ -611,6 +611,60 @@ pub fn TeamDetailPage() -> impl IntoView {
         }
     });
 
+    let (show_disband_modal, set_show_disband_modal) = signal(false);
+    let (disband_confirm_name, set_disband_confirm_name) = signal(String::new());
+    let (disband_loading, set_disband_loading) = signal(false);
+    let (disband_error, set_disband_error) = signal(Option::<String>::None);
+
+    let on_disband_team = Callback::from(move |_| {
+        set_show_disband_modal.set(true);
+        set_disband_confirm_name.set(String::new());
+        set_disband_error.set(None);
+    });
+
+    let on_disband_confirm = {
+        let client = client.clone();
+        let current_team = current_team.clone();
+        let navigate = use_navigate();
+        let set_disband_loading = set_disband_loading;
+        let set_disband_error = set_disband_error;
+        let set_show_disband_modal = set_show_disband_modal;
+        Callback::from(move |_| {
+            let team_name = current_team()
+                .map(|t| t.team_name.clone())
+                .unwrap_or_default();
+            let input = disband_confirm_name.get();
+            if input != team_name {
+                set_disband_error.set(Some("Team name does not match. Please enter the correct team name.".to_string()));
+                return;
+            }
+            set_disband_loading.set(true);
+            set_disband_error.set(None);
+            let client = client.clone();
+            let navigate = navigate.clone();
+            let set_disband_loading = set_disband_loading;
+            let set_show_disband_modal = set_show_disband_modal;
+            wasm_bindgen_futures::spawn_local(async move {
+                match crate::api::team::delete_team(&client, team_id).await {
+                    Ok(_) => {
+                        set_show_disband_modal.set(false);
+                        navigate("/teams", Default::default());
+                    }
+                    Err(e) => {
+                        set_disband_error.set(Some(e.message));
+                        set_disband_loading.set(false);
+                    }
+                }
+            });
+        })
+    };
+
+    let on_disband_cancel = Callback::from(move |_| {
+        set_show_disband_modal.set(false);
+        set_disband_confirm_name.set(String::new());
+        set_disband_error.set(None);
+    });
+
     let on_create_task = Callback::from(move |_| {
         set_show_create_task_modal.set(true);
     });
@@ -777,6 +831,15 @@ pub fn TeamDetailPage() -> impl IntoView {
                 >
                     "Refresh"
                 </Button>
+                <Show when=move || loaded.get()>
+                    <Button
+                        variant=ButtonVariant::Danger
+                        size=ButtonSize::Sm
+                        on_click=on_disband_team
+                    >
+                        "Disband Team"
+                    </Button>
+                </Show>
             </header>
 
             <Show
@@ -1118,6 +1181,65 @@ pub fn TeamDetailPage() -> impl IntoView {
                 on_submit=on_create_task_submit
                 on_close=on_create_task_close
             />
+
+            <Modal
+                title="Disband Team".to_string()
+                open=show_disband_modal.into()
+                close_on_overlay=false
+                show_close_button=false
+            >
+                <div class="disband-modal-content">
+                    <p class="disband-warning">
+                        "This action is irreversible. All team data will be permanently deleted."
+                    </p>
+                    <p class="disband-instruction">
+                        {move || {
+                            let name = current_team()
+                                .map(|t| t.team_name.clone())
+                                .unwrap_or_default();
+                            format!("To confirm, please enter the team name: \"{}\"", name)
+                        }}
+                    </p>
+                    <input
+                        type="text"
+                        class="disband-input"
+                        placeholder="Enter team name"
+                        value=disband_confirm_name.get()
+                        on:input=move |ev| {
+                            set_disband_confirm_name.set(event_target_value(&ev));
+                        }
+                    />
+                    <Show when=move || disband_error.get().is_some()>
+                        <p class="disband-error">
+                            {move || disband_error.get().unwrap_or_default()}
+                        </p>
+                    </Show>
+                    <FormActions>
+                        <Button
+                            variant=ButtonVariant::Secondary
+                            size=ButtonSize::Md
+                            disabled=disband_loading.get()
+                            on_click=on_disband_cancel
+                        >
+                            "Cancel"
+                        </Button>
+                        <Button
+                            variant=ButtonVariant::Danger
+                            size=ButtonSize::Md
+                            disabled=disband_loading.get()
+                            on_click=on_disband_confirm
+                        >
+                            {move || {
+                                if disband_loading.get() {
+                                    "Disbanding..."
+                                } else {
+                                    "Disband Team"
+                                }
+                            }}
+                        </Button>
+                    </FormActions>
+                </div>
+            </Modal>
             </Show>
         </div>
     }

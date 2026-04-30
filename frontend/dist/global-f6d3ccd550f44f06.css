@@ -7289,3 +7289,48 @@ input, textarea, select, button, .no-transition {
   border-top: 1px solid var(--border);
 }
 
+
+/* --- Disband Team Modal --- */
+.disband-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.disband-warning {
+  color: var(--color-danger, #ef4444);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.disband-instruction {
+  color: var(--text-secondary, #9ca3af);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.disband-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-secondary, #1a1a1a);
+  border: 1px solid var(--border, #2d2d2d);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary, #f3f4f6);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.disband-input:focus {
+  border-color: var(--color-danger, #ef4444);
+}
+
+.disband-input::placeholder {
+  color: var(--text-muted, #6b7280);
+}
+
+.disband-error {
+  color: var(--color-danger, #ef4444);
+  font-size: 13px;
+}
