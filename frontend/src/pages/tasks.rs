@@ -357,7 +357,7 @@ pub fn TasksPage() -> impl IntoView {
     // };
 
     view! {
-        <div class="page">
+        <div class="page tasks-page-wrapper">
             <header class="page-header">
                 <div>
                     {/*
