@@ -64,6 +64,7 @@ fn MemberItem(
     view! {
         <div class="member-item">
             <div class="member-info">
+                <div class="member-avatar">{name.chars().next().unwrap_or('?')}</div>
                 <span class="member-name">{name}</span>
                 <Show when=move || is_leader>
                     <span class="member-role-badge">"组长"</span>
@@ -376,13 +377,13 @@ pub fn GroupManagePage() -> impl IntoView {
         .get()
         .into_iter()
         .filter(|t| t.task_group_id == Some(group_id))
-        .collect();
+        .collect::<Vec<_>>();
     let unassigned_tasks = move || all_tasks
         .get()
         .iter()
         .filter(|t| t.task_group_id.is_none())
         .cloned()
-        .collect();
+        .collect::<Vec<_>>();
 
     // Load data
     let do_load: Callback<((),), ()> = {
@@ -620,22 +621,37 @@ pub fn GroupManagePage() -> impl IntoView {
                 </Show>
 
                 <Show when=move || !loading.get() && group.get().is_some()>
-                    <div class="group-detail-card">
-                        <div class="group-detail-header">
-                            <div class="group-detail-title-row">
-                                <h2 class="group-detail-title">{group_name.clone()}</h2>
-                                <Show when=move || show_gl_badge>
-                                    <span class="group-card-badge">"组长"</span>
-                                </Show>
-                            </div>
-                            <Show when=move || group_desc_check()>
-                                <p class="group-detail-desc">{group_desc_value().clone()}</p>
+                    <div class="group-hero">
+                        <div class="group-detail-title-row">
+                            <h2 class="group-detail-title">{group_name.clone()}</h2>
+                            <Show when=move || show_gl_badge>
+                                <span class="group-card-badge">"组长"</span>
                             </Show>
-                            <div class="group-detail-meta">
-                                <span class="group-meta-item">
-                                    <span class="group-meta-label">"创建时间: "</span>
-                                    <span>{format_timestamp(group_ts)}</span>
-                                </span>
+                        </div>
+                        <Show when=move || group_desc_check()>
+                            <p class="group-detail-desc">{group_desc_value().clone()}</p>
+                        </Show>
+                        <div class="group-detail-meta">
+                            <span class="group-meta-item">
+                                <span class="group-meta-label">"创建时间"</span>
+                                <span>{format_timestamp(group_ts)}</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="group-detail-card">
+                        <div class="group-stats-bar">
+                            <div class="group-stat-item">
+                                <span class="group-stat-value">{group_members().len().to_string()}</span>
+                                <span class="group-stat-label">"成员"</span>
+                            </div>
+                            <div class="group-stat-item">
+                                <span class="group-stat-value">{group_tasks().len().to_string()}</span>
+                                <span class="group-stat-label">"已指派任务"</span>
+                            </div>
+                            <div class="group-stat-item">
+                                <span class="group-stat-value">{unassigned_tasks().len().to_string()}</span>
+                                <span class="group-stat-label">"待指派"</span>
                             </div>
                         </div>
 
@@ -663,7 +679,8 @@ pub fn GroupManagePage() -> impl IntoView {
                                 }
                                 on:click=tab0_handler
                             >
-                                {"成员 (".to_string() + &group_members().len().to_string() + ")"}
+                                {"成员"}
+                                <span class="tab-count">{group_members().len().to_string()}</span>
                             </button>
                             <button
                                 class=move || {
@@ -675,7 +692,8 @@ pub fn GroupManagePage() -> impl IntoView {
                                 }
                                 on:click=tab1_handler
                             >
-                                {"任务 ("}
+                                {"任务"}
+                                <span class="tab-count">{group_tasks().len().to_string()}</span>
                             </button>
                         </div>
 
