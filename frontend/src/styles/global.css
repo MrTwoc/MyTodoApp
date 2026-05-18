@@ -2480,6 +2480,32 @@ a:hover {
   }
 }
 
+/* ========== Quick Note Card ========== */
+.db-quick-note-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 10px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+}
+
+.db-quick-note-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.db-quick-note-textarea:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
 /* ========== Teams Page - FlowBoard Style ========== */
 .teams-page {
   position: relative;

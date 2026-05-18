@@ -7,6 +7,7 @@ use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
 use serde_json::Value;
 use std::sync::{Arc, Mutex};
+use wasm_bindgen::JsCast;
 
 fn task_payload_to_text(payload: &Value) -> String {
     match serde_json::to_string(payload) {
@@ -155,16 +156,19 @@ pub fn DashboardPage() -> impl IntoView {
             match connect_ws(
                 &client,
                 Callback::new(move |(state,): (WsState,)| {
-                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
-                        match state {
-                            WsState::Connecting => set_ws_status_inner.set("Connecting".to_string()),
-                            WsState::Open => set_ws_status_inner.set("Connected".to_string()),
-                            WsState::Closed => set_ws_status_inner.set("Closed".to_string()),
-                            WsState::Error(msg) => {
-                                set_ws_status_inner.set(format!("Error: {msg}"))
-                            }
-                        }
-                    }));
+                    let _ =
+                        std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                            move || match state {
+                                WsState::Connecting => {
+                                    set_ws_status_inner.set("Connecting".to_string())
+                                }
+                                WsState::Open => set_ws_status_inner.set("Connected".to_string()),
+                                WsState::Closed => set_ws_status_inner.set("Closed".to_string()),
+                                WsState::Error(msg) => {
+                                    set_ws_status_inner.set(format!("Error: {msg}"))
+                                }
+                            },
+                        ));
                 }),
                 Callback::new(move |(evt,): (WsEvent,)| {
                     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
@@ -200,11 +204,11 @@ pub fn DashboardPage() -> impl IntoView {
 
     let nav_tasks = {
         let n = navigate.clone();
-        Callback::from(move |_: leptos::ev::MouseEvent| { n("/tasks", Default::default()) })
+        Callback::from(move |_: leptos::ev::MouseEvent| n("/tasks", Default::default()))
     };
     let nav_teams = {
         let n = navigate.clone();
-        Callback::from(move |_: leptos::ev::MouseEvent| { n("/teams", Default::default()) })
+        Callback::from(move |_: leptos::ev::MouseEvent| n("/teams", Default::default()))
     };
     let nav_tasks_clone = nav_tasks.clone();
 
@@ -213,6 +217,23 @@ pub fn DashboardPage() -> impl IntoView {
             set_initialized.set(true);
             load_dashboard.run(());
             connect_realtime.run(());
+        }
+    });
+
+    // Load quick note from localStorage on mount
+    Effect::new(move |_| {
+        if let Some(window) = web_sys::window() {
+            if let Ok(Some(storage)) = window.local_storage() {
+                if let Ok(Some(note)) = storage.get_item("quick_note") {
+                    if let Some(document) = window.document() {
+                        if let Some(element) = document.get_element_by_id("quick-note-input") {
+                            if let Ok(ta) = element.dyn_into::<web_sys::HtmlTextAreaElement>() {
+                                ta.set_value(&note);
+                            }
+                        }
+                    }
+                }
+            }
         }
     });
 
@@ -551,6 +572,34 @@ pub fn DashboardPage() -> impl IntoView {
                                                     <span class="db-overview-stat-label">"已暂停"</span>
                                                 </div>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    // Quick Note Card
+                                    <div class="db-section-card">
+                                        <div class="db-section-header">
+                                            <div class="db-section-title">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px">
+                                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                </svg>
+                                                " 快速笔记"
+                                            </div>
+                                        </div>
+                                        <div class="db-section-body">
+                                            <textarea
+                                                id="quick-note-input"
+                                                class="db-quick-note-textarea"
+                                                placeholder="记录一闪而过的想法..."
+                                                on:input=move |ev| {
+                                                    let value = event_target_value(&ev);
+                                                    if let Some(window) = web_sys::window() {
+                                                        if let Ok(Some(storage)) = window.local_storage() {
+                                                            let _ = storage.set_item("quick_note", &value);
+                                                        }
+                                                    }
+                                                }
+                                            ></textarea>
                                         </div>
                                     </div>
                                 </div>
