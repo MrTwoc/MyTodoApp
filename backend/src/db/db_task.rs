@@ -48,7 +48,7 @@ impl DbTask {
                 task_status, task_create_time, task_leader_id,
                 task_team_id, task_group_id, task_update_time, is_favorite, is_deleted, deleted_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             RETURNING task_id, task_name, task_description, task_keywords,
                       task_priority, task_difficulty, task_deadline, task_complete_time,
                       task_status, task_create_time, task_leader_id,
