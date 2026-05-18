@@ -1,11 +1,27 @@
 use crate::db::db_task::DbTask;
-use crate::db::db_user::DbUser;
 use crate::models::task::{Task, TaskStatus};
 use crate::models::team::Team;
 use crate::services::team_service::TeamService;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
+
+/// 从 team_members 表获取用户所属的团队 ID 列表
+async fn get_user_team_ids_from_members(pool: &PgPool, user_id: u64) -> Result<Vec<u64>> {
+    let rows = sqlx::query("SELECT team_id FROM team_members WHERE user_id = $1")
+        .bind(user_id as i64)
+        .fetch_all(pool)
+        .await?;
+
+    let team_ids = rows
+        .iter()
+        .map(|row| {
+            let team_id: i64 = row.get("team_id");
+            team_id as u64
+        })
+        .collect();
+    Ok(team_ids)
+}
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct TaskStatusStats {
@@ -49,11 +65,8 @@ pub struct DashboardService;
 
 impl DashboardService {
     pub async fn overview(pool: &PgPool, user_id: u64) -> Result<DashboardOverview> {
-        let team_ids = DbUser::get_user_teams(pool, user_id)
-            .await?
-            .into_iter()
-            .map(|id| id as u64)
-            .collect::<Vec<u64>>();
+        // 从 team_members 表获取用户所属的团队 ID 列表（而不是 user_teams 字段）
+        let team_ids = get_user_team_ids_from_members(pool, user_id).await?;
 
         let personal_tasks = list_tasks_with_stats(
             DbTask::list_tasks(
@@ -92,12 +105,12 @@ impl DashboardService {
             all_team_tasks.extend(tasks);
         }
 
-        let username = match TeamService::get_team(pool, team_ids.first().copied().unwrap_or_default())
-            .await?
-        {
-            Some(team) => Some(team.team_name),
-            None => None,
-        };
+        let username =
+            match TeamService::get_team(pool, team_ids.first().copied().unwrap_or_default()).await?
+            {
+                Some(team) => Some(team.team_name),
+                None => None,
+            };
 
         let mut recent_personal = DbTask::list_tasks(
             pool,
@@ -132,15 +145,24 @@ impl DashboardService {
 
     pub async fn tasks(pool: &PgPool, user_id: u64) -> Result<DashboardTaskStats> {
         let personal_tasks = list_tasks_with_stats(
-            DbTask::list_tasks(pool, Some(user_id), None, None, None, None, None, None, None, false).await?,
+            DbTask::list_tasks(
+                pool,
+                Some(user_id),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                false,
+            )
+            .await?,
         );
 
         let mut team_stats = TaskStatusStats::default();
-        let team_ids = DbUser::get_user_teams(pool, user_id)
-            .await?
-            .into_iter()
-            .map(|id| id as u64)
-            .collect::<Vec<u64>>();
+        // 从 team_members 表获取用户所属的团队 ID 列表
+        let team_ids = get_user_team_ids_from_members(pool, user_id).await?;
         for team_id in team_ids {
             let tasks = DbTask::list_tasks(
                 pool,
@@ -187,8 +209,7 @@ impl DashboardService {
             output.teams.push(stat_for_team(team, &tasks));
         }
 
-        output.teams
-            .sort_by(|a, b| a.team_name.cmp(&b.team_name));
+        output.teams.sort_by(|a, b| a.team_name.cmp(&b.team_name));
 
         Ok(output)
     }
