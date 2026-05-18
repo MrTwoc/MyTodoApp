@@ -125,6 +125,8 @@ impl DashboardService {
             false,
         )
         .await?;
+        // 只保留 task_team_id IS NULL 的个人任务（排除团队任务）
+        recent_personal.retain(|t| t.task_team_id.is_none());
         // keep deterministic order and trim explicit fields for frontend list size
         recent_personal.truncate(10);
 
