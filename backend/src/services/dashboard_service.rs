@@ -68,21 +68,25 @@ impl DashboardService {
         // 从 team_members 表获取用户所属的团队 ID 列表（而不是 user_teams 字段）
         let team_ids = get_user_team_ids_from_members(pool, user_id).await?;
 
-        let personal_tasks = list_tasks_with_stats(
-            DbTask::list_tasks(
-                pool,
-                Some(user_id),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                false,
-            )
-            .await?,
-        );
+        let all_personal_tasks = DbTask::list_tasks(
+            pool,
+            Some(user_id),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            false,
+        )
+        .await?;
+        // 只保留 task_team_id IS NULL 的真正个人任务
+        let personal_tasks: Vec<Task> = all_personal_tasks
+            .into_iter()
+            .filter(|t| t.task_team_id.is_none())
+            .collect();
+        let personal_stats = list_tasks_with_stats(personal_tasks.clone());
 
         let mut all_team_tasks = Vec::<Task>::new();
         let mut team_stats = TaskStatusStats::default();
@@ -138,7 +142,7 @@ impl DashboardService {
 
         Ok(DashboardOverview {
             username: username,
-            personal_tasks,
+            personal_tasks: personal_stats,
             team_tasks: team_stats,
             recent_personal_tasks: recent_personal,
             recent_team_tasks: recent_team,
@@ -146,21 +150,25 @@ impl DashboardService {
     }
 
     pub async fn tasks(pool: &PgPool, user_id: u64) -> Result<DashboardTaskStats> {
-        let personal_tasks = list_tasks_with_stats(
-            DbTask::list_tasks(
-                pool,
-                Some(user_id),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                false,
-            )
-            .await?,
-        );
+        let all_personal_tasks = DbTask::list_tasks(
+            pool,
+            Some(user_id),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            false,
+        )
+        .await?;
+        // 只保留 task_team_id IS NULL 的真正个人任务
+        let personal_tasks: Vec<Task> = all_personal_tasks
+            .into_iter()
+            .filter(|t| t.task_team_id.is_none())
+            .collect();
+        let personal_stats = list_tasks_with_stats(personal_tasks);
 
         let mut team_stats = TaskStatusStats::default();
         // 从 team_members 表获取用户所属的团队 ID 列表
@@ -183,7 +191,7 @@ impl DashboardService {
         }
 
         Ok(DashboardTaskStats {
-            personal_tasks,
+            personal_tasks: personal_stats,
             team_tasks: team_stats,
         })
     }
