@@ -483,7 +483,7 @@ pub fn DashboardPage() -> impl IntoView {
                                                 {move || {
                                                     let logs = ws_logs.get();
                                                     if logs.is_empty() {
-                                                        view! { <p class="db-ws-empty">"等待实时更新..."</p> }.into_any()
+                                                        view! { <p class="db-ws-empty">"等待更新中..."</p> }.into_any()
                                                     } else {
                                                         logs.into_iter().take(4).map(|msg| {
                                                             view! { <div class="db-ws-log-item">{msg}</div> }
