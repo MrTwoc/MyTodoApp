@@ -61,7 +61,7 @@ pub fn KanbanCard(
 
     let deadline_text = task.task_deadline.map(|ts| {
         let date = js_sys::Date::new(&js_sys::Date::new_0());
-        date.set_milliseconds(ts as u32);
+        date.set_time((ts * 1000) as f64);
         format!(
             "{}/{:02}/{:02}",
             date.get_full_year(),
@@ -70,10 +70,13 @@ pub fn KanbanCard(
         )
     });
 
-    let is_overdue = task.task_deadline.map(|ts| {
-        let now = js_sys::Date::now() as i64;
-        ts < now / 1000
-    }).unwrap_or(false);
+    let is_overdue = task
+        .task_deadline
+        .map(|ts| {
+            let now = js_sys::Date::now() as i64;
+            ts < now / 1000
+        })
+        .unwrap_or(false);
 
     view! {
         <div
