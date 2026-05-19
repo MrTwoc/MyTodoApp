@@ -1,4 +1,5 @@
 use crate::db::db_task::DbTask;
+use crate::db::db_user::DbUser;
 use crate::models::task::{Task, TaskStatus};
 use crate::models::team::Team;
 use crate::services::team_service::TeamService;
@@ -109,12 +110,11 @@ impl DashboardService {
             all_team_tasks.extend(tasks);
         }
 
-        let username =
-            match TeamService::get_team(pool, team_ids.first().copied().unwrap_or_default()).await?
-            {
-                Some(team) => Some(team.team_name),
-                None => None,
-            };
+        // 获取用户真实用户名，而不是团队名称
+        let username = match DbUser::get_user_by_id(pool, user_id).await? {
+            Some(user) => Some(user.user_username),
+            None => None,
+        };
 
         let mut recent_personal = DbTask::list_tasks(
             pool,
